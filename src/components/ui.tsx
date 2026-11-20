@@ -2,13 +2,14 @@ import { Image, type ImageSource } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, ActivityIndicator, Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextProps, type TextStyle, type ViewStyle } from 'react-native';
+import { usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, type IconName } from '@/components/icon';
 import { useSettings } from '@/lib/settings';
 import { fonts, onPastel, onTint, radius, space, touch, type, vivid, wide } from '@/theme/tokens';
 
-// ยืมโครงจาก src/components/ui.tsx ของ ChefJiw: ตัด Mascot แบบขยับได้กับหน้าทำอาหารออก เพิ่ม PriceTag, TaskRow, AskBar สำหรับ AiGo
+// ยืมโครงจาก src/components/ui.tsx ของ ChefJiw: ตัดหน้าทำอาหารออก เพิ่ม PriceTag, TaskRow, AskBar สำหรับ AiGo
 
 // จังหวะการขยับชุดเดียวทั้งแอป: ขยับเฉพาะ opacity กับ transform ไม่ขยับขนาดหรือตำแหน่งที่ทำให้ layout เลื่อน
 export const motion = { fast: 150, base: 200, toast: 4000 } as const;
@@ -45,24 +46,25 @@ export const tap = (kind: 'light' | 'success' = 'light') => {
 };
 
 // ป้ายแจ้งผลชั่วคราวด้านล่างจอ: บอกสิ่งที่จอไม่ได้แสดงเอง หายเองใน 4 วินาที ไม่ขโมยโฟกัส มีได้ทีละ 3 อัน
-type ToastItem = { id: number; text: string };
+type ToastItem = { id: number; text: string; path: string };
 const ToastCtx = createContext<(text: string) => void>(() => {});
 export const useToast = () => useContext(ToastCtx);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const next = useRef(0);
+  const path = usePathname();
   const show = useCallback((text: string) => {
     const id = ++next.current;
-    setItems((xs) => [...xs.slice(-2), { id, text }]);
+    setItems((xs) => [...xs.slice(-2), { id, text, path }]);
     setTimeout(() => setItems((xs) => xs.filter((x) => x.id !== id)), motion.toast);
-  }, []);
+  }, [path]);
   const insets = useSafeAreaInsets();
   return (
     <ToastCtx.Provider value={show}>
       {children}
       <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: insets.bottom + 92, alignItems: 'center', gap: space.sm, paddingHorizontal: space.lg }}>
-        {items.map((x) => <FadeIn key={x.id}><ToastView text={x.text} /></FadeIn>)}
+        {items.filter((x) => x.path === path).map((x) => /* เปลี่ยนจอแล้วซ่อนป้ายของจอเก่า */ <FadeIn key={x.id}><ToastView text={x.text} /></FadeIn>)}
       </View>
     </ToastCtx.Provider>
   );
@@ -149,6 +151,24 @@ export function Card({ tone = 'soft', children, style, onPress, label }: { tone?
   return <OnThemed.Provider value={themed}>{body}</OnThemed.Provider>;
 }
 
+/** ตัวละคร AiGo บนหัวจอ: ลอยขึ้นลงช้าๆ จอหนึ่งมีตัวที่ขยับได้ตัวเดียว (ลดการเคลื่อนไหวแล้วอยู่นิ่ง) */
+export function Mascot({ pose, size = 64 }: { pose: ImageSource; size?: number }) {
+  const reduce = useReducedMotion();
+  const [v] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    if (reduce) { v.setValue(0); return; }
+    const ease = Easing.inOut(Easing.sin);
+    const a = Animated.loop(Animated.sequence([Animated.timing(v, { toValue: 1, duration: 1400, easing: ease, useNativeDriver: native }), Animated.timing(v, { toValue: 0, duration: 1400, easing: ease, useNativeDriver: native })]));
+    a.start();
+    return () => a.stop();
+  }, [v, reduce]);
+  return (
+    <Animated.View style={{ transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [0, -5] }) }, { rotate: v.interpolate({ inputRange: [0, 1], outputRange: ['-2deg', '2deg'] }) }] }}>
+      <Image source={pose} style={{ width: size, height: size }} contentFit="contain" accessible={false} />
+    </Animated.View>
+  );
+}
+
 /** การ์ดคำพูดของ AiGo พร้อมตัวละครถ้าท่านั้นมีความหมาย */
 export function AiSays({ children, pose }: { children: ReactNode; pose?: ImageSource }) {
   return (
@@ -202,7 +222,7 @@ export function AskBar({ placeholder, onSend }: { placeholder: string; onSend: (
 }
 
 /** หัวจอสีประจำหน้า ต่อด้วยแผ่นเนื้อหามุมบนโค้ง (ธีมมืดหัวจอเป็นสีพื้น) */
-export function Screen({ tint, title, subtitle, onBack, right, children, footer, scroll = true }: { tint: string; title: string; subtitle?: string; onBack?: () => void; right?: ReactNode; children: ReactNode; footer?: ReactNode; scroll?: boolean }) {
+export function Screen({ tint, title, subtitle, onBack, right, mascot, children, footer, scroll = true }: { tint: string; title: string; subtitle?: string; onBack?: () => void; right?: ReactNode; mascot?: ImageSource; children: ReactNode; footer?: ReactNode; scroll?: boolean }) {
   const { colors, isDark, t } = useSettings();
   const insets = useSafeAreaInsets();
   const fg = isDark ? undefined : { color: onTint(tint) };
@@ -215,6 +235,7 @@ export function Screen({ tint, title, subtitle, onBack, right, children, footer,
           <T v="title" style={fg} accessibilityRole="header">{title}</T>
           {subtitle && <T v="smallBold" tone="muted" style={fg}>{subtitle}</T>}
         </View>
+        {mascot && <Mascot pose={mascot} size={56} />}
         {right}
       </View>
       <View style={[s.sheet, { backgroundColor: colors.bg }]}>

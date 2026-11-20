@@ -27,13 +27,13 @@ export default function Disruption() {
     catch { setState('wait'); toast(pick({ th: 'เปิดหน้าจองไม่ได้ ลองใหม่อีกครั้ง', en: 'Could not open the booking page. Try again' })); }
   };
   return (
-    <Screen tint={colors.header.travel} title={pick({ th: 'AiGo แก้ให้แล้ว', en: 'AiGo fixed it' })} subtitle={pick({ th: 'วันที่ 5 · 16 ธ.ค. · โอซาก้า', en: 'Day 5 · 16 Dec · Osaka' })} onBack={() => router.back()}>
+    <Screen tint={colors.header.travel} title={pick({ th: 'AiGo แก้ให้แล้ว', en: 'AiGo fixed it' })} subtitle={pick({ th: 'วันที่ 5 · 16 ธ.ค. · โอซาก้า', en: 'Day 5 · 16 Dec · Osaka' })} onBack={() => router.back()} mascot={poses.rain}>
       <Card tone="danger">
         <T v="smallBold" tone="muted">{pick({ th: 'แจ้งจากสายการบิน · 14:05', en: 'From the airline · 14:05' })}</T>
         <T v="heading" tone="warn">{pick({ th: 'เที่ยวบินกลับดีเลย์ 3 ชั่วโมง', en: 'Return flight delayed 3 hours' })}</T>
         <T>{pick({ th: 'ออกใหม่ 02:55 แทน 23:55 คืนนี้', en: 'Now leaving 02:55 instead of 23:55 tonight' })}</T>
       </Card>
-      <AiSays pose={poses.rain}>{pick({ th: 'ไม่ต้องห่วง ฉันปรับแผนคืนนี้ให้แล้ว ใช้เวลาที่ได้เพิ่มมาให้คุ้ม', en: 'No worries, I already adjusted tonight to make use of the extra time.' })}</AiSays>
+      <AiSays>{pick({ th: 'ไม่ต้องห่วง ฉันปรับแผนคืนนี้ให้แล้ว ใช้เวลาที่ได้เพิ่มมาให้คุ้ม', en: 'No worries, I already adjusted tonight to make use of the extra time.' })}</AiSays>
       <T v="smallBold" tone="muted">{t('appr.done')}</T>
       <View>
         {FIXES.map((f, i) => {

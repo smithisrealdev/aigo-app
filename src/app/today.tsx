@@ -16,7 +16,7 @@ export default function Today() {
     ? { name: { th: 'สวนเท็นโนจิ', en: 'Tennoji Park' }, note: { th: 'ฝนตกช่วงนี้', en: 'Rain expected' }, warn: true }
     : { name: { th: 'ช้อปปิ้งชินไซบาชิ', en: 'Shinsaibashi shopping' }, note: { th: 'ย้ายมาแทนเพราะฝน · ตรวจแล้ว เปิดอยู่', en: 'Moved here for the rain · checked, open' }, warn: false };
   return (
-    <Screen tint={colors.header.travel} title={pick({ th: 'วันนี้ วันที่ 2', en: 'Today, day 2' })} subtitle={pick({ th: '13 ธ.ค. · โอซาก้า · เก็บไว้ในเครื่อง', en: '13 Dec · Osaka · saved offline' })} onBack={() => router.back()}
+    <Screen tint={colors.header.travel} title={pick({ th: 'วันนี้ วันที่ 2', en: 'Today, day 2' })} subtitle={pick({ th: '13 ธ.ค. · โอซาก้า · เก็บไว้ในเครื่อง', en: '13 Dec · Osaka · saved offline' })} onBack={() => router.back()} mascot={poses.rain}
       footer={<AskBar placeholder={pick({ th: 'ถาม AiGo เช่น แถวนี้มีคาเฟ่ไหม', en: 'Ask AiGo, e.g. any cafes nearby?' })} onSend={() => toast(pick({ th: 'ส่งให้ AiGo แล้ว', en: 'Sent to AiGo' }))} />}>
       <Card tone="navy" style={{ gap: space.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
@@ -28,7 +28,7 @@ export default function Today() {
         <Button kind="onPastelLight" label={pick({ th: 'นำทาง', en: 'Navigate' })} icon="pin" onPress={() => toast(pick({ th: 'เปิดแผนที่ในแอปจริงจะพาไปที่นี่', en: 'The real app opens maps here' }))} />
       </Card>
       {kept === null ? (
-        <AiSays pose={poses.rain}>{pick({ th: 'ฉันย้ายสวนเท็นโนจิไปพรุ่งนี้แล้ว บ่ายนี้ฝนตก เลยใส่ช้อปปิ้งในร่มที่ชินไซบาชิแทน', en: 'I moved Tennoji Park to tomorrow. Rain this afternoon, so I put indoor shopping in Shinsaibashi instead.' })}</AiSays>
+        <AiSays>{pick({ th: 'ฉันย้ายสวนเท็นโนจิไปพรุ่งนี้แล้ว บ่ายนี้ฝนตก เลยใส่ช้อปปิ้งในร่มที่ชินไซบาชิแทน', en: 'I moved Tennoji Park to tomorrow. Rain this afternoon, so I put indoor shopping in Shinsaibashi instead.' })}</AiSays>
       ) : <FadeIn><T v="smallBold" tone="muted">{kept ? pick({ th: 'เก็บแผนที่ AiGo ปรับไว้', en: 'Kept AiGo\'s change' }) : pick({ th: 'เลิกทำแล้ว กลับเป็นแผนเดิม', en: 'Undone, back to the original plan' })}</T></FadeIn>}
       {kept === null && (
         <View style={{ flexDirection: 'row', gap: space.sm }}>

@@ -5,7 +5,7 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/icon';
-import { Button, Card, IconButton, Row, T, useToast } from '@/components/ui';
+import { Button, Card, IconButton, Mascot, Row, T, useToast } from '@/components/ui';
 import { photos, poses } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
 import { fonts, radius, space, type, wide } from '@/theme/tokens';
@@ -31,7 +31,7 @@ export default function Home() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
           <T v="hero" tone={isDark ? 'ink' : 'onTint'} style={{ flex: 1 }} accessibilityRole="header">{t('home.title')}</T>
           <View style={{ width: 72, height: 72, borderRadius: radius.pill, backgroundColor: colors.ai, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-end' }}>
-            <Image source={poses.wave} style={{ width: 84, height: 84, marginBottom: -14 }} contentFit="contain" accessible={false} />
+            <View style={{ marginBottom: -14 }}><Mascot pose={poses.wave} size={84} /></View>
           </View>
         </View>
         <T v="bodyBold" tone={isDark ? 'muted' : 'onTint'}>{t('home.sub')}</T>

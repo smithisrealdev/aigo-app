@@ -21,9 +21,9 @@ export default function Work() {
   const flightFound = done > agentTasks.findIndex((x) => x.id === 'flight');
   const waiting = offers.filter((o) => flightFound && (o.id === 'flight' || done > agentTasks.findIndex((x) => x.id === 'hotel')));
   return (
-    <Screen tint={colors.header.work} title={t('work.title')} subtitle={`${pick(trip.title)} · ${pick(trip.dates)}`} onBack={() => router.back()}
+    <Screen tint={colors.header.work} title={t('work.title')} subtitle={`${pick(trip.title)} · ${pick(trip.dates)}`} onBack={() => router.back()} mascot={poses.think}
       footer={<AskBar placeholder={t('work.tell')} onSend={() => toast(t('toast.sent'))} />}>
-      <AiSays pose={poses.think}>{t('work.intro')}</AiSays>
+      <AiSays>{t('work.intro')}</AiSays>
       <View accessibilityLiveRegion="polite">
           {agentTasks.map((task, i) => {
             const state = i < done ? 'done' : i === done ? 'now' : 'wait';

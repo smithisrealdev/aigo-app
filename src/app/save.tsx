@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { View } from 'react-native';
 
@@ -13,9 +12,8 @@ export default function Save() {
   const { colors, pick, set } = useSettings();
   const signIn = () => { tap('success'); set({ signedIn: true }); router.back(); };
   return (
-    <Screen tint={colors.header.trips} title={pick({ th: 'เก็บแผนนี้ไว้กับคุณ', en: 'Keep this plan' })} subtitle={`${pick(trip.title)} · ${pick(trip.dates)}`} onBack={() => router.back()}>
+    <Screen tint={colors.header.trips} title={pick({ th: 'เก็บแผนนี้ไว้กับคุณ', en: 'Keep this plan' })} subtitle={`${pick(trip.title)} · ${pick(trip.dates)}`} onBack={() => router.back()} mascot={poses.happy}>
       <Card tone="done" style={{ alignItems: 'center', gap: space.sm }}>
-        <Image source={poses.happy} style={{ width: 120, height: 120 }} contentFit="contain" accessible={false} />
         <T v="heading">{pick({ th: 'เปิดแผนได้แม้ไม่มีเน็ต', en: 'Your plan works offline' })}</T>
         <T style={{ textAlign: 'center' }}>{pick({ th: 'สมัครก่อนจ่ายเงิน แผนจะเก็บไว้ในเครื่อง และตามไปทุกเครื่องที่คุณเข้าสู่ระบบ', en: 'Sign in before paying. The plan stays on this phone and follows you to every device.' })}</T>
       </Card>
