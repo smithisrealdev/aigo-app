@@ -52,7 +52,7 @@ export default function Home() {
             {/* shortcut: ปุ่มไมค์บอกว่ายังใช้ไม่ได้, ต่อ speech-to-text เมื่อทำแชตจริง */}
             <IconButton icon="mic" variant="plain" label={t('home.mic')} onPress={() => toast(t('toast.mic'))} />
           </View>
-          <Button label={t('home.go')} icon="next" big onPress={() => start(wish || pick(POPULAR[1]))} />
+          <Button label={t('home.go')} icon="next" big onPress={() => (wish.trim() ? start(wish.trim()) : toast(pick({ th: 'บอกก่อนว่าอยากไปไหน หรือเลือกทริปยอดนิยมด้านล่าง', en: 'Tell me where first, or pick a popular trip below' })))} />
         </View>
       </FadeIn>
 

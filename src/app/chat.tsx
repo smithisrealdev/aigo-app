@@ -71,7 +71,7 @@ export default function Chat() {
     router.replace('/work');
   };
   return (
-    <Screen follow title={t('chat.title')} subtitle={about ? pick({ th: 'ถามเรื่องทริปของคุณ', en: 'About your trip' }) : t('chat.sub')} onBack={() => router.back()}
+    <Screen follow title={t('chat.title')} subtitle={about ? pick({ th: 'ถามเรื่องทริปของคุณ', en: 'About your trip' }) : parsed.some((r) => r?.summary) ? pick({ th: 'สรุปทริปแล้ว ให้ AiGo จัดการต่อได้เลย', en: 'Trip summed up. AiGo can take it from here' }) : t('chat.sub')} onBack={() => router.back()}
       footer={<AskBar placeholder={t('chat.placeholder')} onSend={say} />}>
       <>
         {msgs.map((m, i) => {
