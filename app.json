@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "AiGo",
+    "slug": "aigo",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "aigo",
+    "userInterfaceStyle": "automatic",
+    "web": { "output": "single" },
+    "plugins": ["expo-router", ["expo-splash-screen", { "backgroundColor": "#4B5BEF" }]],
+    "experiments": { "reactCompiler": true }
+  }
+}
