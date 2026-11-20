@@ -3,8 +3,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { View } from 'react-native';
 
-import { Icon } from '@/components/icon';
-import { AiSays, Button, Card, FadeIn, FlightLeg, PriceTag, Row, Screen, T, Thumb, tap, useToast } from '@/components/ui';
+import { AiSays, Button, Card, FadeIn, FlightLeg, PriceTag, Screen, Section, Stamp, T, tap, Ticket, UndoRow, useToast } from '@/components/ui';
 import { baht, photos, poses } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
 import { space } from '@/theme/tokens';
@@ -27,45 +26,52 @@ export default function Disruption() {
     catch { setState('wait'); toast(pick({ th: 'เปิดหน้าจองไม่ได้ ลองใหม่อีกครั้ง', en: 'Could not open the booking page. Try again' })); }
   };
   return (
-    <Screen tint={colors.header.travel} title={pick({ th: 'AiGo แก้ให้แล้ว', en: 'AiGo fixed it' })} subtitle={pick({ th: 'วันที่ 5 · 16 ธ.ค. · โอซาก้า', en: 'Day 5 · 16 Dec · Osaka' })} onBack={() => router.back()} mascot={poses.rain}>
-      <Card tone="danger">
-        <T v="smallBold" tone="muted">{pick({ th: 'แจ้งจากสายการบิน · 14:05', en: 'From the airline · 14:05' })}</T>
-        <T v="heading" tone="warn">{pick({ th: 'เที่ยวบินกลับดีเลย์ 3 ชั่วโมง', en: 'Return flight delayed 3 hours' })}</T>
-        <FlightLeg from="KIX" fromTime="02:55" was="23:55" to="BKK" toTime="06:55" label="XJ 611" />
-      </Card>
-      <AiSays>{pick({ th: 'ไม่ต้องห่วง ฉันปรับแผนคืนนี้ให้แล้ว ใช้เวลาที่ได้เพิ่มมาให้คุ้ม', en: 'No worries, I already adjusted tonight to make use of the extra time.' })}</AiSays>
-      <T v="smallBold" tone="muted">{t('appr.done')}</T>
-      <View>
-        {FIXES.map((f, i) => {
-          const off = undone.includes(f.id);
-          return (
-            <Row key={f.id} last={i === FIXES.length - 1}>
-              <Icon name="check" color={off ? colors.muted : colors.success} size={20} />
-              {f.photo && <Thumb source={f.photo} size={40} />}
-              <T v="small" tone={off ? 'muted' : 'ink'} style={{ flex: 1 }}>{pick(f)}</T>
-              {off ? <T v="smallBold" tone="muted">{t('appr.undone')}</T>
-                : <Button kind="secondary" label={t('appr.undo')} onPress={() => { tap(); setUndone((u) => [...u, f.id]); }} style={{ minHeight: 44, paddingHorizontal: space.md }} />}
-            </Row>
-          );
-        })}
-      </View>
-      <T v="smallBold" tone="muted">{t('appr.paid')}</T>
-      {state === 'paid' || state === 'skip' ? (
-        <FadeIn><Card tone={state === 'paid' ? 'done' : 'soft'}><T>{state === 'paid' ? t('appr.approved') : pick({ th: 'ไม่ฝากกระเป๋า AiGo จะไม่ถามซ้ำ', en: 'No luggage storage. AiGo will not ask again' })}</T></Card></FadeIn>
-      ) : (
-        <Card style={{ gap: space.sm }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: space.md }}>
-            <T v="subheading" style={{ flex: 1 }}>{pick({ th: 'ฝากกระเป๋าใกล้นัมบะ 2 ใบ', en: 'Store 2 bags near Namba' })}</T>
-            <T v="price">{baht(700)}</T>
-          </View>
-          <PriceTag source="Radical Storage" at="14:07" />
-          <T v="small">{t('appr.why', { x: pick({ th: 'เช็กเอาต์ 11:00 จะได้เดินเล่นตัวเปล่าถึงคืนนี้', en: 'Checkout is 11:00, so you can walk around bag-free until tonight' }) })}</T>
-          <View style={{ flexDirection: 'row', gap: space.sm }}>
-            <Button label={t('appr.go')} busy={state === 'opening'} busyLabel={t('appr.opening')} onPress={pay} style={{ flex: 1 }} />
-            <Button kind="secondary" label={pick({ th: 'ไม่ต้อง', en: 'No thanks' })} onPress={() => setState('skip')} style={{ flex: 1 }} />
-          </View>
-        </Card>
-      )}
+    <Screen title={pick({ th: 'AiGo แก้ให้แล้ว', en: 'AiGo fixed it' })} subtitle={pick({ th: 'วันที่ 5 · 16 ธ.ค. · โอซาก้า', en: 'Day 5 · 16 Dec · Osaka' })} onBack={() => router.back()} mascot={poses.rain}>
+      {/* แจ้งเตือนเที่ยวบินเป็นบัตรขึ้นเครื่องสีเตือน เวลาเดิมขีดฆ่า */}
+      <FadeIn>
+        <Ticket tone="danger"
+          top={<>
+            <T v="smallBold" style={{ color: colors.mutedStrong }}>{pick({ th: 'แจ้งจากสายการบิน · 14:05', en: 'From the airline · 14:05' })}</T>
+            <T v="heading" tone="warn">{pick({ th: 'เที่ยวบินกลับดีเลย์ 3 ชั่วโมง', en: 'Return flight delayed 3 hours' })}</T>
+          </>}
+          bottom={<FlightLeg from="KIX" fromTime="02:55" was="23:55" to="BKK" toTime="06:55" label="XJ 611" />} />
+      </FadeIn>
+      <FadeIn index={1}><AiSays>{pick({ th: 'ไม่ต้องห่วง ฉันปรับแผนคืนนี้ให้แล้ว ใช้เวลาที่ได้เพิ่มมาให้คุ้ม', en: 'No worries, I already adjusted tonight to make use of the extra time.' })}</AiSays></FadeIn>
+      <FadeIn index={2}>
+        <Section title={t('appr.done')}>
+          <Card tone="paper" style={{ paddingVertical: space.xs }}>
+            {FIXES.map((f, i) => (
+              <UndoRow key={f.id} text={pick(f)} photo={f.photo} undone={undone.includes(f.id)} onUndo={() => setUndone((u) => [...u, f.id])} last={i === FIXES.length - 1} />
+            ))}
+          </Card>
+        </Section>
+      </FadeIn>
+      <FadeIn index={3}>
+        <Section title={t('appr.paid')}>
+          {state === 'paid' || state === 'skip' ? (
+            <FadeIn>
+              <Card tone={state === 'paid' ? 'done' : 'soft'} style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+                <T v="bodyBold" style={{ flex: 1 }}>{state === 'paid' ? t('appr.approved') : pick({ th: 'ไม่ฝากกระเป๋า AiGo จะไม่ถามซ้ำ', en: 'No luggage storage. AiGo will not ask again' })}</T>
+                {state === 'paid' && <Stamp label={pick({ th: 'อนุมัติ', en: 'OK' })} color={colors.success} size={64} />}
+              </Card>
+            </FadeIn>
+          ) : (
+            <Ticket
+              top={<View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+                <T v="subheading" style={{ flex: 1 }}>{pick({ th: 'ฝากกระเป๋าใกล้นัมบะ 2 ใบ', en: 'Store 2 bags near Namba' })}</T>
+                <T v="price">{baht(700)}</T>
+              </View>}
+              bottom={<>
+                <PriceTag source="Radical Storage" at="14:07" />
+                <T v="small">{t('appr.why', { x: pick({ th: 'เช็กเอาต์ 11:00 จะได้เดินเล่นตัวเปล่าถึงคืนนี้', en: 'Checkout is 11:00, so you can walk around bag-free until tonight' }) })}</T>
+                <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.xs }}>
+                  <Button label={t('appr.go')} busy={state === 'opening'} busyLabel={t('appr.opening')} onPress={pay} style={{ flex: 1 }} />
+                  <Button kind="secondary" label={pick({ th: 'ไม่ต้อง', en: 'No thanks' })} onPress={() => setState('skip')} style={{ flex: 1 }} />
+                </View>
+              </>} />
+          )}
+        </Section>
+      </FadeIn>
     </Screen>
   );
 }

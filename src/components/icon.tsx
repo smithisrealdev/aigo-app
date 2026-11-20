@@ -13,8 +13,16 @@ const PATHS = {
   mic: ['M9 6a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0z', 'M5.5 11a6.5 6.5 0 0 0 13 0', 'M12 17.5V21'],
   send: ['M12 19V5', 'M6 11l6-6 6 6'],
   alert: ['M12 4 2.5 20h19z', 'M12 10v4.5', 'M12 17.2v.3'],
+  plus: ['M12 5v14', 'M5 12h14'],
+  close: ['M6 6l12 12', 'M18 6L6 18'],
+  plane: ['M10.5 13.5 4 12l-1-2 7 .5 4.5-5.5c.8-.9 2.2-1 3-.2.8.8.7 2.2-.2 3L12 12.5l.5 7-2 -1z'],
+  map: ['M3.5 6.5 9 4l6 2.5 5.5-2.5v13L15 19.5 9 17l-5.5 2.5z', 'M9 4v13', 'M15 6.5v13'],
+  home: ['M4 11 12 4.5l8 6.5', 'M6.5 9.5V20h11V9.5', 'M10 20v-5h4v5'],
+  flag: ['M6 21V4', 'M6 4.5h11l-2.5 4 2.5 4H6'],
+  walk: ['M12.5 8.5 10.5 14', 'M10.5 14 8 20.5', 'M10.5 14l3 2.5 1 4', 'M7.5 11.5l3-3 3.5 1 2 3'],
+  train: ['M7 4h10a2 2 0 0 1 2 2v9a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V6a2 2 0 0 1 2-2z', 'M5 11h14', 'M8.5 21 10 18.5', 'M15.5 21 14 18.5', 'M8.5 14.5h.01', 'M15.5 14.5h.01'],
 } as const;
-const CIRCLES: Partial<Record<keyof typeof PATHS, [number, number, number]>> = { user: [12, 8.5, 4], pin: [12, 10, 2.4] };
+const CIRCLES: Partial<Record<keyof typeof PATHS, [number, number, number]>> = { user: [12, 8.5, 4], pin: [12, 10, 2.4], walk: [13.5, 4.8, 1.8] };
 
 export type IconName = keyof typeof PATHS;
 

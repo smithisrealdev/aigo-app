@@ -1,46 +1,65 @@
 import { router } from 'expo-router';
 import { View } from 'react-native';
 
-import { Image } from 'expo-image';
-
-import { Icon } from '@/components/icon';
-import { AiSays, Button, Card, IconButton, Row, Screen, T } from '@/components/ui';
-import { offers, photos, trip } from '@/data/trip';
+import { Icon, type IconName } from '@/components/icon';
+import { AiSays, ArtCard, Badge, Button, Card, FadeIn, IconButton, PhotoCard, Row, Screen, Section, Stamp, T } from '@/components/ui';
+import { art, offers, photos, trip } from '@/data/trip';
+import type { L } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings';
-import { radius, space } from '@/theme/tokens';
+import { space } from '@/theme/tokens';
+
+// shortcut: ทางเข้าหน้าตัวอย่างระหว่างเที่ยว ในแอปจริงหน้าเหล่านี้เปิดจาก push notification และลิงก์แชร์
+const PREVIEWS: { href: '/today' | '/disruption' | '/shared/demo'; icon: IconName; tone: 'sky' | 'blush' | 'lilac'; label: L }[] = [
+  { href: '/today', icon: 'pin', tone: 'sky', label: { th: 'วันนี้ วันที่ 2 (AiGo ย้ายแผนเพราะฝน)', en: 'Today, day 2 (AiGo moved a stop for rain)' } },
+  { href: '/disruption', icon: 'alert', tone: 'blush', label: { th: 'เที่ยวบินกลับดีเลย์', en: 'Return flight delayed' } },
+  { href: '/shared/demo', icon: 'share', tone: 'lilac', label: { th: 'ทริปที่เพื่อนแชร์มา', en: 'A trip a friend shared' } },
+];
 
 export default function Trips() {
   const { colors, t, pick } = useSettings();
+  const places = trip.days.flat().length;
   return (
-    <Screen tint={colors.header.trips} title={t('trips.title')} subtitle={t('trips.sub', { n: 1 })}
-      right={<IconButton icon="user" label={pick({ th: 'บัญชีของฉัน', en: 'My account' })} onPress={() => router.push('/account')} onPastelBg />}>
-      <Card style={{ padding: 0, overflow: 'hidden' }}>
+    <Screen tabbed title={t('trips.title')} subtitle={t('trips.sub', { n: 1 })}
+      right={<IconButton icon="user" label={pick({ th: 'บัญชีของฉัน', en: 'My account' })} onPress={() => router.push('/account')} />}>
+      <FadeIn>
         <View>
-          <Image source={photos.skyline} style={{ width: '100%', height: 140 }} contentFit="cover" accessibilityLabel="Osaka" accessible />
-          {/* นับถอยหลังแบบป้ายปฏิทินบนรูป */}
-          <View accessible accessibilityLabel={t('trips.next', { n: trip.daysAway })} style={{ position: 'absolute', top: space.md, right: space.md, width: 64, borderRadius: radius.sm, overflow: 'hidden', backgroundColor: colors.surface, alignItems: 'center' }}>
-            <View style={{ alignSelf: 'stretch', paddingVertical: 2, backgroundColor: colors.header.money, alignItems: 'center' }}><T v="smallBold" tone="onTint">{pick({ th: 'อีก', en: 'in' })}</T></View>
-            <T v="title" style={{ fontVariant: ['tabular-nums'] }}>{trip.daysAway}</T>
-            <T v="small" tone="muted" style={{ marginTop: -4, marginBottom: 4 }}>{pick({ th: 'วัน', en: 'days' })}</T>
+          <PhotoCard source={photos.skyline} height={260} title={pick(trip.title)} subtitle={`${pick(trip.dates)} · ${t('trips.offline')}`}
+            badge={<Badge label={pick({ th: 'ทริปถัดไป', en: 'Next trip' })} />} onPress={() => router.push('/itinerary')} label={`${pick(trip.title)}, ${t('trips.open')}`}>
+            <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.sm }}>
+              {[pick({ th: '5 วัน', en: '5 days' }), pick({ th: `${places} ที่`, en: `${places} places` }), pick({ th: `${trip.people} คน`, en: `${trip.people} people` })].map((s) => (
+                <View key={s} style={{ paddingHorizontal: space.md, paddingVertical: 4, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.22)' }}><T v="smallBold" tone="white">{s}</T></View>
+              ))}
+            </View>
+          </PhotoCard>
+          {/* นับถอยหลังเป็นตราประทับบนรูป แบบตราในพาสปอร์ต */}
+          <View pointerEvents="none" style={{ position: 'absolute', bottom: space.lg, right: space.lg }}>
+            <Stamp label={pick({ th: `อีก ${trip.daysAway} วัน`, en: `${trip.daysAway} days to go` })} color="#FFFFFF" size={84} rotate={-12} />
           </View>
         </View>
-        <View style={{ padding: space.lg, gap: space.sm }}>
-          <T v="smallBold" tone="muted">{t('trips.next', { n: trip.daysAway })}</T>
-          <T v="title">{pick(trip.title)}</T>
-          <T v="small" tone="muted">{pick(trip.dates)} · {t('trips.offline')}</T>
-          <Button label={t('trips.open')} onPress={() => router.push('/itinerary')} />
-        </View>
-      </Card>
-      <AiSays>{t('trips.waiting', { n: offers.length })}</AiSays>
-      <Button label={t('work.see')} onPress={() => router.push('/approvals')} />
-      <Button kind="secondary" label={t('trips.new')} onPress={() => router.push('/paywall')} />
-      {/* shortcut: ทางเข้าหน้าตัวอย่างระหว่างเที่ยว ในแอปจริงหน้าเหล่านี้เปิดจาก push notification และลิงก์แชร์ */}
-      <T v="smallBold" tone="muted" style={{ marginTop: space.lg }}>{pick({ th: 'ตัวอย่างหน้าจอระหว่างเที่ยว', en: 'Preview: during the trip' })}</T>
-      <View>
-        {([['/today', { th: 'วันนี้ วันที่ 2 (AiGo ย้ายแผนเพราะฝน)', en: 'Today, day 2 (AiGo moved a stop for rain)' }], ['/disruption', { th: 'เที่ยวบินกลับดีเลย์', en: 'Return flight delayed' }], ['/shared/demo', { th: 'ทริปที่เพื่อนแชร์มา', en: 'A trip a friend shared' }]] as const).map(([href, label], i) => (
-          <Row key={href} last={i === 2} onPress={() => router.push(href)} label={pick(label)}><T style={{ flex: 1 }}>{pick(label)}</T><Icon name="next" color={colors.muted} /></Row>
-        ))}
-      </View>
+      </FadeIn>
+
+      <FadeIn index={1} style={{ gap: space.md }}>
+        <AiSays>{t('trips.waiting', { n: offers.length })}</AiSays>
+        <Button label={t('work.see')} icon="next" onPress={() => router.push('/approvals')} />
+      </FadeIn>
+
+      <FadeIn index={2}>
+        <ArtCard tone="lilac" art={art.plan} title={t('trips.new')} body={pick({ th: 'บอกที่อยากไป AiGo จัดให้ครบ', en: 'Say where, AiGo sorts out the rest' })} onPress={() => router.push('/paywall')} />
+      </FadeIn>
+
+      <FadeIn index={3}>
+        <Section title={pick({ th: 'ตัวอย่างหน้าจอระหว่างเที่ยว', en: 'Preview: during the trip' })}>
+          <Card style={{ paddingVertical: space.xs }}>
+            {PREVIEWS.map((p, i) => (
+              <Row key={p.href} last={i === PREVIEWS.length - 1} onPress={() => router.push(p.href)} label={pick(p.label)}>
+                <View style={{ width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.sticker[p.tone] }}><Icon name={p.icon} color={colors.ink} size={20} /></View>
+                <T v="bodyBold" style={{ flex: 1 }}>{pick(p.label)}</T>
+                <Icon name="next" color={colors.muted} />
+              </Row>
+            ))}
+          </Card>
+        </Section>
+      </FadeIn>
     </Screen>
   );
 }

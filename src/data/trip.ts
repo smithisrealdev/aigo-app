@@ -26,11 +26,24 @@ export const logos = {
   radical: require('@/assets/partners/radicalstorage.svg'),
 } satisfies Record<string, ImageSource>;
 
+// ภาพประกอบแบบแบนสไตล์ Headspace วาดเองสำหรับ AiGo (ไม่มีลิขสิทธิ์ผู้อื่น)
+export const art = {
+  plan: require('@/assets/art/art-plan.svg'),
+  trips: require('@/assets/art/art-trips.svg'),
+  flight: require('@/assets/art/art-flight.svg'),
+  hotel: require('@/assets/art/art-hotel.svg'),
+  watch: require('@/assets/art/art-watch.svg'),
+  share: require('@/assets/art/art-share.svg'),
+  offline: require('@/assets/art/art-offline.svg'),
+  map: require('@/assets/art/art-map.svg'),
+} satisfies Record<string, ImageSource>;
+
 export const poses = {
   wave: require('@/assets/character/aigo-wave.svg'),
   think: require('@/assets/character/aigo-think.svg'),
   happy: require('@/assets/character/aigo-happy.svg'),
   rain: require('@/assets/character/aigo-rain.svg'),
+  peek: require('@/assets/character/aigo-peek.svg'),
 } satisfies Record<string, ImageSource>;
 
 export type Place = {
@@ -56,10 +69,10 @@ export const trip = {
 };
 
 /** การเดินทางไปที่ถัดไป (เวลาโดยประมาณ) ใช้คั่นระหว่างสถานที่ในแผนรายวัน */
-export const legs: Record<string, L> = {
-  castle: { th: 'รถไฟใต้ดิน ~25 นาที', en: 'Subway, ~25 min' },
-  kuromon: { th: 'เดิน ~12 นาที', en: 'Walk, ~12 min' },
-  shinsaibashi: { th: 'เดิน ~6 นาที', en: 'Walk, ~6 min' },
+export const legs: Record<string, { mode: 'train' | 'walk'; text: L }> = {
+  castle: { mode: 'train', text: { th: 'รถไฟใต้ดิน · ~25 นาที', en: 'Subway · ~25 min' } },
+  kuromon: { mode: 'walk', text: { th: 'เดิน · ~12 นาที', en: 'Walk · ~12 min' } },
+  shinsaibashi: { mode: 'walk', text: { th: 'เดิน · ~6 นาที', en: 'Walk · ~6 min' } },
 };
 
 export const allPlaces = (): Place[] => trip.days.flat();

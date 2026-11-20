@@ -4,8 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { View } from 'react-native';
 
-import { Icon } from '@/components/icon';
-import { Button, Card, FadeIn, FlightLeg, PriceTag, Row, Screen, T, tap, useToast } from '@/components/ui';
+import { Button, Card, FadeIn, FlightLeg, PriceTag, Screen, Section, Stamp, T, tap, Ticket, UndoRow, useToast } from '@/components/ui';
 import { autoDone, baht, offers, poses } from '@/data/trip';
 import { decide } from '@/lib/agent';
 import { useSettings } from '@/lib/settings';
@@ -29,48 +28,58 @@ export default function Approvals() {
       tap('success');
       setApproved((a) => [...a, id]);
     } catch {
-      toast('เปิดหน้าจองไม่ได้ รายการยังรอคุณอยู่ ลองใหม่อีกครั้ง');
+      toast(pick({ th: 'เปิดหน้าจองไม่ได้ รายการยังรอคุณอยู่ ลองใหม่อีกครั้ง', en: 'Could not open the booking page. It is still waiting for you; try again' }));
     } finally {
       setOpening(null);
     }
   };
   return (
-    <Screen tint={colors.header.money} mascot={pending.length ? undefined : poses.happy} title={t('appr.title')} subtitle={t('appr.sub', { n: pending.length })} onBack={() => router.back()}>
-      <T v="smallBold" tone="muted">{pending.length ? t('appr.paid') : t('appr.none')}</T>
-      {pending.map((o) => (
-        <Card key={o.id} style={{ gap: space.sm }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
-            {o.lead === 'XJ'
-              ? <View style={{ width: 44, height: 44, borderRadius: radius.sm, backgroundColor: colors.header.money, alignItems: 'center', justifyContent: 'center' }} accessible={false}><T v="bodyBold" tone="onTint">XJ</T></View>
-              : <Image source={o.lead} style={{ width: 44, height: 44, borderRadius: radius.sm }} contentFit="cover" accessible={false} />}
-            <View style={{ flex: 1 }}>
-              <T v="subheading">{pick(o.name)}</T>
-              <T v="small" tone="muted">{pick(o.note)}</T>
-            </View>
-            <T v="price">{baht(o.costBaht)}</T>
-          </View>
-          {o.id === 'flight' && <FlightLeg from="BKK" fromTime="23:55" to="KIX" toTime="07:30" label={pick({ th: 'บินตรง 5 ชม. 35 น.', en: 'Direct, 5h 35m' })} />}
-          <PriceTag source={o.source} at={o.at} logo={o.logo} />
-          <T v="small">{t('appr.why', { x: pick(o.why) })}</T>
-          <View style={{ flexDirection: 'row', gap: space.sm }}>
-            <Button label={t('appr.go')} busy={opening === o.id} busyLabel={t('appr.opening')} onPress={() => approve(o.id, o.url)} style={{ flex: 1 }} />
-            <Button kind="secondary" label={t('appr.other')} onPress={() => toast(t('toast.other'))} style={{ flex: 1 }} />
-          </View>
-        </Card>
+    <Screen mascot={pending.length ? undefined : poses.happy} title={t('appr.title')} subtitle={t('appr.sub', { n: pending.length })} onBack={() => router.back()}>
+      <T v="bodyBold" tone="muted">{pending.length ? t('appr.paid') : t('appr.none')}</T>
+      {/* รายการที่ต้องจ่ายเงินเป็นตั๋ว ด้านบนคือของ ด้านล่างคือราคา เหตุผล และปุ่ม */}
+      {pending.map((o, i) => (
+        <FadeIn key={o.id} index={i}>
+          <Ticket
+            top={<>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+                {o.lead === 'XJ'
+                  ? <View style={{ width: 52, height: 52, borderRadius: radius.sm, backgroundColor: colors.sticker.sky, alignItems: 'center', justifyContent: 'center' }} accessible={false}><T v="subheading">XJ</T></View>
+                  : <Image source={o.lead} style={{ width: 52, height: 52, borderRadius: radius.sm }} contentFit="cover" accessible={false} />}
+                <View style={{ flex: 1 }}>
+                  <T v="subheading">{pick(o.name)}</T>
+                  <T v="small" tone="muted">{pick(o.note)}</T>
+                </View>
+              </View>
+              {o.id === 'flight' && <FlightLeg from="BKK" fromTime="23:55" to="KIX" toTime="07:30" label={pick({ th: 'บินตรง 5 ชม. 35 น.', en: 'Direct, 5h 35m' })} />}
+            </>}
+            bottom={<>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: space.md }}>
+                <PriceTag source={o.source} at={o.at} logo={o.logo} />
+                <T v="price">{baht(o.costBaht)}</T>
+              </View>
+              <T v="small">{t('appr.why', { x: pick(o.why) })}</T>
+              <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.xs }}>
+                <Button label={t('appr.go')} busy={opening === o.id} busyLabel={t('appr.opening')} onPress={() => approve(o.id, o.url)} style={{ flex: 1 }} />
+                <Button kind="secondary" label={t('appr.other')} onPress={() => toast(t('toast.other'))} style={{ flex: 1 }} />
+              </View>
+            </>} />
+        </FadeIn>
       ))}
-      {approved.length > 0 && <FadeIn><Card tone="done"><T tone="pastel">{t('appr.approved')}</T></Card></FadeIn>}
-      <T v="smallBold" tone="muted">{t('appr.done')}</T>
-      <View>
-        {autoDone.map((a, i) => (
-          <Row key={a.id} last={i === autoDone.length - 1}>
-            <Icon name="check" color={undone.includes(a.id) ? colors.muted : colors.success} size={20} />
-            <T v="small" tone={undone.includes(a.id) ? 'muted' : 'ink'} style={{ flex: 1 }}>{pick(a.text)}</T>
-            {undone.includes(a.id)
-              ? <T v="smallBold" tone="muted">{t('appr.undone')}</T>
-              : <Button kind="secondary" label={t('appr.undo')} onPress={() => { tap(); setUndone((u) => [...u, a.id]); }} style={{ minHeight: 44, paddingHorizontal: space.md }} />}
-          </Row>
-        ))}
-      </View>
+      {approved.length > 0 && (
+        <FadeIn>
+          <Card tone="done" style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+            <T v="bodyBold" style={{ flex: 1 }}>{t('appr.approved')}</T>
+            <Stamp label={pick({ th: 'อนุมัติ', en: 'OK' })} color={colors.success} size={64} />
+          </Card>
+        </FadeIn>
+      )}
+      <Section title={t('appr.done')}>
+        <Card tone="paper" style={{ paddingVertical: space.xs }}>
+          {autoDone.map((a, i) => (
+            <UndoRow key={a.id} text={pick(a.text)} undone={undone.includes(a.id)} onUndo={() => setUndone((u) => [...u, a.id])} last={i === autoDone.length - 1} />
+          ))}
+        </Card>
+      </Section>
     </Screen>
   );
 }
