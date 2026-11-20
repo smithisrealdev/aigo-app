@@ -84,5 +84,6 @@ test('แผนเป็นข้อความ: บริบทที่แน
   const trip = toAppTrip({ days: [{ places: [{ name: 'Nijo Market', startTime: '08:00' }, { name: 'Odori Park', startTime: '10:00' }] }, { places: [] }] },
     { destination: 'Sapporo, Japan', startDate: '2027-01-24', endDate: '2027-01-25', language: 'th' }, 2);
   assert.equal(tripContext(trip, 'th', 0), 'ทริปของฉันที่ AiGo วางไว้: Sapporo, Japan, 24–25 ม.ค., 2 คน\nวันที่ 1: Nijo Market, Odori Park\nตอนนี้ฉันดูวันที่ 1');
+  assert.equal(trip.days[0][0].entry.text.th, 'ยังไม่มีราคา', 'AI ไม่ให้ราคา = ยังไม่มีราคา ไม่ใช่ฟรี');
   assert.equal(planText(trip, 'en'), 'Sapporo, Japan, 2 days (24–25 Jan)\nDay 1: 08:00 Nijo Market → 10:00 Odori Park\nPlanned with AiGo');
 });

@@ -5,6 +5,7 @@ import { Icon } from '@/components/icon';
 import { AiSays, Button, Card, Chip, FadeIn, PriceTag, Row, Screen, Section, T } from '@/components/ui';
 import { baht } from '@/data/trip';
 import { askAigo } from '@/lib/ask';
+import { NO_PRICE } from '@/lib/itinerary';
 import { usePhotos } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
@@ -53,7 +54,7 @@ export default function Place() {
           <Row last={!p.spend}>
             <View style={{ flex: 1, gap: 2 }}>
               <Line label={pick({ th: 'ค่าเข้า', en: 'Admission' })} value={pick(p.entry.text)} />
-              <PriceTag source={p.entry.source === 'official' ? pick({ th: 'เว็บทางการ', en: 'official site' }) : p.entry.source} at={p.entry.at} />
+              {p.entry.text.en !== NO_PRICE.en && <PriceTag source={p.entry.source === 'official' ? pick({ th: 'เว็บทางการ', en: 'official site' }) : p.entry.source} at={p.entry.at} />}
             </View>
           </Row>
           {p.spend && (

@@ -30,6 +30,7 @@ export type GenItinerary = { id?: string; title?: string; destination?: string; 
 export type GenRequest = { destination: string; startDate: string; endDate: string; budget?: string; travelers?: string; tripStyle?: string; language: string };
 
 const both = (s: string): L => ({ th: s, en: s });
+export const NO_PRICE: L = { th: 'ยังไม่มีราคา', en: 'No price yet' };
 const DAY = 86400000;
 export const addDays = (iso: string, n: number) => new Date(Date.parse(iso + 'T00:00:00Z') + n * DAY).toISOString().slice(0, 10);
 /** จำนวนวันของทริป นับทั้งวันแรกและวันสุดท้าย */
@@ -80,7 +81,8 @@ export function toAppTrip(gen: GenItinerary, req: GenRequest, people = 2): AppTr
     return {
       id: p.id ?? `d${di}p${pi}`, time: p.startTime ?? '', name: both(p.name ?? '?'), minutes: minutesOf(p.duration), checked: false,
       tip: both(p.tips?.[0] ?? p.whyVisit?.[0] ?? p.description ?? ''),
-      entry: { text: amount > 0 ? both(price) : { th: 'ฟรี', en: 'Free' } },
+      // ห้ามแต่งราคา (R15c): AI ไม่ให้ราคามา = ยังไม่มีราคา ไม่ใช่ฟรี
+      entry: { text: amount > 0 ? both(price) : p.cost?.amount === 0 ? { th: 'ฟรี', en: 'Free' } : NO_PRICE },
       lat: p.coordinates?.lat ?? 0, lon: p.coordinates?.lng ?? 0,
     };
   }));

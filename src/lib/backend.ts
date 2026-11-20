@@ -20,9 +20,10 @@ async function deviceId() {
   return (device = id);
 }
 
-/** เรียก edge function แบบ POST ถ้าเซิร์ฟเวอร์ตอบผิดพลาดหรือไม่เริ่มตอบใน connectMs จะโยน error */
-async function post(fn: string, body: unknown, connectMs: number) {
+/** เรียก edge function แบบ POST ถ้าเซิร์ฟเวอร์ตอบผิดพลาดหรือไม่เริ่มตอบใน connectMs จะโยน error; signal = ผู้ใช้กดหยุด (ตัดทั้งการเชื่อมต่อและสตรีม) */
+async function post(fn: string, body: unknown, connectMs: number, signal?: AbortSignal) {
   const ctrl = new AbortController();
+  signal?.addEventListener('abort', () => ctrl.abort(), { once: true });
   const timer = setTimeout(() => ctrl.abort(), connectMs);
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/${fn}`, {
@@ -83,9 +84,9 @@ export async function streamTripChat(messages: ChatMessage[], lang: string, onTe
  * สร้างแผนด้วย generate-itinerary และส่งแต่ละวันให้ onDay ทันทีที่เสร็จ ผู้ใช้จึงเห็นแผนทีละวัน
  * Supabase ให้ฟังก์ชันทำงานได้ราว 150 วินาทีต่อครั้ง เซิร์ฟเวอร์จึงหยุดเองก่อนหมดเวลา ถ้าครั้งไหนได้ไม่ครบ
  * (หยุดก่อน ถูกตัด หรือ AI ตอบไม่ครบ) จะขอวันที่เหลือในครั้งใหม่ พร้อมรายการที่วางแล้วไม่ให้ซ้ำ
- * have = วันที่ได้มาแล้วจากครั้งก่อน (กดลองใหม่แล้วทำต่อจากเดิม)
+ * have = วันที่ได้มาแล้วจากครั้งก่อน (กดลองใหม่แล้วทำต่อจากเดิม), signal = ผู้ใช้กดหยุด วันที่ได้แล้วยังอยู่
  */
-export async function generateItinerary(req: GenRequest, messages: ChatMessage[], onDay: (index: number, day: GenDay) => void, have: GenDay[] = []): Promise<GenItinerary> {
+export async function generateItinerary(req: GenRequest, messages: ChatMessage[], onDay: (index: number, day: GenDay) => void, have: GenDay[] = [], signal?: AbortSignal): Promise<GenItinerary> {
   const total = dayCount(req.startDate, req.endDate);
   const days = [...have];
   let title: string | undefined;
@@ -94,11 +95,12 @@ export async function generateItinerary(req: GenRequest, messages: ChatMessage[]
   const add = (i: number, d: GenDay) => { if (i === days.length && i < total) { days.push(d); onDay(i, d); } };
   let stalls = 0;
   while (days.length < total) {
+    if (signal?.aborted) throw new Error('stopped');
     const fromDay = days.length + 1, before = days.length;
     // ส่งบทสนทนาล่าสุดไปด้วยให้ AI เห็นความต้องการทั้งหมด (สคีมารับได้ 100 ข้อความ)
     const body = await post('generate-itinerary', {
       ...req, conversationMessages: messages.slice(-40), ...(fromDay > 1 && { fromDay, planned: plannedText(days) }),
-    }, 30000);
+    }, 30000, signal);
     try {
       await eachLine(body, (line) => {
         const e = genEvent(line);
@@ -109,6 +111,7 @@ export async function generateItinerary(req: GenRequest, messages: ChatMessage[]
     } catch (err) {
       failure = (err as Error).message; // การเชื่อมต่อขาดกลางทาง: วันที่ได้แล้วยังอยู่ ขอต่อรอบหน้า
     }
+    if (signal?.aborted) throw new Error('stopped');
     // ไม่ได้วันเพิ่มเลย: ลองอีกครั้งเดียว (งานอาจไปตกเครื่องของ Supabase ที่ใกล้หมดเวลา) ถ้ายังไม่ได้ก็หยุด ไม่วนไม่จบ
     if (days.length > before) stalls = 0;
     else if (++stalls > 1) break;

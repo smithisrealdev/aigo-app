@@ -16,7 +16,7 @@ import { useSettings } from '@/lib/settings';
 import { useTrip, type Pending } from '@/lib/tripStore';
 import { radius, space } from '@/theme/tokens';
 
-type Gen = { state: 'run' | 'done' | 'fail'; quota?: boolean };
+type Gen = { state: 'run' | 'done' | 'fail' | 'stopped'; quota?: boolean };
 const BOOKING_KINDS: CardKind[] = ['flight', 'hotel', 'food', 'ticket', 'service'];
 
 // หน้างานของ AiGo มีสองแบบ
@@ -36,15 +36,18 @@ export default function Work() {
   const near = job?.request.destination;
   const photo = usePhotos(job ? trip.days.slice(0, ready).flat().filter((p) => !p.photo).map((p) => ({ name: p.name.en, near })) : []);
 
+  const stopper = useRef<AbortController | null>(null);
   const run = useCallback((j: Pending) => {
     setPlanning(true);
+    const ctrl = new AbortController();
+    stopper.current = ctrl;
     return generateItinerary(j.request, j.messages, (i, d) => {
       got.current[i] = d;
       setTrip({ ...toAppTrip({ days: got.current }, j.request, j.people), id: j.id, bookings: j.cards });
       setReady(got.current.length);
-    }, got.current)
+    }, got.current, ctrl.signal)
       .then((g) => { setTrip({ ...toAppTrip(g, j.request, j.people), id: j.id, bookings: j.cards }); setGen({ state: 'done' }); })
-      .catch((e: Error) => setGen({ state: 'fail', quota: / 429$/.test(e.message) }))
+      .catch((e: Error) => setGen(ctrl.signal.aborted ? { state: 'stopped' } : { state: 'fail', quota: / 429$/.test(e.message) }))
       .finally(() => setPlanning(false));
   }, [setTrip, setPlanning]);
 
@@ -103,6 +106,7 @@ export default function Work() {
                       <View style={{ gap: space.sm }}>
                         <T v="small" tone="muted">{pick({ th: `เสร็จ ${ready} จาก ${days} วัน`, en: `${ready} of ${days} days done` })}</T>
                         <ProgressBar value={ready / days} color={colors.success} />
+                        <Button kind="secondary" label={pick({ th: 'หยุดสร้างแผน', en: 'Stop planning' })} onPress={() => stopper.current?.abort()} style={{ alignSelf: 'flex-start', minHeight: 44 }} />
                       </View>
                     )}
                   </View>
@@ -111,6 +115,20 @@ export default function Work() {
             })}
           </View>
         </FadeIn>
+        {gen.state === 'stopped' && (
+          <FadeIn>
+            <Card style={{ gap: space.md }}>
+              <T v="subheading">{pick({ th: 'หยุดสร้างแผนแล้ว', en: 'Planning stopped' })}</T>
+              <T>{ready
+                ? pick({ th: `ได้แผน ${ready} จาก ${days} วัน เก็บไว้ในทริปแล้ว วางวันที่เหลือต่อได้ทุกเมื่อจากหน้านี้`, en: `${ready} of ${days} days are planned and saved. You can plan the rest from here.` })
+                : pick({ th: 'ยังไม่ได้วันไหนเลย สรุปทริปยังอยู่ครบ', en: 'No days yet. Your trip summary is kept.' })}</T>
+              <View style={{ flexDirection: 'row', gap: space.sm }}>
+                <Button label={pick({ th: 'วางวันที่เหลือต่อ', en: 'Plan the rest' })} onPress={retry} style={{ flex: 1 }} />
+                {ready > 0 && <Button kind="secondary" label={pick({ th: 'ดูแผน', en: 'See plan' })} onPress={() => router.push('/itinerary')} style={{ flex: 1 }} />}
+              </View>
+            </Card>
+          </FadeIn>
+        )}
         {gen.state === 'fail' && (
           <FadeIn>
             <Card tone="danger" style={{ gap: space.md }}>

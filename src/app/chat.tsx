@@ -119,6 +119,8 @@ function UserBubble({ text }: { text: string }) {
 /** สรุปทริปจาก [TRIP_SUMMARY] เป็นตั๋ว ปุ่มด้านล่างส่งต่อให้ AiGo จัดการ */
 function Summary({ s, onGo }: { s: TripSummary; onGo: () => void }) {
   const { t, pick, lang } = useSettings();
+  // สิ่งที่ AiGo เข้าใจแล้ว 6 อย่าง (R7): ที่หมาย วันที่ จำนวนวัน ใครไป งบ และความชอบ
+  const known = [s.destination, s.startDate && s.endDate, s.duration, s.travelers, s.budget, s.tripStyle].filter(Boolean).length;
   const tags = [
     s.startDate && s.endDate ? dateRange(s.startDate, s.endDate, lang) : undefined,
     s.duration && pick({ th: `${s.duration} วัน`, en: `${s.duration} days` }), s.travelers, s.budget, s.tripStyle,
@@ -126,7 +128,7 @@ function Summary({ s, onGo }: { s: TripSummary; onGo: () => void }) {
   return (
     <Ticket
       top={<>
-        <T v="smallBold" tone="accent">{pick({ th: 'AiGo สรุปทริปให้แล้ว', en: 'AiGo summed up your trip' })}</T>
+        <T v="smallBold" tone="accent">{`${pick({ th: 'สรุปทริป', en: 'Trip summary' })} · ${t('chat.understood', { n: known, total: 6 })}`}</T>
         <T v="title">{s.destination ?? pick({ th: 'ทริปของคุณ', en: 'Your trip' })}</T>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.xs }}>
           {tags.map((x, i) => <Badge key={x} label={x} tone={TONES[i % TONES.length]} />)}
