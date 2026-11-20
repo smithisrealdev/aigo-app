@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { dateRange, genEvent, legOf, minutesOf, peopleOf, requestFromSummary, toAppTrip } from './itinerary.ts';
+import { dateRange, dayCount, genEvent, legOf, minutesOf, peopleOf, plannedText, requestFromSummary, toAppTrip } from './itinerary.ts';
 
 const REQ = { destination: 'Tokyo', startDate: '2026-12-28', endDate: '2027-01-01', language: 'th' };
 
@@ -19,15 +19,33 @@ test('แปลงผล generate-itinerary เป็นทริปของแ
   }, REQ);
   assert.equal(trip.title.th, 'Tokyo Winter Lights');
   assert.equal(trip.dates.th, '28 ธ.ค. – 1 ม.ค.');
-  assert.equal(trip.totalDays, 1);
+  assert.equal(trip.totalDays, 5, 'จำนวนวันมาจากวันที่ของทริป');
+  assert.deepEqual(trip.days[1], [], 'วันที่ไม่มีที่แวะยังอยู่ในลำดับเดิม วันถัดไปจึงตรงกับวันที่');
   assert.equal(trip.days[0][0].minutes, 90);
   assert.equal(trip.days[0][0].entry.text.en, 'Free');
   assert.equal(trip.days[0][1].entry.text.th, '~¥1,000');
   assert.equal(trip.days[0][0].checked, false);
   assert.deepEqual(trip.legs.a, { mode: 'walk', text: { th: 'เดิน · ~5 นาที', en: 'Walk · ~5 min' } });
   assert.equal(trip.legs.b, undefined, 'จุดสุดท้ายของวันไม่มีการเดินทางต่อ');
-  assert.deepEqual(trip.dayTitles?.map((d) => d.en), ['Asakusa–Ueno']);
+  assert.deepEqual(trip.dayTitles?.map((d) => d.en), ['Asakusa–Ueno', 'Empty']);
   assert.equal(trip.sample, false);
+});
+
+test('ทริปที่ยังสร้างไม่ครบ: มีวันที่ได้แล้ว ที่เหลือรอ', () => {
+  const trip = toAppTrip({ days: [{ title: 'Day one', places: [{ id: 'a', name: 'Senso-ji' }] }] }, REQ);
+  assert.equal(trip.totalDays, 5);
+  assert.equal(trip.days.length, 1);
+  assert.equal(trip.title.th, 'Tokyo 5 วัน', 'ยังไม่มีชื่อทริปจาก AI ใช้จำนวนวันทั้งทริป ไม่ใช่วันที่ได้แล้ว');
+  assert.equal(dayCount('2026-12-28', '2027-01-01'), 5);
+  assert.equal(dayCount('2026-12-28', '2026-12-28'), 1);
+});
+
+test('รายการวันที่วางแล้วสำหรับขอวันที่เหลือ', () => {
+  assert.equal(plannedText([
+    { title: 'Namba', places: [{ name: 'Dotonbori' }, { name: 'Hozenji Temple' }] },
+    { places: [{ name: 'Osaka Castle' }, {}] },
+  ]), 'Day 1 (Namba): Dotonbori, Hozenji Temple\nDay 2: Osaka Castle');
+  assert.equal(plannedText([]), '');
 });
 
 test('อ่านระยะเวลาและการเดินทาง', () => {

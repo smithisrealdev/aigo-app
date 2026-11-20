@@ -23,12 +23,20 @@ type GenPlace = {
   id?: string; name?: string; description?: string; coordinates?: { lat?: number; lng?: number }; startTime?: string; duration?: string;
   cost?: { amount?: number; currency?: string }; tips?: string[]; whyVisit?: string[]; travelToNext?: { mode?: string; time?: number };
 };
-export type GenItinerary = { id?: string; title?: string; destination?: string; startDate?: string; endDate?: string; days?: { title?: string; places?: GenPlace[] }[] };
+export type GenDay = { title?: string; places?: GenPlace[] };
+export type GenItinerary = { id?: string; title?: string; destination?: string; startDate?: string; endDate?: string; days?: GenDay[] };
 export type GenRequest = { destination: string; startDate: string; endDate: string; budget?: string; travelers?: string; tripStyle?: string; language: string };
 
 const both = (s: string): L => ({ th: s, en: s });
 const DAY = 86400000;
 export const addDays = (iso: string, n: number) => new Date(Date.parse(iso + 'T00:00:00Z') + n * DAY).toISOString().slice(0, 10);
+/** จำนวนวันของทริป นับทั้งวันแรกและวันสุดท้าย */
+export const dayCount = (start: string, end: string) => Math.max(1, Math.round((Date.parse(end) - Date.parse(start)) / DAY) + 1);
+
+/** วันที่วางแล้ว ส่งให้ generate-itinerary รอบถัดไปไม่วางที่ซ้ำ: "Day 1 (ชื่อวัน): ที่ A, ที่ B" ทีละบรรทัด */
+export function plannedText(days: GenDay[]): string {
+  return days.map((d, i) => `Day ${i + 1}${d.title ? ` (${d.title})` : ''}: ${(d.places ?? []).map((p) => p.name).filter(Boolean).join(', ')}`).join('\n').slice(0, 4000);
+}
 
 /** "2 hours" → 120, "1.5 ชม." → 90, "45 minutes" → 45; อ่านไม่ออกถือว่า 60 นาที */
 export function minutesOf(duration = ''): number {
@@ -59,9 +67,12 @@ export function dateRange(start: string, end: string, lang: 'th' | 'en') {
   return m1 && m1 === m2 ? `${d1}–${d2} ${m1}` : `${a} – ${b}`;
 }
 
-/** แปลงผลของ generate-itinerary เป็นทริปของแอป; ราคาเป็นค่าประมาณของ AI และยังไม่ได้ตรวจเวลาเปิด */
+/**
+ * แปลงผลของ generate-itinerary เป็นทริปของแอป; ราคาเป็นค่าประมาณของ AI และยังไม่ได้ตรวจเวลาเปิด
+ * ใช้กับทริปที่ยังสร้างไม่ครบได้ด้วย: จำนวนวันมาจากวันที่ของทริป วันที่ยังไม่มีที่แวะเป็นวันว่างตามลำดับเดิม
+ */
 export function toAppTrip(gen: GenItinerary, req: GenRequest, people = 2): AppTrip {
-  const days = (gen.days ?? []).map((d, di) => (d.places ?? []).map((p, pi): Place => {
+  const days = (gen.days ?? []).map((d, di) => (d?.places ?? []).map((p, pi): Place => {
     const amount = p.cost?.amount ?? 0, cur = (p.cost?.currency ?? '').toUpperCase();
     const price = amount > 0 ? `~${SYMBOL[cur] ?? ''}${amount.toLocaleString('en-US')}${SYMBOL[cur] ? '' : ` ${cur}`}`.trim() : '';
     return {
@@ -70,20 +81,21 @@ export function toAppTrip(gen: GenItinerary, req: GenRequest, people = 2): AppTr
       entry: { text: amount > 0 ? both(price) : { th: 'ฟรี', en: 'Free' } },
       lat: p.coordinates?.lat ?? 0, lon: p.coordinates?.lng ?? 0,
     };
-  })).filter((d) => d.length > 0);
+  }));
   const legs: Record<string, Leg> = {};
-  (gen.days ?? []).forEach((d, di) => (d.places ?? []).forEach((p, pi) => {
+  (gen.days ?? []).forEach((d, di) => (d?.places ?? []).forEach((p, pi) => {
     const leg = pi < (d.places?.length ?? 0) - 1 ? legOf(p.travelToNext) : undefined;
     if (leg) legs[p.id ?? `d${di}p${pi}`] = leg;
   }));
   const start = gen.startDate ?? req.startDate, end = gen.endDate ?? req.endDate;
   const dest = gen.destination ?? req.destination;
+  const total = Math.max(dayCount(start, end), days.length);
   return {
     id: gen.id ?? `trip-${start}`, destination: both(dest),
-    title: gen.title ? both(gen.title) : { th: `${dest} ${days.length} วัน`, en: `${dest}, ${days.length} days` },
+    title: gen.title ? both(gen.title) : { th: `${dest} ${total} วัน`, en: `${dest}, ${total} days` },
     dates: { th: dateRange(start, end, 'th'), en: dateRange(start, end, 'en') },
-    startDate: start, totalDays: days.length, people, days, legs, sample: false,
-    dayTitles: (gen.days ?? []).filter((d) => (d.places ?? []).length > 0).map((d) => both(d.title ?? '')),
+    startDate: start, totalDays: total, people, days, legs, sample: false,
+    dayTitles: (gen.days ?? []).map((d) => both(d?.title ?? '')),
   };
 }
 

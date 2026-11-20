@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetch } from 'expo/fetch';
 
 import { sseDelta } from '@/lib/chat';
-import { genEvent, type GenItinerary, type GenRequest } from '@/lib/itinerary';
+import { dayCount, genEvent, plannedText, type GenDay, type GenItinerary, type GenRequest } from '@/lib/itinerary';
 
 // โปรเจกต์ Supabase ของแอป (docs/backend.md) publishable key ออกแบบมาให้ฝังในแอปได้
 export const SUPABASE_URL = 'https://vjblrglalptgdxabteqm.supabase.co';
@@ -68,24 +68,40 @@ export async function streamTripChat(messages: ChatMessage[], lang: string, onTe
   return full;
 }
 
-/** สร้างแผนด้วย generate-itinerary: ได้ความคืบหน้าเป็นรายวันระหว่างทาง และทริปเต็มจากเหตุการณ์ complete */
-export async function generateItinerary(req: GenRequest, messages: ChatMessage[], onProgress: (p: { day: number; message?: string }) => void): Promise<GenItinerary> {
-  // ส่งบทสนทนาล่าสุดไปด้วยให้ AI เห็นความต้องการทั้งหมด (สคีมารับได้ 100 ข้อความ)
-  const body = await post('generate-itinerary', { ...req, conversationMessages: messages.slice(-40) }, 30000);
-  let result: GenItinerary | null = null;
+/**
+ * สร้างแผนด้วย generate-itinerary และส่งแต่ละวันให้ onDay ทันทีที่เสร็จ ผู้ใช้จึงเห็นแผนทีละวัน
+ * Supabase ให้ฟังก์ชันทำงานได้ราว 150 วินาทีต่อครั้ง เซิร์ฟเวอร์จึงหยุดเองก่อนหมดเวลา ถ้าครั้งไหนได้ไม่ครบ
+ * (หยุดก่อน ถูกตัด หรือ AI ตอบไม่ครบ) จะขอวันที่เหลือในครั้งใหม่ พร้อมรายการที่วางแล้วไม่ให้ซ้ำ
+ * have = วันที่ได้มาแล้วจากครั้งก่อน (กดลองใหม่แล้วทำต่อจากเดิม)
+ */
+export async function generateItinerary(req: GenRequest, messages: ChatMessage[], onDay: (index: number, day: GenDay) => void, have: GenDay[] = []): Promise<GenItinerary> {
+  const total = dayCount(req.startDate, req.endDate);
+  const days = [...have];
+  let title: string | undefined;
   let failure: string | null = null;
-  const days: NonNullable<GenItinerary['days']> = [];
-  await eachLine(body, (line) => {
-    const e = genEvent(line);
-    if (!e) return;
-    if (e.type === 'progress') onProgress({ day: e.day ?? 0, message: e.dayTitle || e.message });
-    else if (e.type === 'day_complete' && e.day) days[e.dayIndex ?? days.length] = e.day;
-    else if (e.type === 'complete') result = e.itinerary;
-    else if (e.type === 'error') failure = e.error ?? 'generation failed';
-  });
-  if (result) return result;
-  // ฟังก์ชันถูกตัดก่อนจบ (เกินเวลาที่ Supabase ให้) แต่ได้บางวันมาแล้ว ใช้วันที่ได้ดีกว่าทิ้งทั้งหมด
-  const got = days.filter(Boolean);
-  if (got.length) return { destination: req.destination, startDate: req.startDate, endDate: req.endDate, days: got };
-  throw new Error(failure ?? 'generate-itinerary ended without a trip');
+  // วันมาตามลำดับ: complete ส่งวันที่ day_complete ส่งไปแล้วซ้ำอีก จึงรับเฉพาะวันถัดไป
+  const add = (i: number, d: GenDay) => { if (i === days.length && i < total) { days.push(d); onDay(i, d); } };
+  let stalls = 0;
+  while (days.length < total) {
+    const fromDay = days.length + 1, before = days.length;
+    // ส่งบทสนทนาล่าสุดไปด้วยให้ AI เห็นความต้องการทั้งหมด (สคีมารับได้ 100 ข้อความ)
+    const body = await post('generate-itinerary', {
+      ...req, conversationMessages: messages.slice(-40), ...(fromDay > 1 && { fromDay, planned: plannedText(days) }),
+    }, 30000);
+    try {
+      await eachLine(body, (line) => {
+        const e = genEvent(line);
+        if (e?.type === 'day_complete' && e.day) add(e.dayIndex ?? days.length, e.day);
+        else if (e?.type === 'complete') { title ??= e.itinerary.title; (e.itinerary.days ?? []).forEach((d, i) => add(fromDay - 1 + i, d)); }
+        else if (e?.type === 'error') failure = e.error ?? 'generation failed';
+      });
+    } catch (err) {
+      failure = (err as Error).message; // การเชื่อมต่อขาดกลางทาง: วันที่ได้แล้วยังอยู่ ขอต่อรอบหน้า
+    }
+    // ไม่ได้วันเพิ่มเลย: ลองอีกครั้งเดียว (งานอาจไปตกเครื่องของ Supabase ที่ใกล้หมดเวลา) ถ้ายังไม่ได้ก็หยุด ไม่วนไม่จบ
+    if (days.length > before) stalls = 0;
+    else if (++stalls > 1) break;
+  }
+  if (days.length < total) throw new Error(failure ?? `generate-itinerary stopped at day ${days.length} of ${total}`);
+  return { title, destination: req.destination, startDate: req.startDate, endDate: req.endDate, days };
 }

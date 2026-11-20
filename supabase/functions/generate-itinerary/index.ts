@@ -97,8 +97,13 @@ function sseEvent(type: string, data: any): string {
 // FIX #6: Skeleton cache TTL — 7 days
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
+// Supabase stops a worker ~150 s after it starts, and one worker serves several requests in a row,
+// so a request gets only what is left of that time (seen: a 30-day trip cut 85 s in on a reused worker)
+const WORKER_STARTED_AT = Date.now();
+
 // --- Main handler ---
 serve(async (req) => {
+  const startedAt = Date.now();
   // Handle preflight CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -149,20 +154,26 @@ serve(async (req) => {
       return validationErrorResponse(error as z.ZodError, corsHeaders);
     }
 
+    // A continuation (fromDay > 1) makes the rest of a trip whose first call stopped before the time limit;
+    // that first call already passed the quota checks and counts the trip
+    const fromDay = validatedData.fromDay ?? 1;
+    const isContinuation = fromDay > 1;
+
     // Check quota based on user type
     if (userId) {
       // Authenticated user: check credit quota
-      const quotaResponse = await checkQuotaMiddleware(userId, corsHeaders);
+      const quotaResponse = isContinuation ? null : await checkQuotaMiddleware(userId, corsHeaders);
       if (quotaResponse) {
         return quotaResponse;
       }
     } else if (deviceId) {
-      // Device IDs can be faked, so also cap guest trips per IP per day
-      if (!(await allow(`gen:ip:${clientIp(req)}`, 5, 86400))) {
+      // Device IDs can be faked, so also cap guest trips per IP per day (continuations have their own allowance)
+      const ip = clientIp(req);
+      if (!(await allow(isContinuation ? `gen:more:${ip}` : `gen:ip:${ip}`, isContinuation ? 20 : 5, 86400))) {
         return tooMany(corsHeaders, 'Too many trips today. Please try again tomorrow.', 86400);
       }
       // Guest user: 1 trip per device — check quota before generating
-      const guestQuotaResponse = await checkGuestGenerationQuota(deviceId, corsHeaders);
+      const guestQuotaResponse = isContinuation ? null : await checkGuestGenerationQuota(deviceId, corsHeaders);
       if (guestQuotaResponse) {
         return guestQuotaResponse; // 429 — quota exceeded
       }
@@ -172,6 +183,15 @@ serve(async (req) => {
     const startMs = new Date(validatedData.startDate).getTime();
     const endMs = new Date(validatedData.endDate).getTime();
     const totalDays = Math.max(1, Math.round((endMs - startMs) / 86400000) + 1);
+    if (fromDay > totalDays) {
+      return new Response(JSON.stringify({ error: 'fromDay is after the last day of the trip' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    // Days this call makes: the whole trip, or days fromDay..totalDays of a continuation
+    const partDays = totalDays - fromDay + 1;
+    const partStart = new Date(startMs + (fromDay - 1) * 86400000).toISOString().split('T')[0];
 
     const destinationStr = validatedData.destination;
     const tripStyle = validatedData.tripStyle || 'mixed';
@@ -194,7 +214,8 @@ serve(async (req) => {
     );
 
     let skeletonItinerary: any = null;
-    try {
+    // A continuation makes only some days, so it never reads or writes the whole-trip cache
+    if (!isContinuation) try {
       // FIX #6: Check cache TTL — only use cache entries younger than 7 days
       const { data: cached, error } = await supabase
         .from('itinerary_skeleton_cache')
@@ -343,6 +364,10 @@ serve(async (req) => {
       }
     }
 
+    const continueBlock = isContinuation
+      ? `\n\n## CONTINUATION\nDays 1-${fromDay - 1} are already planned:\n${validatedData.planned || '(list not provided)'}\nGenerate ONLY days ${fromDay}-${totalDays} (${partStart} to ${validatedData.endDate}); the "days" array starts at day ${fromDay}. Do not repeat places that are already planned.`
+      : '';
+
     const prompt = `You are an expert travel planner creating a detailed ${totalDays}-day itinerary for ${destinationStr}.
 
 Trip Details:
@@ -357,7 +382,7 @@ ${dietaryRestrictions ? `- Dietary: ${dietaryRestrictions}` : ''}
 ${mustVisit ? `- Must Visit: ${mustVisit}` : ''}
 ${mustAvoid ? `- Must Avoid: ${mustAvoid}` : ''}
 ${validatedData.specialRequirements ? `- Special Requirements: ${validatedData.specialRequirements}` : ''}
-${contextBlock}
+${contextBlock}${continueBlock}
 
 Generate a JSON itinerary with this EXACT structure:
 {
@@ -371,8 +396,8 @@ Generate a JSON itinerary with this EXACT structure:
   "budget": { "amount": <daily_budget_number>, "currency": "USD" },
   "days": [
     {
-      "day": 1,
-      "date": "${validatedData.startDate}",
+      "day": ${fromDay},
+      "date": "${partStart}",
       "title": "Day Title",
       "description": "Brief overview of the day",
       "places": [
@@ -392,7 +417,7 @@ Generate a JSON itinerary with this EXACT structure:
 }
 
 Requirements:
-1. Generate exactly ${totalDays} days with correct sequential dates starting from ${validatedData.startDate}
+1. Generate exactly ${partDays} days with correct sequential dates starting from ${partStart}
 2. Each day should have 4-5 places/activities
 3. Include mix of categories based on trip style
 4. Provide realistic lat/lng coordinates for ${destinationStr}
@@ -413,7 +438,9 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
     const FALLBACK_MODEL = 'google/gemini-3.5-flash-lite';
     // Scale max_tokens by trip size: ~2500 tokens/day for detailed itineraries
     // 3-day trip = 16K, 7-day trip = 20K, 14-day trip = 40K
-    const MAX_TOKENS = Math.min(65000, Math.max(16000, totalDays * 2800 + 8000));
+    const MAX_TOKENS = Math.min(65000, Math.max(16000, partDays * 2800 + 8000));
+    // Stop on our own before the worker's ~150 s limit (see WORKER_STARTED_AT and the day loop)
+    const TIME_BUDGET_MS = 125_000;
     // Streaming keeps connection alive, so timeouts are generous (only for initial connection)
     const PRIMARY_TIMEOUT_MS = totalDays <= 5 ? 120_000 : totalDays <= 10 ? 180_000 : 240_000;
     const FALLBACK_TIMEOUT_MS = totalDays <= 5 ? 120_000 : totalDays <= 10 ? 180_000 : 240_000;
@@ -519,13 +546,13 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
         const hydrateSingleDay = (dayJson: string, dayIndex: number): any => {
           try {
             const day = JSON.parse(dayJson);
-            const startDateObj = new Date(validatedData.startDate);
+            const startDateObj = new Date(partStart);
             const currentDate = new Date(startDateObj);
             currentDate.setDate(currentDate.getDate() + dayIndex);
             day.date = currentDate.toISOString().split('T')[0];
             (day.places || []).forEach((p: any, pIdx: number) => {
               if (!p.id) {
-                const placeId = `place-d${dayIndex}-p${pIdx}-${crypto.randomUUID().slice(0, 8)}`;
+                const placeId = `place-d${fromDay - 1 + dayIndex}-p${pIdx}-${crypto.randomUUID().slice(0, 8)}`;
                 p.id = placeId;
                 // Store for reuse in final hydrateSkeletonWithDates
                 progressivePlaceIds.set(`d${dayIndex}-p${pIdx}`, placeId);
@@ -593,9 +620,10 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
         let lastEmittedDay = 0;
         let finishReason = 'unknown';
         let sseLineBuffer = ''; // buffer for lines split across chunks
+        let stoppedEarly = false;
 
         try {
-          while (true) {
+          while (!stoppedEarly) {
             const { done, value } = await reader.read();
             if (done) break;
 
@@ -625,25 +653,26 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
               // Detect newly completed days → extract, hydrate, emit day_complete
               const completeDays = scanForNewDays(accumulated);
               while (lastEmittedDay < completeDays) {
-                const dayIndex = lastEmittedDay; // 0-based
+                const dayIndex = lastEmittedDay; // 0-based within this call
                 lastEmittedDay++;
+                const dayNo = fromDay - 1 + lastEmittedDay; // day number in the whole trip
                 const hydratedDay = hydrateSingleDay(dayObjects[dayIndex], dayIndex);
                 if (hydratedDay) {
                   const places = hydratedDay.places || [];
-                  console.log(`[generate-itinerary] Day ${lastEmittedDay} streamed: "${hydratedDay.title}", ${places.length} places`);
+                  console.log(`[generate-itinerary] Day ${dayNo} streamed: "${hydratedDay.title}", ${places.length} places`);
 
                   // Emit progress (for stepper UI)
                   await writeSSE('progress', {
-                    day: lastEmittedDay,
+                    day: dayNo,
                     totalPlaces: places.length,
                     currentPlace: hydratedDay.title || '',
-                    message: `Planning Day ${lastEmittedDay}: ${hydratedDay.title || ''}`,
+                    message: `Planning Day ${dayNo}: ${hydratedDay.title || ''}`,
                     dayTitle: hydratedDay.title || '',
                   });
 
                   // Emit day_complete with full hydrated day data (for progressive rendering)
                   await writeSSE('day_complete', {
-                    dayIndex,
+                    dayIndex: dayNo - 1,
                     day: hydratedDay,
                     totalDays,
                     destination: destinationStr,
@@ -653,10 +682,27 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
                   });
                 }
               }
+
+              // If the next day (at this request's time per day so far) would run past the worker's time budget, end this
+              // call cleanly instead of being killed mid-day; the app asks for the remaining days with fromDay
+              const now = Date.now();
+              if (lastEmittedDay > 0 && lastEmittedDay < partDays && now - WORKER_STARTED_AT + (now - startedAt) / lastEmittedDay > TIME_BUDGET_MS) {
+                stoppedEarly = true;
+                break;
+              }
             }
           }
+          if (stoppedEarly) await reader.cancel().catch(() => {}); // stops the AI from generating the rest
         } finally {
           reader.releaseLock();
+        }
+
+        if (stoppedEarly) {
+          console.log(`[generate-itinerary] Stopped after day ${fromDay - 1 + lastEmittedDay} of ${totalDays} at ${Date.now() - startedAt} ms (worker age ${Date.now() - WORKER_STARTED_AT} ms) to stay inside the time limit`);
+          // Continuations never count the trip, so its first call counts it now
+          if (!isContinuation && userId) await incrementUserUsage(userId, 'generate_itinerary', 0, undefined, { totalDays });
+          else if (!isContinuation && deviceId) await incrementGuestGenerationUsage(deviceId);
+          return; // no 'complete' event: the app sees the missing days and continues
         }
 
         // Flush remaining SSE buffer (last line without trailing newline)
@@ -738,9 +784,9 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
           }
         }
 
-        // Cache the skeleton
-        const skeleton = stripPersonalData(itinerary);
-        try {
+        // Cache the skeleton (whole trips only: a continuation holds just the remaining days)
+        if (!isContinuation) try {
+          const skeleton = stripPersonalData(itinerary);
           await supabase.from('itinerary_skeleton_cache').upsert({
             cache_key: cacheKey,
             skeleton: skeleton,
@@ -753,7 +799,7 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
         // Hydrate with actual dates
         const hydratedItinerary = hydrateSkeletonWithDates(
           itinerary,
-          validatedData.startDate,
+          partStart,
           validatedData.endDate,
           totalDays,
           destinationStr,
@@ -771,8 +817,10 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
           });
         }
 
-        // Deduct credits for authenticated users, save trip for guests
-        if (userId) {
+        // Deduct credits for authenticated users, save trip for guests (a continuation's trip was counted by its first call)
+        if (isContinuation) {
+          // nothing to count
+        } else if (userId) {
           await incrementUserUsage(userId, 'generate_itinerary', 0, undefined, { totalDays });
         } else if (deviceId) {
           await saveGuestTrip(deviceId, hydratedItinerary);

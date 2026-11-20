@@ -14,6 +14,8 @@ export type Pending = { request: GenRequest; people: number; messages: ChatMessa
 type Ctx = {
   ready: boolean; trip: AppTrip; setTrip: (t: AppTrip) => void; resetTrip: () => void;
   pending: Pending | null; setPending: (p: Pending | null) => void;
+  /** AiGo กำลังสร้างวันที่เหลือของทริปนี้ (ไม่เก็บลงเครื่อง: ปิดแอปกลางทาง วันที่ยังไม่มาเป็นวันว่าง) */
+  planning: boolean; setPlanning: (p: boolean) => void;
 };
 const TripContext = createContext<Ctx | null>(null);
 
@@ -21,6 +23,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
   const [trip, setState] = useState<AppTrip>(sample);
   const [ready, setReady] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
+  const [planning, setPlanning] = useState(false);
   useEffect(() => {
     AsyncStorage.getItem(KEY)
       .then((raw) => { if (raw) setState(JSON.parse(raw)); })
@@ -30,7 +33,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
   // เก็บเฉพาะทริปที่ AiGo สร้าง (ไม่มีรูปในเครื่องที่อ้างด้วย require) ทริปตัวอย่างอยู่ในโค้ดอยู่แล้ว
   const setTrip = (t: AppTrip) => { setState(t); AsyncStorage.setItem(KEY, JSON.stringify(t)).catch(() => {}); };
   const resetTrip = () => { setState(sample); AsyncStorage.removeItem(KEY).catch(() => {}); };
-  return <TripContext.Provider value={{ ready, trip, setTrip, resetTrip, pending, setPending }}>{children}</TripContext.Provider>;
+  return <TripContext.Provider value={{ ready, trip, setTrip, resetTrip, pending, setPending, planning, setPlanning }}>{children}</TripContext.Provider>;
 }
 
 export function useTrip() {

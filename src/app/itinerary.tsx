@@ -16,7 +16,7 @@ const MAP_H = 330;
 // แผนทริปแบบ Polarsteps: แผนที่ด้านบน แผนเป็นแผ่นซ้อนขึ้นมา จุดแวะมีเลขตรงกับหมุด มีป้ายการเดินทางระหว่างจุด และปุ่ม + ขอให้ AiGo เพิ่มที่แวะ
 export default function Itinerary() {
   const { colors, t, pick, lang } = useSettings();
-  const { trip } = useTrip();
+  const { trip, planning } = useTrip();
   const [day, setDay] = useState(0);
   const toast = useToast();
   const places = trip.days[day] ?? [];
@@ -85,13 +85,15 @@ export default function Itinerary() {
           addLabel={(i) => pick({ th: `ขอให้ AiGo เพิ่มที่แวะ${between(i)}`, en: `Ask AiGo to add a stop ${between(i)}` })}
           end={{ title: pick({ th: 'จบวัน · กลับที่พัก', en: 'End of day · back to the hotel' }), sub: trip.hotel && pick(trip.hotel) }} />
       ) : (
-        // shortcut: ทริปตัวอย่างมีข้อมูลแค่วันที่ 1, ทริปที่ AiGo สร้างมีครบทุกวัน
+        // shortcut: ทริปตัวอย่างมีข้อมูลแค่วันที่ 1; ทริปที่ AiGo สร้างมีวันว่างเฉพาะวันที่ยังสร้างไม่ถึง
         <FadeIn key={day}>
           <View style={{ alignItems: 'center', gap: space.sm, padding: space.xl, borderRadius: radius.lg, borderWidth: 2, borderStyle: 'dashed', borderColor: colors.line }}>
             <Mascot pose={poses.think} size={96} />
-            <T v="heading" style={{ textAlign: 'center' }}>{pick({ th: `${t('it.day', { n: day + 1 })} ยังว่างอยู่`, en: `${t('it.day', { n: day + 1 })} is still open` })}</T>
-            <T tone="muted" style={{ textAlign: 'center' }}>{t('common.sample')}</T>
-            <Button kind="dark" icon="spark" label={pick({ th: 'ให้ AiGo วางแผนวันนี้', en: 'Let AiGo plan this day' })} onPress={() => toast(t('toast.sent'))} style={{ marginTop: space.sm }} />
+            <T v="heading" style={{ textAlign: 'center' }}>{planning
+              ? pick({ th: `AiGo กำลังวางแผน${t('it.day', { n: day + 1 })}`, en: `AiGo is planning ${t('it.day', { n: day + 1 })}` })
+              : pick({ th: `${t('it.day', { n: day + 1 })} ยังว่างอยู่`, en: `${t('it.day', { n: day + 1 })} is still open` })}</T>
+            {trip.sample && <T tone="muted" style={{ textAlign: 'center' }}>{t('common.sample')}</T>}
+            {!planning && <Button kind="dark" icon="spark" label={pick({ th: 'ให้ AiGo วางแผนวันนี้', en: 'Let AiGo plan this day' })} onPress={() => toast(t('toast.sent'))} style={{ marginTop: space.sm }} />}
           </View>
         </FadeIn>
       )}

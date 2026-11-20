@@ -70,6 +70,9 @@ export const generateItinerarySchema = z.object({
   language: z.string().max(10).optional().nullable(),
   lang: z.string().max(10).optional().nullable(),
   tripSummary: tripSummarySchema,
+  // Continue a trip whose first days came from an earlier call (each call must finish inside the edge function time limit)
+  fromDay: z.number().int().min(1).max(60).optional(),
+  planned: z.string().max(4000).optional().nullable(),
 });
 
 // Allowed OpenRouter model IDs for trip chat
