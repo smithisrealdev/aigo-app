@@ -175,7 +175,10 @@ export function AiSays({ children, pose }: { children: ReactNode; pose?: ImageSo
     <Card tone="ai" style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
       {pose && <Image source={pose} style={{ width: 64, height: 64 }} contentFit="contain" accessible={false} />}
       <View style={{ flex: 1, gap: space.xs }}>
-        <T v="smallBold" tone="pastelMuted">AiGo</T>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+          {!pose && <View style={{ width: 28, height: 28, borderRadius: 14, overflow: 'hidden', alignItems: 'center', backgroundColor: '#FFFFFF' }}><Image source={require('@/assets/character/aigo-wave.svg')} style={{ width: 40, height: 40 }} contentFit="contain" accessible={false} /></View>}
+          <T v="smallBold" tone="pastelMuted">AiGo</T>
+        </View>
         <T tone="pastel">{children}</T>
       </View>
     </Card>

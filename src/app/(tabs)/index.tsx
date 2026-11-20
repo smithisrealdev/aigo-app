@@ -48,6 +48,19 @@ export default function Home() {
               <Button label={t('home.go')} icon="next" big onPress={() => start(wish || pick(POPULAR[1]))} style={{ flex: 1 }} />
             </View>
           </Card>
+          <T v="smallBold" tone="muted">{pick({ th: 'AiGo กำลังทำงานให้คุณ', en: 'AiGo is working for you' })}</T>
+          <View>
+            <Row onPress={() => router.push('/approvals')} label={pick({ th: 'รอคุณอนุมัติ 2 รายการ', en: '2 items waiting for you' })}>
+              <Image source={photos.skyline} style={{ width: 44, height: 44, borderRadius: radius.sm }} contentFit="cover" accessible={false} />
+              <View style={{ flex: 1 }}><T v="bodyBold">{pick({ th: 'รอคุณอนุมัติ 2 รายการ', en: '2 items waiting for you' })}</T><T v="small" tone="muted">{pick({ th: 'โอซาก้า 5 วัน · เที่ยวบินและที่พัก', en: 'Osaka, 5 days · flight and hotel' })}</T></View>
+              <Icon name="next" color={colors.muted} />
+            </Row>
+            <Row last onPress={() => router.push('/work')} label={pick({ th: 'เฝ้าราคาเที่ยวบิน', en: 'Watching flight prices' })}>
+              <View style={{ width: 44, height: 44, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceSoft }}><Icon name="spark" color={colors.ink} /></View>
+              <View style={{ flex: 1 }}><T v="bodyBold">{pick({ th: 'เฝ้าราคาเที่ยวบิน BKK ⇄ KIX', en: 'Watching BKK ⇄ KIX fares' })}</T><T v="small" tone="muted">{pick({ th: '฿19,600 · ยังไม่ลด จะแจ้งถ้าลดเกิน ฿1,000', en: '฿19,600 · no drop yet. I will alert you past ฿1,000' })}</T></View>
+              <Icon name="next" color={colors.muted} />
+            </Row>
+          </View>
           <T v="smallBold" tone="muted">{t('home.popular')}</T>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm }} style={{ marginHorizontal: -space.lg }}>
             <View style={{ width: space.sm }} />

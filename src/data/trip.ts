@@ -55,6 +55,13 @@ export const trip = {
   ] satisfies Place[]],
 };
 
+/** การเดินทางไปที่ถัดไป (เวลาโดยประมาณ) ใช้คั่นระหว่างสถานที่ในแผนรายวัน */
+export const legs: Record<string, L> = {
+  castle: { th: 'รถไฟใต้ดิน ~25 นาที', en: 'Subway, ~25 min' },
+  kuromon: { th: 'เดิน ~12 นาที', en: 'Walk, ~12 min' },
+  shinsaibashi: { th: 'เดิน ~6 นาที', en: 'Walk, ~6 min' },
+};
+
 export const allPlaces = (): Place[] => trip.days.flat();
 
 /** งานที่ AiGo ทำตามลำดับหลังผู้ใช้กด "ให้ AiGo จัดการทั้งหมด" */

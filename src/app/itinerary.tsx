@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { AskBar, Card, Chip, IconButton, Row, Screen, T, Thumb, useToast } from '@/components/ui';
-import { photos, trip } from '@/data/trip';
+import { legs, photos, trip } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
 import { radius, space } from '@/theme/tokens';
 
@@ -34,14 +34,23 @@ export default function Itinerary() {
       {/* shortcut: มีข้อมูลตัวอย่างแค่วันที่ 1, วันอื่นรอข้อมูลจาก generate-itinerary */}
       {places.length === 0 && <T tone="muted">{t('common.sample')}</T>}
       <View>{places.map((p, i) => (
-        <Row key={p.id} onPress={() => router.push({ pathname: '/place/[id]', params: { id: p.id } })} label={pick(p.name)} last={i === places.length - 1}>
-          <T v="bodyBold" style={{ width: 48, fontVariant: ['tabular-nums'] }}>{p.time}</T>
-          <Thumb source={p.photo} size={72} />
-          <View style={{ flex: 1 }}>
-            <T v="subheading">{pick(p.name)}</T>
-            <T v="small" tone={p.checked ? 'success' : 'muted'}>{p.checked ? t('it.open') : t('it.unchecked')}</T>
-          </View>
-        </Row>
+        <View key={p.id} style={{ borderBottomWidth: i === places.length - 1 ? 0 : 1, borderBottomColor: colors.line }}>
+          <Row onPress={() => router.push({ pathname: '/place/[id]', params: { id: p.id } })} label={`${i + 1}. ${pick(p.name)}`} last>
+            <T v="bodyBold" style={{ width: 48, fontVariant: ['tabular-nums'] }}>{p.time}</T>
+            <View>
+              <Thumb source={p.photo} size={72} />
+              {/* เลขตรงกับหมุดบนแผนที่ */}
+              <View style={{ position: 'absolute', top: -6, left: -6, width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, borderWidth: 2, borderColor: colors.bg }}>
+                <T v="smallBold" tone="onPrimary">{i + 1}</T>
+              </View>
+            </View>
+            <View style={{ flex: 1 }}>
+              <T v="subheading">{pick(p.name)}</T>
+              <T v="small" tone={p.checked ? 'success' : 'muted'}>{p.checked ? t('it.open') : t('it.unchecked')}</T>
+            </View>
+          </Row>
+          {legs[p.id] && <T v="small" tone="muted" style={{ paddingLeft: 48 + space.md, paddingBottom: space.sm }}>↓ {pick(legs[p.id])}</T>}
+        </View>
       ))}</View>
     </Screen>
   );
