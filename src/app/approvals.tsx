@@ -12,7 +12,7 @@ import { useSettings } from '@/lib/settings';
 import { radius, space, vivid } from '@/theme/tokens';
 
 export default function Approvals() {
-  const { colors, t, pick, autoEdit } = useSettings();
+  const { colors, t, pick, autoEdit, signedIn } = useSettings();
   const [approved, setApproved] = useState<string[]>([]);
   const [undone, setUndone] = useState<string[]>([]);
   const [opening, setOpening] = useState<string | null>(null);
@@ -21,6 +21,8 @@ export default function Approvals() {
   const pending = offers.filter((o) => decide(o, autoEdit) === 'approve' && !approved.includes(o.id));
   // จ่ายเงินไม่ทำแบบ optimistic: ปุ่มหมุนจนหน้าจองของพันธมิตรเปิดได้จริง แล้วค่อยย้ายรายการออก
   const approve = async (id: string, url: string) => {
+    // จ่ายเงินต้องมีบัญชีก่อน (R14) กลับมาจากหน้าสมัครแล้วกดอนุมัติต่อได้เลย
+    if (!signedIn) { router.push('/save'); return; }
     setOpening(id);
     try {
       await WebBrowser.openBrowserAsync(url);

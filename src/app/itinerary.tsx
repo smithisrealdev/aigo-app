@@ -15,7 +15,10 @@ export default function Itinerary() {
   const checked = places.filter((p) => p.checked).length;
   return (
     <Screen tint={colors.header.trips} title={pick(trip.title)} subtitle={`${pick(trip.dates)} · ${trip.people} คน`} onBack={() => router.back()}
-      right={<IconButton icon="share" label="แชร์ทริป" onPress={() => toast(t('toast.share'))} onPastelBg />}
+      right={<View style={{ flexDirection: 'row', gap: space.sm }}>
+        <IconButton icon="pin" label={pick({ th: 'ดูบนแผนที่', en: 'View on map' })} onPress={() => router.push('/map')} onPastelBg />
+        <IconButton icon="share" label={pick({ th: 'แชร์ทริป', en: 'Share trip' })} onPress={() => router.push('/share')} onPastelBg />
+      </View>}
       footer={<AskBar placeholder={t('it.tell')} onSend={() => toast(t('toast.sent'))} />}>
       <View style={{ flexDirection: 'row', gap: space.sm }}>
         {[0, 1, 2, 3, 4].map((d) => <Chip key={d} label={d === 0 ? t('it.day', { n: 1 }) : String(d + 1)} selected={d === day} a11y={t('it.dayA11y', { n: d + 1 })} onPress={() => setDay(d)} />)}

@@ -5,8 +5,8 @@ import { useColorScheme } from 'react-native';
 import { translate, type Key, type L, type Lang } from '@/lib/i18n';
 import { dark, light, type Palette } from '@/theme/tokens';
 
-type Saved = { lang: Lang; theme: 'system' | 'light' | 'dark'; autoEdit: boolean };
-const DEFAULTS: Saved = { lang: 'th', theme: 'system', autoEdit: true };
+type Saved = { lang: Lang; theme: 'system' | 'light' | 'dark'; autoEdit: boolean; signedIn: boolean };
+const DEFAULTS: Saved = { lang: 'th', theme: 'system', autoEdit: true, signedIn: false };
 const KEY = 'aigo.settings.v1';
 
 type Ctx = Saved & {
