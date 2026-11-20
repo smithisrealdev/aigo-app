@@ -17,6 +17,12 @@ publishable key (ใส่ในแอปได้): `sb_publishable_ThF183z7kk5
 - ปิดช่องโหว่ที่ติดมาจากฐานข้อมูลเดิม: ผู้ไม่ได้ล็อกอินเรียก `update_plan_credits`, `deduct_credits`, `reset_monthly_credits`, `reward_*` และฟังก์ชัน SECURITY DEFINER อื่นผ่าน `/rest/v1/rpc` ได้ จึงให้เรียกได้เฉพาะ service role (ฟังก์ชันเกี่ยวกับทริปให้ผู้ที่ล็อกอินเรียกได้) ตรวจแล้วว่า anon โดนปฏิเสธ
 - deploy edge function `trip-chat` และ `generate-itinerary` (โค้ดเดียวกับเว็บ, verify_jwt ปิดตาม config เดิม เพราะตรวจ token ในโค้ดเอง)
 
+## แอปเรียกอะไรแล้วบ้าง
+
+- หน้าแชต (`src/app/chat.tsx`) ส่งบทสนทนาให้ `trip-chat` แล้วอ่านคำตอบแบบสตรีมผ่าน `src/lib/backend.ts` (header `apikey` = publishable key, `x-device-id` = เลขเครื่องโหมดผู้เยี่ยมชม)
+  แยกปุ่มตอบด่วน `[QUICK_REPLIES]` และสรุปทริป `[TRIP_SUMMARY]` ด้วย `src/lib/chat.ts` ถ้าเรียกครั้งแรกไม่สำเร็จ (เช่นยังไม่มี key) จะใช้บทสนทนาตัวอย่างและบอกว่าเป็นตัวอย่าง
+- หน้างานของ AiGo แผนรายวัน และราคา ยังเป็นข้อมูลตัวอย่าง ขั้นต่อไปคือเรียก `generate-itinerary` ด้วย `[TRIP_SUMMARY]` จากแชต
+
 ## ยังขาด
 
 1. **OPENROUTER_API_KEY**: ใส่ที่ Supabase Dashboard → Edge Functions → Secrets ตอนนี้ทั้งสองฟังก์ชันตอบ 500 เพราะไม่มี key

@@ -2,7 +2,7 @@ import { BlurView } from 'expo-blur';
 import { Image, type ImageSource } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { usePathname } from 'expo-router';
-import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ComponentRef, type ReactNode } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextProps, type TextStyle, type ViewStyle } from 'react-native';
 import Animated, { Easing, FadeInUp, LinearTransition, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withSequence, withSpring, withTiming, ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -422,10 +422,14 @@ export function CurveHero({ color, children, height = 260 }: { color: string; ch
  * top = บล็อกสีโค้ง (CurveHero) แทนรูป
  * footer ลอยเหนือเนื้อหา tabbed = จอที่มีแถบเมนูลอยด้านล่าง
  */
-export function Screen({ title, subtitle, onBack, left, right, footer, hero, heroHeight = 300, heroContent, top, mascot, children, scroll = true, tabbed = false }: {
+export function Screen({ title, subtitle, onBack, left, right, footer, hero, heroHeight = 300, heroContent, top, mascot, children, scroll = true, tabbed = false, follow = false }: {
   title?: string; subtitle?: string; onBack?: () => void; left?: ReactNode; right?: ReactNode; footer?: ReactNode; hero?: ImageSource; heroHeight?: number; heroContent?: ReactNode; top?: ReactNode;
   mascot?: ImageSource; children: ReactNode; scroll?: boolean; tabbed?: boolean;
+  /** แบบแชต: เนื้อหาใหม่มาแล้วเลื่อนลงล่างสุดให้เอง เฉพาะตอนที่ผู้ใช้อยู่ใกล้ล่างสุดอยู่แล้ว (เลื่อนขึ้นไปอ่านอยู่จะไม่ดึงลง) */
+  follow?: boolean;
 }) {
+  const sv = useRef<ComponentRef<typeof ScrollView>>(null);
+  const atEnd = useRef(true);
   const { colors, t } = useSettings();
   const insets = useSafeAreaInsets();
   const tabSpace = tabbed ? 88 : 0;
@@ -461,7 +465,14 @@ export function Screen({ title, subtitle, onBack, left, right, footer, hero, her
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       {!overlay && bar}
-      {scroll ? <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>{body}</ScrollView> : <View style={{ flex: 1 }}>{body}</View>}
+      {scroll ? (
+        <ScrollView ref={sv} style={{ flex: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
+          scrollEventThrottle={follow ? 100 : undefined}
+          onScroll={follow ? (e) => { const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent; atEnd.current = contentSize.height - contentOffset.y - layoutMeasurement.height < 160; } : undefined}
+          onContentSizeChange={follow ? () => { if (atEnd.current) sv.current?.scrollToEnd({ animated: true }); } : undefined}>
+          {body}
+        </ScrollView>
+      ) : <View style={{ flex: 1 }}>{body}</View>}
       {overlay && <View style={{ position: 'absolute', top: 0, left: 0, right: 0 }} pointerEvents="box-none">{bar}</View>}
       {footer && (
         <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: space.xl }} pointerEvents="box-none">
