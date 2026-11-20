@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetch } from 'expo/fetch';
 
 import { sseDelta } from '@/lib/chat';
-import { dayCount, genEvent, plannedText, type GenDay, type GenItinerary, type GenRequest } from '@/lib/itinerary';
+import { addDays, dayCount, genEvent, plannedText, type GenDay, type GenItinerary, type GenRequest } from '@/lib/itinerary';
 
 // โปรเจกต์ Supabase ของแอป (docs/backend.md) publishable key ออกแบบมาให้ฝังในแอปได้
 export const SUPABASE_URL = 'https://vjblrglalptgdxabteqm.supabase.co';
@@ -118,4 +118,24 @@ export async function generateItinerary(req: GenRequest, messages: ChatMessage[]
   }
   if (days.length < total) throw new Error(failure ?? `generate-itinerary stopped at day ${days.length} of ${total}`);
   return { title, destination: req.destination, startDate: req.startDate, endDate: req.endDate, days };
+}
+
+/**
+ * แก้แผนวันเดียวตามที่ผู้ใช้บอก (R13) ด้วย generate-itinerary แบบทำต่อ: ให้วันก่อนหน้าเป็นวันที่วางแล้ว จึงได้แผนวันเดียว
+ * และไม่นับเป็นทริปใหม่ (การทำต่อมีโควตาของตัวเอง) planned = ที่แวะของวันอื่นในทริป ไม่ให้ซ้ำ
+ */
+export async function replanDay(req: GenRequest, date: string, wish: string, planned: GenDay[], signal?: AbortSignal): Promise<GenDay> {
+  const body = await post('generate-itinerary', {
+    ...req, startDate: addDays(date, -1), endDate: date, fromDay: 2, planned: plannedText(planned), specialRequirements: wish.slice(0, 1000),
+  }, 30000, signal);
+  let day: GenDay | undefined;
+  let failure: string | null = null;
+  await eachLine(body, (line) => {
+    const e = genEvent(line);
+    if (e?.type === 'day_complete' && e.day) day ??= e.day;
+    else if (e?.type === 'complete') day ??= e.itinerary.days?.[0];
+    else if (e?.type === 'error') failure = e.error ?? 'replan failed';
+  });
+  if (!day?.places?.length) throw new Error(failure ?? 'replan returned no places');
+  return day;
 }
