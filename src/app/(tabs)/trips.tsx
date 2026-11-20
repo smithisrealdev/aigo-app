@@ -1,10 +1,14 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/icon';
-import { AiSays, ArtCard, Badge, Button, Card, FadeIn, IconButton, PhotoCard, Row, Screen, Section, Stamp, T } from '@/components/ui';
+import { AiSays, ArtCard, Badge, Button, Card, FadeIn, IconButton, PhotoCard, Row, Screen, Section, Stamp, StatusDot, T } from '@/components/ui';
 import { art } from '@/data/trip';
+import { askAigo } from '@/lib/ask';
 import type { L } from '@/lib/i18n';
+import type { AppTrip } from '@/lib/itinerary';
 import { usePhotos } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { daysUntil, useTrip } from '@/lib/tripStore';
@@ -57,6 +61,7 @@ export default function Trips() {
             : pick({ th: 'แผนเที่ยวพร้อมแล้ว เปิดดูได้แม้ไม่มีเน็ต', en: 'Your plan is ready and works offline.' })}</AiSays>
           <Button label={t('trips.open')} icon="next" onPress={() => router.push('/itinerary')} />
         </FadeIn>
+        <FadeIn index={2}><Checklist trip={trip} /></FadeIn>
         <FadeIn index={2}>
           <ArtCard tone="lilac" art={art.plan} title={t('trips.new')} body={pick({ th: 'บอกที่อยากไป AiGo จัดให้ครบ', en: 'Say where, AiGo sorts out the rest' })} onPress={() => router.push('/paywall')} />
         </FadeIn>
@@ -93,5 +98,49 @@ export default function Trips() {
         </Section>
       </FadeIn>}
     </Screen>
+  );
+}
+
+// เช็กลิสต์ก่อนเดินทาง (R24) รวมข้อเฉพาะคนไทย ติ๊กแล้วจำไว้ในเครื่องแยกตามทริป
+const CHECKS: { id: string; label: (country: string) => L }[] = [
+  { id: 'passport', label: () => ({ th: 'พาสปอร์ตเหลืออายุอย่างน้อย 6 เดือนนับจากวันเดินทาง', en: 'Passport valid for at least 6 months from departure' }) },
+  { id: 'visa', label: (c) => ({ th: `เช็กวีซ่า ${c} สำหรับพาสปอร์ตไทย`, en: `Check ${c} visa rules for Thai passports` }) },
+  { id: 'flight', label: () => ({ th: 'จองเที่ยวบินไปกลับ', en: 'Book return flights' }) },
+  { id: 'hotel', label: () => ({ th: 'จองที่พักครบทุกคืน', en: 'Book a place for every night' }) },
+  { id: 'insurance', label: () => ({ th: 'ทำประกันการเดินทาง', en: 'Get travel insurance' }) },
+  { id: 'sim', label: () => ({ th: 'ซิมหรือ eSIM สำหรับต่างประเทศ', en: 'SIM or eSIM for abroad' }) },
+  { id: 'money', label: () => ({ th: 'เงินสดหรือบัตรที่ใช้ต่างประเทศได้', en: 'Cash or a card that works abroad' }) },
+];
+
+function Checklist({ trip }: { trip: AppTrip }) {
+  const { t, pick, lang } = useSettings();
+  const key = `aigo.check.${trip.id}`;
+  const country = trip.destination.en.split(',').pop()?.trim() || trip.destination.en;
+  const [done, setDone] = useState<string[]>([]);
+  useEffect(() => {
+    AsyncStorage.getItem(key).then((v) => setDone(v ? JSON.parse(v) : [])).catch(() => {});
+  }, [key]);
+  const toggle = (id: string) => {
+    const next = done.includes(id) ? done.filter((x) => x !== id) : [...done, id];
+    setDone(next);
+    AsyncStorage.setItem(key, JSON.stringify(next)).catch(() => {});
+  };
+  return (
+    <Section title={t('trips.checklist', { n: done.length, total: CHECKS.length })}>
+      <Card style={{ paddingVertical: space.xs }}>
+        {CHECKS.map((c, i) => {
+          const on = done.includes(c.id);
+          return (
+            <Row key={c.id} last={i === CHECKS.length - 1} onPress={() => toggle(c.id)}
+              label={`${pick(c.label(country))}, ${on ? pick({ th: 'เสร็จแล้ว', en: 'done' }) : pick({ th: 'ยังไม่เสร็จ', en: 'not done' })}`}>
+              <StatusDot state={on ? 'done' : 'wait'} />
+              <T style={{ flex: 1 }} tone={on ? 'muted' : 'ink'}>{pick(c.label(country))}</T>
+            </Row>
+          );
+        })}
+      </Card>
+      <Button kind="secondary" label={pick({ th: `ถาม AiGo เรื่องวีซ่า ${country}`, en: `Ask AiGo about ${country} visas` })}
+        onPress={() => askAigo(pick({ th: `พาสปอร์ตไทยต้องใช้วีซ่าไป ${country} ไหม ต้องเตรียมอะไรบ้าง`, en: `Do Thai passport holders need a visa for ${country}? What should I prepare?` }), trip, lang)} />
+    </Section>
   );
 }
