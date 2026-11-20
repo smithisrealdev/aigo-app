@@ -20,13 +20,13 @@ const PREVIEWS: { href: '/itinerary' | '/today' | '/disruption' | '/shared/demo'
 
 export default function Trips() {
   const { colors, t, pick } = useSettings();
-  const { trip } = useTrip();
+  const { trip, trips, openTrip } = useTrip();
   const places = trip.days.flat().length;
   const away = daysUntil(trip.startDate);
   // ทริปที่ AiGo สร้างไม่มีรูปปก ใช้รูปของเมืองปลายทาง
   const cover = usePhotos(trip.cover ? [] : [{ name: trip.destination.en }]);
   return (
-    <Screen tabbed title={t('trips.title')} subtitle={t('trips.sub', { n: trip.sample ? 0 : 1 })}
+    <Screen tabbed title={t('trips.title')} subtitle={t('trips.sub', { n: trips.length })}
       right={<IconButton icon="user" label={pick({ th: 'บัญชีของฉัน', en: 'My account' })} onPress={() => router.push('/account')} />}>
       {trip.sample ? (
         <FadeIn style={{ gap: space.md }}>
@@ -60,6 +60,23 @@ export default function Trips() {
         <FadeIn index={2}>
           <ArtCard tone="lilac" art={art.plan} title={t('trips.new')} body={pick({ th: 'บอกที่อยากไป AiGo จัดให้ครบ', en: 'Say where, AiGo sorts out the rest' })} onPress={() => router.push('/paywall')} />
         </FadeIn>
+        {trips.length > 1 && (
+          <FadeIn index={3}>
+            <Section title={pick({ th: 'ทริปอื่นของคุณ', en: 'Your other trips' })}>
+              <Card style={{ paddingVertical: space.xs }}>
+                {trips.slice(1).map((x, i, rest) => (
+                  <Row key={x.id} last={i === rest.length - 1} onPress={() => openTrip(x.id)} label={`${pick(x.title)}, ${pick(x.dates)}`}>
+                    <View style={{ flex: 1 }}>
+                      <T v="bodyBold">{pick(x.title)}</T>
+                      <T v="small" tone="muted">{pick(x.dates)}</T>
+                    </View>
+                    <Icon name="next" color={colors.muted} />
+                  </Row>
+                ))}
+              </Card>
+            </Section>
+          </FadeIn>
+        )}
       </>}
 
       {trip.sample && <FadeIn index={3}>

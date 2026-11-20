@@ -40,10 +40,10 @@ export default function Work() {
     setPlanning(true);
     return generateItinerary(j.request, j.messages, (i, d) => {
       got.current[i] = d;
-      setTrip({ ...toAppTrip({ days: got.current }, j.request, j.people), bookings: j.cards });
+      setTrip({ ...toAppTrip({ days: got.current }, j.request, j.people), id: j.id, bookings: j.cards });
       setReady(got.current.length);
     }, got.current)
-      .then((g) => { setTrip({ ...toAppTrip(g, j.request, j.people), bookings: j.cards }); setGen({ state: 'done' }); })
+      .then((g) => { setTrip({ ...toAppTrip(g, j.request, j.people), id: j.id, bookings: j.cards }); setGen({ state: 'done' }); })
       .catch((e: Error) => setGen({ state: 'fail', quota: / 429$/.test(e.message) }))
       .finally(() => setPlanning(false));
   }, [setTrip, setPlanning]);

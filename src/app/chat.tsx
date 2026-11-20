@@ -65,11 +65,13 @@ export default function Chat() {
   const go = () => {
     const req = reply?.summary && requestFromSummary(reply.summary, lang, new Date().toISOString().slice(0, 10));
     const picks = [...parsed].reverse().find((r) => r?.cards.some((c) => c.kind !== 'place'))?.cards ?? [];
-    if (req) setPending({ request: req, people: peopleOf(reply?.summary?.travelers), messages: msgs, cards: picks });
+    if (!req) { say(pick({ th: 'ช่วยสรุปทริปให้หน่อย', en: 'Please sum up my trip' })); return; }
+    // ทริปเดิม (ที่หมายและวันเดียวกัน) ที่วางใหม่จะแทนของเก่า ทริปอื่นยังอยู่
+    setPending({ id: `trip-${req.destination}-${req.startDate}-${req.endDate}`, request: req, people: peopleOf(reply?.summary?.travelers), messages: msgs, cards: picks });
     router.replace('/work');
   };
   return (
-    <Screen follow title={t('chat.title')} subtitle={t('chat.sub')} onBack={() => router.back()}
+    <Screen follow title={t('chat.title')} subtitle={about ? pick({ th: 'ถามเรื่องทริปของคุณ', en: 'About your trip' }) : t('chat.sub')} onBack={() => router.back()}
       footer={<AskBar placeholder={t('chat.placeholder')} onSend={say} />}>
       <>
         {msgs.map((m, i) => {

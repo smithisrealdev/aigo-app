@@ -23,7 +23,7 @@ function Group({ title, children, index }: { title: string; children: ReactNode;
 export default function Account() {
   const { colors, pick, lang, theme, autoEdit, signedIn, set } = useSettings();
   const toast = useToast();
-  const { trip, resetTrip } = useTrip();
+  const { trip, trips, removeTrip } = useTrip();
   const [confirmClear, setConfirmClear] = useState(false);
   return (
     <Screen title={pick({ th: 'บัญชีของฉัน', en: 'My account' })} subtitle={signedIn ? pick({ th: 'เข้าสู่ระบบแล้ว', en: 'Signed in' }) : pick({ th: 'ยังไม่ได้เข้าสู่ระบบ', en: 'Not signed in' })} onBack={() => router.back()}>
@@ -56,13 +56,15 @@ export default function Account() {
       {!trip.sample && (
         <Group index={2} title={pick({ th: 'ทริป', en: 'Trip' })}>
           {/* ลบแล้วสร้างใหม่ไม่ได้ทันที (ผู้เยี่ยมชมได้ทริปฟรีสัปดาห์ละ 1) จึงให้ยืนยันด้วยชื่อทริปก่อน */}
-          <Row last onPress={confirmClear ? undefined : () => setConfirmClear(true)} label={pick({ th: 'ล้างทริปที่ AiGo สร้าง', en: 'Clear the trip AiGo made' })}>
+          <Row last onPress={confirmClear ? undefined : () => setConfirmClear(true)} label={pick({ th: 'ลบทริปนี้', en: 'Delete this trip' })}>
             <View style={{ flex: 1, gap: space.sm }}>
-              <T>{pick({ th: 'ล้างทริปที่ AiGo สร้าง', en: 'Clear the trip AiGo made' })}</T>
-              <T v="small" tone="muted">{pick({ th: `${pick(trip.title)} จะถูกลบจากเครื่องนี้ แล้วกลับไปใช้ทริปตัวอย่าง`, en: `${pick(trip.title)} is removed from this phone and the sample trip comes back` })}</T>
+              <T>{pick({ th: 'ลบทริปนี้', en: 'Delete this trip' })}</T>
+              <T v="small" tone="muted">{trips.length > 1
+                ? pick({ th: `${pick(trip.title)} จะถูกลบจากเครื่องนี้ ทริปอื่นยังอยู่`, en: `${pick(trip.title)} is removed from this phone. Your other trips stay` })
+                : pick({ th: `${pick(trip.title)} จะถูกลบจากเครื่องนี้`, en: `${pick(trip.title)} is removed from this phone` })}</T>
               {confirmClear && (
                 <View style={{ flexDirection: 'row', gap: space.sm }}>
-                  <Button kind="dark" label={pick({ th: `ลบ ${pick(trip.title)}`, en: `Delete ${pick(trip.title)}` })} onPress={() => { resetTrip(); setConfirmClear(false); toast(pick({ th: 'กลับไปใช้ทริปตัวอย่างแล้ว', en: 'Back to the sample trip' })); }} style={{ flex: 1, minHeight: 44 }} />
+                  <Button kind="dark" label={pick({ th: `ลบ ${pick(trip.title)}`, en: `Delete ${pick(trip.title)}` })} onPress={() => { removeTrip(); setConfirmClear(false); toast(pick({ th: 'ลบทริปแล้ว', en: 'Trip deleted' })); }} style={{ flex: 1, minHeight: 44 }} />
                   <Button kind="secondary" label={pick({ th: 'ยกเลิก', en: 'Cancel' })} onPress={() => setConfirmClear(false)} style={{ minHeight: 44 }} />
                 </View>
               )}
