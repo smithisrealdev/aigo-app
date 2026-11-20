@@ -59,7 +59,7 @@ No clear gap was found for "an AI that writes an itinerary". That job is now fre
 
 Three narrower openings, each needing proof:
 
-- **A plan you can trust.** The best-documented complaint is wrong hours and closed or invented places. AiGo's backend already has venue and opening-hours checks and weather replanning. Nothing found shows a competitor leading with verification. Unproven that AiGo's checks are better; this needs a side-by-side test.
+- **A plan you can trust.** The best-documented complaint is wrong hours and closed or invented places. AiGo's web backend fetches opening hours (`place-details`) and has weather replanning, but does not yet check whether a place is still in business or compare hours with the planned time; that check has to be built. Nothing found shows a competitor leading with verification. This needs a side-by-side test.
 - **Pay for a trip, not a year.** Complaints about yearly plans and cancelling suggest a one-off per-trip price could be an advantage. AiGo's credits are closer to this than a subscription, but the current ladder costs more per year than both paid rivals.
 - **Thai-first, going abroad.** No stand-alone AI planner was found that is built in Thai for Thais travelling abroad; the TAT app is domestic only. But Trip.com's assistant supports Thai and general chatbots speak Thai, so language alone is not a gap. The gap would have to be Thai-specific content: visa rules for Thai passports, Thai payment, budgets in baht. Not verified.
 
