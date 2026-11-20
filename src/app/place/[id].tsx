@@ -1,11 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Linking, View } from 'react-native';
+import { Linking, Platform, View } from 'react-native';
 
 import { Icon } from '@/components/icon';
 import { AiSays, Button, Card, Chip, FadeIn, PriceTag, Row, Screen, Section, T } from '@/components/ui';
 import { baht } from '@/data/trip';
 import { askAigo } from '@/lib/ask';
 import { NO_PRICE } from '@/lib/itinerary';
+import { navLink } from '@/lib/links';
 import { usePhotos } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
@@ -22,11 +23,9 @@ export default function Place() {
   const near = trip.destination.en;
   const photo = usePhotos(p && !p.photo ? [{ name: p.name.en, near }] : []);
   if (!p) return <Screen title={t('common.sample')} onBack={() => router.back()}><T>{id}</T></Screen>;
-  // ไม่มีพิกัด (AI ไม่ได้ให้มา) ค้นหาด้วยชื่อแทน
-  const query = p.lat || p.lon ? `${p.lat},${p.lon}` : encodeURIComponent(pick(p.name));
   return (
     <Screen hero={p.photo ?? photo({ name: p.name.en, near })} heroHeight={340} title={pick(p.name)} subtitle={[t('it.day', { n: day + 1 }), p.time].filter(Boolean).join(' · ')} onBack={() => router.back()}
-      footer={<Button label={t('place.navigate')} icon="pin" big onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`)} />}>
+      footer={<Button label={t('place.navigate')} icon="pin" big onPress={() => Linking.openURL(navLink({ name: p.name.en, lat: p.lat, lon: p.lon }, Platform.OS))} />}>
       {!p.checked && (
         <FadeIn index={1}>
           <Card>

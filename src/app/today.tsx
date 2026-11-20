@@ -1,12 +1,13 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Linking, View } from 'react-native';
+import { Linking, Platform, View } from 'react-native';
 
 import { AiSays, AskBar, Badge, Button, FadeIn, PhotoCard, RouteList, Screen, Segmented, T, tap, useToast } from '@/components/ui';
 import { photos, poses } from '@/data/trip';
 import { askAigo } from '@/lib/ask';
 import { shortDate } from '@/lib/chat';
 import { addDays, type Place } from '@/lib/itinerary';
+import { navLink } from '@/lib/links';
 import { usePhotos } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
@@ -36,7 +37,7 @@ function TripToday() {
   const rest = next ? places.slice(at + 1) : [];
   const near = trip.destination.en;
   const photo = usePhotos(places.filter((p) => !p.photo).map((p) => ({ name: p.name.en, near })));
-  const navigate = (p: Place) => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${p.lat || p.lon ? `${p.lat},${p.lon}` : encodeURIComponent(p.name.en)}`);
+  const navigate = (p: Place) => Linking.openURL(navLink({ name: p.name.en, lat: p.lat, lon: p.lon }, Platform.OS));
   const note = idx < 0
     ? pick({ th: `อีก ${-idx} วันถึงวันเดินทาง ระหว่างเที่ยวหน้านี้จะบอกที่ถัดไปให้ทุกวัน ตอนนี้ดูวันแรกไว้ก่อนได้`, en: `${-idx} days to go. During the trip this page shows your next stop each day. Here is day 1 for now.` })
     : !during ? pick({ th: 'ทริปนี้จบแล้ว นี่คือวันสุดท้ายของแผน', en: 'This trip is over. Here is its last day.' })

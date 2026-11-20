@@ -1,11 +1,12 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { Button, Chip, FadeIn, lift, Screen, SketchMap, StopCard, T } from '@/components/ui';
 import { mapPins, photos } from '@/data/trip';
+import { navLink } from '@/lib/links';
 import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
 import { fonts, radius, space } from '@/theme/tokens';
@@ -20,10 +21,9 @@ export default function MapScreen() {
   // ทริปตัวอย่างมีภาพแผนที่จริงของวันที่ 1 ทริปที่ AiGo สร้างใช้แผนที่ร่างจากพิกัด
   const real = trip.sample && places.every((x) => mapPins[x.id]);
   const route = real ? places.map((x, i) => `${i ? 'L' : 'M'}${mapPins[x.id][0] * 100} ${mapPins[x.id][1] * 100}`).join(' ') : '';
-  const query = p.lat || p.lon ? `${p.lat},${p.lon}` : encodeURIComponent(pick(p.name));
   return (
     <Screen title={pick({ th: 'แผนที่ วันที่ 1', en: 'Map, day 1' })} subtitle={pick({ th: `${places.length} ที่`, en: `${places.length} stops` })} onBack={() => router.back()}
-      footer={<Button label={t('place.navigate')} icon="pin" big onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`)} />}>
+      footer={<Button label={t('place.navigate')} icon="pin" big onPress={() => Linking.openURL(navLink({ name: p.name.en, lat: p.lat, lon: p.lon }, Platform.OS))} />}>
       {/* shortcut: ภาพแผนที่นิ่งจาก OpenStreetMap, เปลี่ยนเป็น react-native-maps หรือ Google Maps เมื่อต่อข้อมูลจริง */}
       <FadeIn>
         <View style={[{ width: '100%', aspectRatio: 1, borderRadius: radius.xl, overflow: 'hidden' }, lift(isDark, 0.8)]}>

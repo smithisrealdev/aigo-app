@@ -18,6 +18,11 @@ export type LinkTrip = { destination?: string; startDate?: string; endDate?: str
 const isoDate = (d?: string) => (d && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : undefined);
 const iata = (s?: string) => (s && /^[A-Z]{3}$/.test(s.trim().toUpperCase()) ? s.trim().toUpperCase() : undefined);
 
+/** นำทางด้วยแอปแผนที่ของเครื่อง (R16): iOS เปิด Apple Maps, ที่อื่นเปิดเส้นทางของ Google Maps; ไม่มีพิกัดใช้ชื่อ */
+export function navLink(p: { name: string; lat?: number; lon?: number }, os: string): string {
+  const to = p.lat || p.lon ? `${p.lat},${p.lon}` : encodeURIComponent(p.name.trim());
+  return os === 'ios' ? `https://maps.apple.com/?daddr=${to}` : `https://www.google.com/maps/dir/?api=1&destination=${to}`;
+}
 export const mapsLink = (query: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query.trim())}`;
 export const klookLink = (query: string) =>
   `https://affiliate.klook.com/redirect?aid=${KLOOK.aid}&aff_adid=${KLOOK.adid}&k_site=${encodeURIComponent(`https://www.klook.com/search/?query=${encodeURIComponent(query.trim())}`)}`;

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import type { ChatCard } from './chat.ts';
-import { cardLink, flightLink, hotelLink, klookLink } from './links.ts';
+import { cardLink, flightLink, hotelLink, klookLink, navLink } from './links.ts';
 
 const TRIP = { destination: 'Osaka, Japan', startDate: '2026-12-26', endDate: '2026-12-30', people: 2 };
 const card = (c: Partial<ChatCard> & Pick<ChatCard, 'kind' | 'name'>): ChatCard => c;
@@ -21,4 +21,10 @@ test('ที่พัก ตั๋ว ร้าน และบริการ',
   assert.equal(cardLink(card({ kind: 'food', name: 'Kushikatsu Daruma', area: 'Shinsekai' }), TRIP), 'https://www.google.com/maps/search/?api=1&query=Kushikatsu%20Daruma%20Shinsekai');
   assert.equal(cardLink(card({ kind: 'service', name: 'Car rental', type: 'car_rental' }), TRIP), 'https://localrent.tpm.lv/lrzvZSNx');
   assert.match(cardLink(card({ kind: 'service', name: 'Kansai Area Pass', type: 'rail_pass' }), TRIP), /^https:\/\/affiliate\.klook\.com\/redirect\?.*Kansai%2520Area%2520Pass$/);
+});
+
+test('นำทาง: iOS ใช้ Apple Maps ที่อื่นใช้เส้นทางของ Google Maps ไม่มีพิกัดใช้ชื่อ', () => {
+  assert.equal(navLink({ name: 'Nijo Market', lat: 43.0577, lon: 141.3577 }, 'ios'), 'https://maps.apple.com/?daddr=43.0577,141.3577');
+  assert.equal(navLink({ name: 'Nijo Market', lat: 43.0577, lon: 141.3577 }, 'android'), 'https://www.google.com/maps/dir/?api=1&destination=43.0577,141.3577');
+  assert.equal(navLink({ name: 'Nijo Market', lat: 0, lon: 0 }, 'web'), 'https://www.google.com/maps/dir/?api=1&destination=Nijo%20Market');
 });
