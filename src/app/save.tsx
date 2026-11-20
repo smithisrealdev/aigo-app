@@ -1,22 +1,35 @@
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { View } from 'react-native';
 
-import { Button, Card, Screen, T, tap } from '@/components/ui';
-import { poses, trip } from '@/data/trip';
+import { Icon } from '@/components/icon';
+import { Button, Row, Screen, T, tap } from '@/components/ui';
+import { photos, poses, trip } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
-import { space } from '@/theme/tokens';
+import { radius, space } from '@/theme/tokens';
 
 // บันทึกทริป = จุดแรกที่ขอให้สมัคร (R14, R19) แล้วกลับไปทำต่อที่เดิม
 // shortcut: ปุ่มเข้าสู่ระบบแค่ตั้งค่า signedIn ในเครื่อง, ต่อ Supabase Auth (Apple, Google, อีเมล) และ migrate-guest-trips เมื่อมี backend
+const BENEFITS = [
+  { th: 'เปิดแผนได้แม้ไม่มีเน็ต', en: 'Open your plan without internet' },
+  { th: 'แผนตามไปทุกเครื่องที่คุณเข้าสู่ระบบ', en: 'Your plan follows you to every device' },
+  { th: 'AiGo เฝ้าราคาและแจ้งเมื่อแผนมีปัญหา', en: 'AiGo watches prices and tells you when something changes' },
+];
+
 export default function Save() {
   const { colors, pick, set } = useSettings();
   const signIn = () => { tap('success'); set({ signedIn: true }); router.back(); };
   return (
     <Screen tint={colors.header.trips} title={pick({ th: 'เก็บแผนนี้ไว้กับคุณ', en: 'Keep this plan' })} subtitle={`${pick(trip.title)} · ${pick(trip.dates)}`} onBack={() => router.back()} mascot={poses.happy}>
-      <Card tone="done" style={{ alignItems: 'center', gap: space.sm }}>
-        <T v="heading">{pick({ th: 'เปิดแผนได้แม้ไม่มีเน็ต', en: 'Your plan works offline' })}</T>
-        <T style={{ textAlign: 'center' }}>{pick({ th: 'สมัครก่อนจ่ายเงิน แผนจะเก็บไว้ในเครื่อง และตามไปทุกเครื่องที่คุณเข้าสู่ระบบ', en: 'Sign in before paying. The plan stays on this phone and follows you to every device.' })}</T>
-      </Card>
+      <Image source={photos.skyline} style={{ width: '100%', height: 130, borderRadius: radius.lg }} contentFit="cover" accessible={false} />
+      <View>
+        {BENEFITS.map((x, i) => (
+          <Row key={x.th} last={i === BENEFITS.length - 1}>
+            <Icon name="check" color={colors.success} />
+            <T style={{ flex: 1 }}>{pick(x)}</T>
+          </Row>
+        ))}
+      </View>
       <View style={{ gap: space.sm }}>
         <Button label={pick({ th: 'ไปต่อด้วย Apple', en: 'Continue with Apple' })} big onPress={signIn} />
         <Button kind="secondary" label={pick({ th: 'ไปต่อด้วย Google', en: 'Continue with Google' })} big onPress={signIn} />
