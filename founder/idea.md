@@ -1,0 +1,7 @@
+# AiGo Mobile
+
+- What it is: a native mobile app (iOS and Android) of AiGo, an AI travel planner where you tell an AI where you want to go and get a day-by-day itinerary you can edit, budget, book from and share.
+- Who it is for: per the web product's brand guidelines, travellers worldwide in four groups: solo travellers, groups (friends, families, couples), business travellers and digital nomads. The mobile v1 proposal is Thai-first with an English pair. The founder has not narrowed the customer further than this.
+- What it sells, at what price: AI usage paid in credits. Free: 30 credits a month, no rollover. Travel Pass: $4.99 a month for 50 credits. Credit packs: 10 for $1.99, 50 for $7.99, 100 for $12.99. Second income: affiliate commissions on flights, hotels, activities and about 25 partner links. (The web codebase holds conflicting older price tables; these are the ones the live pricing page uses and are not yet confirmed against Stripe.)
+- Where and how: App Store and Google Play. The web app already exists at theaigo.co with SEO landing pages and a blog; how mobile users will be acquired is not decided.
+- Budget and constraints: budget, team size and timeline are not stated. Decided: the visual design reuses the "ChefJiw" design system (the founder's other app); the mobile repo is empty today; the backend (Supabase, about 70 edge functions) already exists and would be reused.
