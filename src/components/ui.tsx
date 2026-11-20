@@ -279,6 +279,20 @@ export function Thumb({ source, size = 56, label }: { source: ImageSource; size?
   return <Image source={source} style={{ width: size, height: size, borderRadius: radius.sm }} contentFit="cover" accessibilityLabel={label} accessible={!!label} />;
 }
 
+/** แถวรูปสถานที่เลื่อนแนวนอน: ให้เห็นว่าทริปพาไปไหน แตะรูปเพื่อดูสถานที่ */
+export function PhotoStrip({ items }: { items: { key: string; source: ImageSource; label: string; onPress?: () => void }[] }) {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm }}>
+      {items.map((x) => (
+        <Pressable key={x.key} accessibilityRole={x.onPress ? 'button' : 'image'} accessibilityLabel={x.label} onPress={x.onPress} style={{ width: 132, gap: space.xs }}>
+          <Image source={x.source} style={{ width: 132, height: 96, borderRadius: radius.sm }} contentFit="cover" accessible={false} />
+          <T v="smallBold" numberOfLines={1}>{x.label}</T>
+        </Pressable>
+      ))}
+    </ScrollView>
+  );
+}
+
 const s = StyleSheet.create({
   button: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm, paddingHorizontal: space.xl, borderRadius: radius.pill },
   iconButton: { width: touch.min, height: touch.min, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },

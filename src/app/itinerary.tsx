@@ -1,11 +1,12 @@
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
 import { AskBar, Card, Chip, IconButton, Row, Screen, T, Thumb, useToast } from '@/components/ui';
-import { trip } from '@/data/trip';
+import { photos, trip } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
-import { space } from '@/theme/tokens';
+import { radius, space } from '@/theme/tokens';
 
 export default function Itinerary() {
   const { colors, t, pick } = useSettings();
@@ -20,6 +21,7 @@ export default function Itinerary() {
         <IconButton icon="share" label={pick({ th: 'แชร์ทริป', en: 'Share trip' })} onPress={() => router.push('/share')} onPastelBg />
       </View>}
       footer={<AskBar placeholder={t('it.tell')} onSend={() => toast(t('toast.sent'))} />}>
+      <Image source={photos.skyline} style={{ width: '100%', height: 150, borderRadius: radius.lg }} contentFit="cover" accessibilityLabel={pick({ th: 'วิวเมืองโอซาก้า', en: 'Osaka skyline' })} accessible />
       <View style={{ flexDirection: 'row', gap: space.sm }}>
         {[0, 1, 2, 3, 4].map((d) => <Chip key={d} label={d === 0 ? t('it.day', { n: 1 }) : String(d + 1)} selected={d === day} a11y={t('it.dayA11y', { n: d + 1 })} onPress={() => setDay(d)} />)}
       </View>
@@ -34,7 +36,7 @@ export default function Itinerary() {
       <View>{places.map((p, i) => (
         <Row key={p.id} onPress={() => router.push({ pathname: '/place/[id]', params: { id: p.id } })} label={pick(p.name)} last={i === places.length - 1}>
           <T v="bodyBold" style={{ width: 48, fontVariant: ['tabular-nums'] }}>{p.time}</T>
-          <Thumb source={p.photo} />
+          <Thumb source={p.photo} size={72} />
           <View style={{ flex: 1 }}>
             <T v="subheading">{pick(p.name)}</T>
             <T v="small" tone={p.checked ? 'success' : 'muted'}>{p.checked ? t('it.open') : t('it.unchecked')}</T>

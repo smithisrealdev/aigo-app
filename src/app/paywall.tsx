@@ -13,7 +13,7 @@ export default function Paywall() {
   const toast = useToast();
   const notYet = () => toast(pick({ th: 'การซื้อในแอปยังใช้ไม่ได้ในรุ่นทดลองนี้', en: 'In-app purchase is not available in this preview yet' }));
   return (
-    <Screen tint={colors.header.home} title={pick({ th: 'วางแผนทริปใหม่', en: 'Plan a new trip' })} subtitle={pick({ th: 'แผนแรกฟรีใช้ไปแล้ว', en: 'Your free plan is used' })} onBack={() => router.back()}>
+    <Screen tint={colors.header.money} title={pick({ th: 'วางแผนทริปใหม่', en: 'Plan a new trip' })} subtitle={pick({ th: 'แผนแรกฟรีใช้ไปแล้ว', en: 'Your free plan is used' })} onBack={() => router.back()}>
       <Card tone="navy" style={{ gap: space.sm }}>
         <T v="smallBold" tone="onTint" style={{ opacity: 0.85 }}>{pick({ th: 'จ่ายต่อทริป ไม่ผูกรายเดือน', en: 'Pay per trip, no subscription' })}</T>
         <T v="hero" tone="onTint">[ราคาต่อทริป]</T>

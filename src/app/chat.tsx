@@ -1,8 +1,9 @@
+import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { AiSays, AskBar, Button, Card, Chip, FadeIn, Screen, T, Thinking, Thumb, useToast } from '@/components/ui';
+import { AiSays, AskBar, Button, Card, Chip, FadeIn, PhotoStrip, Screen, T, Thinking, useToast } from '@/components/ui';
 import { photos, trip } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
 import { radius, space } from '@/theme/tokens';
@@ -34,15 +35,15 @@ export default function Chat() {
         <AiSays>{t('chat.ack')}</AiSays>
         <Card style={{ gap: space.sm }}>
           <T v="smallBold" tone="muted">{t('chat.understood', { n: 6, total: 6 })}</T>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
-            <T v="heading" style={{ flex: 1 }}>{pick(trip.title)}</T>
-            <Thumb source={photos.skyline} />
-          </View>
+          <Image source={photos.skyline} style={{ width: '100%', height: 120, borderRadius: radius.sm }} contentFit="cover" accessible={false} />
+          <T v="heading">{pick(trip.title)}</T>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
             {tags.map((x) => <View key={x} style={{ paddingHorizontal: space.md, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.bg }}><T v="smallBold">{x}</T></View>)}
           </View>
           <Button label={t('chat.go')} big onPress={() => router.replace('/work')} />
         </Card>
+        <T v="smallBold" tone="muted">{pick({ th: 'ที่ฉันคิดว่าคุณน่าจะชอบ', en: 'Places I think you will like' })}</T>
+        <PhotoStrip items={trip.days[0].map((p) => ({ key: p.id, source: p.photo, label: pick(p.name) }))} />
       </FadeIn>}
     </Screen>
   );

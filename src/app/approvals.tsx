@@ -35,7 +35,7 @@ export default function Approvals() {
     }
   };
   return (
-    <Screen tint={colors.header.trips} title={t('appr.title')} subtitle={t('appr.sub', { n: pending.length })} onBack={() => router.back()}>
+    <Screen tint={colors.header.money} title={t('appr.title')} subtitle={t('appr.sub', { n: pending.length })} onBack={() => router.back()}>
       <T v="smallBold" tone="muted">{pending.length ? t('appr.paid') : t('appr.none')}</T>
       {pending.map((o) => (
         <Card key={o.id} style={{ gap: space.sm }}>

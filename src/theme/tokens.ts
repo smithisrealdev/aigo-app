@@ -5,7 +5,7 @@ export type Palette = {
   primary: string; onPrimary: string;
   accent: string; onAccent: string; note: string; ai: string; done: string; danger: string;
   success: string; warn: string; flame: string;
-  header: { home: string; work: string; trips: string; place: string; travel: string };
+  header: { home: string; work: string; trips: string; place: string; travel: string; money: string };
 };
 
 // ทุกคู่ข้อความ/พื้นผ่าน 4.5:1 สีการ์ดตามความหมาย (note ai done danger) สว่างในธีมสว่าง เข้มในธีมมืด ตัวอักษรในการ์ดตามธีม (ดู Card กับ T ใน ui.tsx)
@@ -17,7 +17,7 @@ export const light: Palette = {
   accent: '#FFE66D', onAccent: '#24212B', note: '#FFF8D6', ai: '#F1EFFF', done: '#E3F7E6', danger: '#FFEDE4',
   success: '#1E7A45', warn: '#8A3B12', flame: '#C2512E',
   // หนึ่งหน้าหนึ่งสี: AiGo คราม, AiGo กำลังทำงาน เหลือง, ทริปและอนุมัติ เขียว, สถานที่ ฟ้า, ระหว่างเที่ยว ชมพู
-  header: { home: '#4B5BEF', work: '#FFD84D', trips: '#22C58B', place: '#3DB8F5', travel: '#FF6B8B' },
+  header: { home: '#4B5BEF', work: '#FFD84D', trips: '#22C58B', place: '#3DB8F5', travel: '#FF6B8B', money: '#1E1B3A' },
 };
 
 export const dark: Palette = {
@@ -26,7 +26,7 @@ export const dark: Palette = {
   primary: '#F3F1FA', onPrimary: '#24212B',
   accent: '#FFE66D', onAccent: '#24212B', note: '#3A3420', ai: '#2D2A45', done: '#1F3527', danger: '#40291F',
   success: '#7FD9A0', warn: '#FFB38A', flame: '#FF9A6B',
-  header: { home: '#17151D', work: '#17151D', trips: '#17151D', place: '#17151D', travel: '#17151D' },
+  header: { home: '#17151D', work: '#17151D', trips: '#17151D', place: '#17151D', travel: '#17151D', money: '#17151D' },
 };
 
 // สีสดประจำแอป ไม่เปลี่ยนตามธีม ใช้กับการ์ดเด่นของแต่ละจอ (จอละใบ) ตัวอักษรบนสีเหล่านี้เลือกด้วย onTint

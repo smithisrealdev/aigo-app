@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { AiSays, AskBar, Button, Card, FadeIn, Screen, T, TaskRow, useToast } from '@/components/ui';
+import { AiSays, AskBar, Button, Card, FadeIn, PhotoStrip, Screen, T, TaskRow, useToast } from '@/components/ui';
 import { agentTasks, offers, poses, trip } from '@/data/trip';
 import { stateWord } from '@/lib/agent';
 import { useSettings } from '@/lib/settings';
@@ -30,6 +30,12 @@ export default function Work() {
             return <TaskRow key={task.id} label={pick(task)} state={state} word={stateWord(state)} />;
           })}
       </View>
+      {done > 0 && (
+        <FadeIn style={{ gap: space.sm }}>
+          <T v="smallBold" tone="muted">{pick({ th: 'แผนวันที่ 1 พร้อมแล้ว แตะเพื่อดู', en: 'Day 1 is ready. Tap to view' })}</T>
+          <PhotoStrip items={trip.days[0].map((p) => ({ key: p.id, source: p.photo, label: `${p.time} ${pick(p.name)}`, onPress: () => router.push('/itinerary') }))} />
+        </FadeIn>
+      )}
       {waiting.length > 0 && (
         <FadeIn><Card tone="note" style={{ gap: space.sm }}>
           <T v="smallBold" tone="pastelMuted">{t('work.waiting', { n: waiting.length })}</T>
