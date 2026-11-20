@@ -143,7 +143,7 @@ Mockup: https://claude.ai/artifact/YDHqzheiiRT8wMjZe3AAb8 (ลิงก์ส่
 
 ## 5. Backend
 
-ใช้ Supabase เดิมของเว็บ (`ai-travel-buddy-13`)
+โปรเจกต์ Supabase ใหม่ `aigo` (`vjblrglalptgdxabteqm`, สิงคโปร์) ตั้งเมื่อ 20 พ.ย. 2026 เพราะโปรเจกต์เดิมของเว็บ (`dvzqgsukcmdhwwxsynwg`) หายไปจาก DNS แล้ว รายละเอียดว่าทำอะไรไปบ้างและอะไรยังขาดอยู่ใน [backend.md](backend.md)
 
 | ต้องการ | มีอยู่แล้ว | ต้องทำเพิ่ม |
 |---|---|---|
