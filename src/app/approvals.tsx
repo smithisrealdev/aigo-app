@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { Icon } from '@/components/icon';
-import { Button, Card, PriceTag, Screen, T } from '@/components/ui';
+import { Button, Card, PriceTag, Row, Screen, T } from '@/components/ui';
 import { autoDone, baht, offers } from '@/data/trip';
 import { decide } from '@/lib/agent';
 import { useSettings } from '@/lib/settings';
@@ -43,17 +43,17 @@ export default function Approvals() {
       ))}
       {approved.length > 0 && <Card tone="done"><T tone="pastel">{t('appr.approved')}</T></Card>}
       <T v="smallBold" tone="muted">{t('appr.done')}</T>
-      <Card style={{ paddingVertical: space.xs }}>
-        {autoDone.map((a) => (
-          <View key={a.id} style={{ minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+      <View>
+        {autoDone.map((a, i) => (
+          <Row key={a.id} last={i === autoDone.length - 1}>
             <Icon name="check" color={undone.includes(a.id) ? colors.muted : colors.success} size={20} />
             <T v="small" tone={undone.includes(a.id) ? 'muted' : 'ink'} style={{ flex: 1 }}>{pick(a.text)}</T>
             {undone.includes(a.id)
               ? <T v="smallBold" tone="muted">{t('appr.undone')}</T>
               : <Button kind="secondary" label={t('appr.undo')} onPress={() => setUndone((u) => [...u, a.id])} style={{ minHeight: 44, paddingHorizontal: space.md }} />}
-          </View>
+          </Row>
         ))}
-      </Card>
+      </View>
     </Screen>
   );
 }

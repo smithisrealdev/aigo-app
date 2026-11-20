@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
-import { AskBar, Card, Chip, IconButton, Screen, T, Thumb } from '@/components/ui';
+import { AskBar, Card, Chip, IconButton, Row, Screen, T, Thumb } from '@/components/ui';
 import { trip } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
 import { space } from '@/theme/tokens';
@@ -27,16 +27,16 @@ export default function Itinerary() {
       )}
       {/* shortcut: มีข้อมูลตัวอย่างแค่วันที่ 1, วันอื่นรอข้อมูลจาก generate-itinerary */}
       {places.length === 0 && <T tone="muted">{t('common.sample')}</T>}
-      {places.map((p) => (
-        <Card key={p.id} onPress={() => router.push({ pathname: '/place/[id]', params: { id: p.id } })} label={pick(p.name)} style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+      <View>{places.map((p, i) => (
+        <Row key={p.id} onPress={() => router.push({ pathname: '/place/[id]', params: { id: p.id } })} label={pick(p.name)} last={i === places.length - 1}>
           <T v="bodyBold" style={{ width: 48, fontVariant: ['tabular-nums'] }}>{p.time}</T>
           <Thumb source={p.photo} />
           <View style={{ flex: 1 }}>
             <T v="subheading">{pick(p.name)}</T>
             <T v="small" tone={p.checked ? 'success' : 'muted'}>{p.checked ? t('it.open') : t('it.unchecked')}</T>
           </View>
-        </Card>
-      ))}
+        </Row>
+      ))}</View>
     </Screen>
   );
 }

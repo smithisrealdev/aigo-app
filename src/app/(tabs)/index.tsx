@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Card, IconButton, T } from '@/components/ui';
+import { Icon } from '@/components/icon';
+import { Button, Card, IconButton, Row, T } from '@/components/ui';
 import { photos, poses } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
 import { fonts, radius, space, type, wide } from '@/theme/tokens';
@@ -58,7 +59,7 @@ export default function Home() {
             <View style={{ width: space.sm }} />
           </ScrollView>
           <T v="smallBold" tone="muted">{t('home.other')}</T>
-          {ASKS.map((a) => <Card key={a.th} onPress={() => start(pick(a))} label={pick(a)}><T v="bodyBold">{pick(a)}</T></Card>)}
+          <View>{ASKS.map((a, i) => <Row key={a.th} onPress={() => start(pick(a))} label={pick(a)} last={i === ASKS.length - 1}><T v="bodyBold" style={{ flex: 1 }}>{pick(a)}</T><Icon name="next" color={colors.muted} /></Row>)}</View>
         </View>
       </View>
     </ScrollView>

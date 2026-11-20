@@ -156,6 +156,14 @@ export function Screen({ tint, title, subtitle, onBack, right, children, footer,
   );
 }
 
+/** แถวของรายการบนพื้นจอ คั่นด้วยเส้นบาง ไม่ใส่กล่องให้ทุกแถว (ระบบดีไซน์ ChefJiw รุ่นล่าสุด) */
+export function Row({ children, onPress, label, last }: { children: ReactNode; onPress?: () => void; label?: string; last?: boolean }) {
+  const { colors } = useSettings();
+  const style = { minHeight: 52, flexDirection: 'row' as const, alignItems: 'center' as const, gap: space.md, paddingVertical: space.sm, borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.line };
+  if (!onPress) return <View style={style}>{children}</View>;
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [style, { opacity: pressed ? 0.7 : 1 }]}>{children}</Pressable>;
+}
+
 export function Thumb({ source, size = 56, label }: { source: ImageSource; size?: number; label?: string }) {
   return <Image source={source} style={{ width: size, height: size, borderRadius: radius.sm }} contentFit="cover" accessibilityLabel={label} accessible={!!label} />;
 }

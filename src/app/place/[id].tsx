@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Linking, View } from 'react-native';
 
-import { AiSays, Button, Card, Chip, PriceTag, Screen, T } from '@/components/ui';
+import { AiSays, Button, Card, Chip, PriceTag, Row, Screen, T } from '@/components/ui';
 import { allPlaces, baht, trip } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
 import { radius, space } from '@/theme/tokens';
@@ -26,17 +26,11 @@ export default function Place() {
         </Card>
       )}
       <AiSays>{pick(p.tip)}</AiSays>
-      <Card style={{ gap: space.sm }}>
-        <Row label={t('place.duration')} value={`${p.minutes / 60} ชม.`} />
-        <View style={{ height: 1, backgroundColor: colors.line }} />
-        <Row label="ค่าเข้า" value={pick(p.entry.text)} />
-        <PriceTag source={p.entry.source} at={p.entry.at} />
-        {p.spend && <>
-          <View style={{ height: 1, backgroundColor: colors.line }} />
-          <Row label="ค่ากิน 2 คน" value={'~' + baht(p.spend.baht)} />
-          <PriceTag source={p.spend.source} />
-        </>}
-      </Card>
+      <View>
+        <Row><View style={{ flex: 1 }}><Line label={t('place.duration')} value={`${p.minutes / 60} ชม.`} /></View></Row>
+        <Row last={!p.spend}><View style={{ flex: 1 }}><Line label="ค่าเข้า" value={pick(p.entry.text)} /><PriceTag source={p.entry.source} at={p.entry.at} /></View></Row>
+        {p.spend && <Row last><View style={{ flex: 1 }}><Line label="ค่ากิน 2 คน" value={'~' + baht(p.spend.baht)} /><PriceTag source={p.spend.source} /></View></Row>}
+      </View>
       <T v="smallBold" tone="muted">{t('place.askMore')}</T>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
         {ASK.map((a) => <Chip key={a.th} label={pick(a)} onPress={() => {}} />)}
@@ -45,7 +39,7 @@ export default function Place() {
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Line({ label, value }: { label: string; value: string }) {
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: space.md }}>
       <T tone="muted">{label}</T>
