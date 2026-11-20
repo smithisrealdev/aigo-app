@@ -140,7 +140,7 @@ export default function Work() {
                   : pick({ th: 'ระบบ AI ไม่ตอบ ลองใหม่อีกครั้งได้ สรุปทริปยังอยู่ครบ', en: 'The AI did not answer. You can try again; your trip summary is kept.' })}</T>
               <View style={{ flexDirection: 'row', gap: space.sm }}>
                 {gen.quota
-                  ? <Button label={pick({ th: 'ดูแพ็กทริป', en: 'See trip packs' })} onPress={() => router.push('/paywall')} style={{ flex: 1 }} />
+                  ? <Button label={pick({ th: 'ดูแพ็กทริป', en: 'See trip packs' })} onPress={() => router.push({ pathname: '/paywall', params: { used: '1' } })} style={{ flex: 1 }} />
                   : <Button label={pick({ th: 'ลองใหม่', en: 'Try again' })} onPress={retry} style={{ flex: 1 }} />}
                 <Button kind="secondary" label={pick({ th: 'ไว้ทีหลัง', en: 'Later' })} onPress={() => router.back()} style={{ flex: 1 }} />
               </View>

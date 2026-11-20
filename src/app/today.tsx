@@ -28,8 +28,10 @@ function TripToday() {
   const day = during ? idx : idx < 0 ? 0 : trip.totalDays - 1;
   const places = trip.days[day] ?? [];
   // ที่ถัดไป: ที่แรกที่ยังไม่ถึงเวลา (นอกช่วงเที่ยวคือที่แรกของวัน)
-  const clock = now.toTimeString().slice(0, 5);
-  const at = during ? places.findIndex((p) => !p.time || p.time >= clock) : 0;
+  // เทียบเป็นนาที เวลาจาก AI อาจเป็น "9:00" หรือ "09:00"
+  const mins = (t?: string) => { const m = t?.match(/(\d{1,2}):(\d{2})/); return m ? Number(m[1]) * 60 + Number(m[2]) : -1; };
+  const clock = now.getHours() * 60 + now.getMinutes();
+  const at = during ? places.findIndex((p) => mins(p.time) < 0 || mins(p.time) >= clock) : 0;
   const next: Place | undefined = places[at];
   const rest = next ? places.slice(at + 1) : [];
   const near = trip.destination.en;

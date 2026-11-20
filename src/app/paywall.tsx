@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { View } from 'react-native';
 
 import { AiSays, Button, Card, FadeIn, Peek, Screen, T, Ticket, useToast } from '@/components/ui';
@@ -10,6 +10,8 @@ import { space } from '@/theme/tokens';
 // shortcut: ปุ่มซื้อแจ้งว่ายังใช้ไม่ได้, ต่อการซื้อในแอปของ App Store / Google Play
 export default function Paywall() {
   const { pick } = useSettings();
+  // used = มาจากหน้างานเพราะทริปฟรีของสัปดาห์นี้หมดแล้ว จึงไม่ชวนวางแผนฟรีซ้ำ
+  const { used } = useLocalSearchParams<{ used?: string }>();
   const { trip } = useTrip();
   const toast = useToast();
   const notYet = () => toast(pick({ th: 'การซื้อในแอปยังใช้ไม่ได้ในรุ่นทดลองนี้', en: 'In-app purchase is not available in this preview yet' }));
@@ -30,8 +32,10 @@ export default function Paywall() {
       </FadeIn>
       {/* ยังขายไม่ได้: ให้ไปวางแผนฟรีต่อได้ (เซิร์ฟเวอร์จำกัดสัปดาห์ละ 1 ทริปต่อเครื่อง) ไม่ให้หน้านี้เป็นทางตัน */}
       <FadeIn index={1} style={{ gap: space.md }}>
-        <AiSays>{pick({ th: 'ระหว่างที่ยังไม่เปิดขาย วางแผนฟรีได้สัปดาห์ละ 1 ทริป ทริปเดิมยังอยู่ครบ', en: 'Until sales open, you can plan 1 free trip a week. Your trips stay.' })}</AiSays>
-        <Button label={pick({ th: 'วางแผนทริปใหม่ฟรี', en: 'Plan a new trip for free' })} icon="next" onPress={() => router.navigate('/')} />
+        <AiSays>{used
+          ? pick({ th: 'ทริปฟรีของสัปดาห์นี้ใช้ไปแล้ว ระหว่างที่ยังไม่เปิดขาย วางแผนทริปใหม่ได้อีกครั้งสัปดาห์หน้า ทริปเดิมยังอยู่ครบ', en: 'This week\'s free trip is used. Until sales open, you can plan another next week. Your trips stay.' })
+          : pick({ th: 'ระหว่างที่ยังไม่เปิดขาย วางแผนฟรีได้สัปดาห์ละ 1 ทริป ทริปเดิมยังอยู่ครบ', en: 'Until sales open, you can plan 1 free trip a week. Your trips stay.' })}</AiSays>
+        {!used && <Button label={pick({ th: 'วางแผนทริปใหม่ฟรี', en: 'Plan a new trip for free' })} icon="next" onPress={() => router.navigate('/')} />}
       </FadeIn>
       <FadeIn index={1}>
         <Card tone="paper" style={{ gap: space.sm }}>
