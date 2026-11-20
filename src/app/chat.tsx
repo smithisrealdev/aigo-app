@@ -66,8 +66,7 @@ export default function Chat() {
     const req = reply?.summary && requestFromSummary(reply.summary, lang, new Date().toISOString().slice(0, 10));
     const picks = [...parsed].reverse().find((r) => r?.cards.some((c) => c.kind !== 'place'))?.cards ?? [];
     if (!req) { say(pick({ th: 'ช่วยสรุปทริปให้หน่อย', en: 'Please sum up my trip' })); return; }
-    // ทริปเดิม (ที่หมายและวันเดียวกัน) ที่วางใหม่จะแทนของเก่า ทริปอื่นยังอยู่
-    setPending({ id: `trip-${req.destination}-${req.startDate}-${req.endDate}`, request: req, people: peopleOf(reply?.summary?.travelers), messages: msgs, cards: picks });
+    setPending({ request: req, people: peopleOf(reply?.summary?.travelers), messages: msgs, cards: picks });
     router.replace('/work');
   };
   return (

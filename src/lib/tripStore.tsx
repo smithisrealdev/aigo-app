@@ -11,8 +11,8 @@ import type { AppTrip, GenRequest } from '@/lib/itinerary';
 const LIST = 'aigo.trips.v1';
 const OLD = 'aigo.trip.v1'; // รุ่นแรกเก็บได้ทริปเดียว ย้ายเข้ารายการตอนเปิดแอป
 
-/** งานที่แชตส่งต่อให้หน้างานของ AiGo: สร้างแผนจริงจากสรุปทริป พร้อมเที่ยวบิน ที่พัก ร้าน และบริการที่ AI หาไว้ในแชต; id = id ของทริปที่จะได้ */
-export type Pending = { id: string; request: GenRequest; people: number; messages: ChatMessage[]; cards?: ChatCard[] };
+/** งานที่แชตส่งต่อให้หน้างานของ AiGo: สร้างแผนจริงจากสรุปทริป พร้อมเที่ยวบิน ที่พัก ร้าน และบริการที่ AI หาไว้ในแชต */
+export type Pending = { request: GenRequest; people: number; messages: ChatMessage[]; cards?: ChatCard[] };
 
 type Ctx = {
   ready: boolean; trip: AppTrip; trips: AppTrip[];

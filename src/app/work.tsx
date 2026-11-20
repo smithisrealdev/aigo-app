@@ -37,16 +37,18 @@ export default function Work() {
   const photo = usePhotos(job ? trip.days.slice(0, ready).flat().filter((p) => !p.photo).map((p) => ({ name: p.name.en, near })) : []);
 
   const stopper = useRef<AbortController | null>(null);
+  // ทุกแผนได้ id ใหม่ (ตั้งตอนเริ่มงาน) ทริปเก่าที่ที่หมายและวันซ้ำกันจึงไม่ถูกแทนด้วยแผนที่ยังไม่เสร็จ
+  const tripId = useRef('');
   const run = useCallback((j: Pending) => {
     setPlanning(true);
     const ctrl = new AbortController();
     stopper.current = ctrl;
     return generateItinerary(j.request, j.messages, (i, d) => {
       got.current[i] = d;
-      setTrip({ ...toAppTrip({ days: got.current }, j.request, j.people), id: j.id, bookings: j.cards });
+      setTrip({ ...toAppTrip({ days: got.current }, j.request, j.people), id: tripId.current, bookings: j.cards });
       setReady(got.current.length);
     }, got.current, ctrl.signal)
-      .then((g) => { setTrip({ ...toAppTrip(g, j.request, j.people), id: j.id, bookings: j.cards }); setGen({ state: 'done' }); })
+      .then((g) => { setTrip({ ...toAppTrip(g, j.request, j.people), id: tripId.current, bookings: j.cards }); setGen({ state: 'done' }); })
       .catch((e: Error) => setGen(ctrl.signal.aborted ? { state: 'stopped' } : { state: 'fail', quota: / 429$/.test(e.message) }))
       .finally(() => setPlanning(false));
   }, [setTrip, setPlanning]);
@@ -55,6 +57,7 @@ export default function Work() {
   useEffect(() => {
     if (!job || started.current) return;
     started.current = true;
+    tripId.current = `trip-${Date.now()}`;
     setPending(null);
     run(job);
   }, [job, run, setPending]);
