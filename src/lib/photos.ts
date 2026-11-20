@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { ImageSource } from 'expo-image';
 import { useEffect, useSyncExternalStore } from 'react';
+import { Platform } from 'react-native';
 
 import { postJson } from '@/lib/backend';
 
@@ -8,6 +9,9 @@ import { postJson } from '@/lib/backend';
 // เก็บในเครื่องอีกชั้น เปิดซ้ำไม่ต้องถามใหม่; ไม่มีรูปก็ไม่เป็นไร การ์ดใช้ช่องสีแทน
 
 export type PhotoQuery = { name: string; near?: string };
+// เซิร์ฟเวอร์รูปของ Wikimedia ตอบ 403 ให้ user agent ปกติของตัวโหลดรูปบน Android (okhttp) และคำขอที่ไม่มี user agent
+// จึงบอกชื่อแอปตามนโยบายของ Wikimedia เฉพาะบนมือถือ (บนเว็บเบราว์เซอร์ส่ง user agent ของตัวเองซึ่งผ่านอยู่แล้ว)
+const WIKIMEDIA_UA = { 'User-Agent': 'AiGoTravel/1.0 (https://theaigo.co)' };
 const keyOf = (q: PhotoQuery) => `${q.name}|${q.near ?? ''}`.trim().toLowerCase();
 const STORE = 'aigo.photos.v1';
 const MAX_KEPT = 600;
@@ -61,6 +65,6 @@ export function usePhotos(qs: PhotoQuery[]): (q: PhotoQuery) => ImageSource | un
   // อ้าง seen ในฟังก์ชัน ให้ React Compiler สร้างฟังก์ชันใหม่เมื่อมีรูปเพิ่ม (ไม่อย่างนั้นการ์ดที่จำค่าไว้จะไม่เห็นรูปใหม่)
   return (q) => {
     const url = seen >= 0 ? known.get(keyOf(q)) : undefined;
-    return url ? { uri: url } : undefined;
+    return url ? (Platform.OS === 'web' ? { uri: url } : { uri: url, headers: WIKIMEDIA_UA }) : undefined;
   };
 }
