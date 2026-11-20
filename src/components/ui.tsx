@@ -114,7 +114,7 @@ export function Button({ label, onPress, kind = 'primary', icon, big, style, bus
     <Pressable accessibilityRole="button" accessibilityState={{ busy: !!busy }} accessibilityLabel={text} onPress={busy ? undefined : onPress}
       style={({ pressed }) => [s.button, { backgroundColor: bg, minHeight: big ? touch.big : 48, transform: [{ scale: pressed && !busy ? 0.97 : 1 }] }, style]}>
       {busy ? <ActivityIndicator color={fg} /> : done ? <Icon name="check" color={fg} /> : icon && <Icon name={icon} color={fg} />}
-      <Text style={{ fontFamily: fonts.heading, fontSize: big ? type.lg : type.md, color: fg }}>{text}</Text>
+      <Text style={{ flexShrink: 1, textAlign: 'center', fontFamily: fonts.heading, fontSize: big ? type.lg : type.md, color: fg }}>{text}</Text>
     </Pressable>
   );
 }

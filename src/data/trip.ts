@@ -44,10 +44,10 @@ export const trip = {
   people: 2, budget: 40000, daysAway: 22, checkedAt: '09:10',
   days: [[
     { id: 'castle', time: '10:00', name: { th: 'ปราสาทโอซาก้า', en: 'Osaka Castle' }, photo: photos.castle, minutes: 120, checked: true,
-      tip: { th: 'ขึ้นลิฟต์ไปชั้นบนก่อนแล้วเดินลง คนน้อยกว่า', en: 'Take the lift up first and walk down; it is quieter' }, entry: { text: { th: '[ค่าเข้า]', en: '[admission]' } }, lat: 34.6873, lon: 135.5262 },
+      tip: { th: 'ขึ้นลิฟต์ไปชั้นบนก่อนแล้วเดินลง คนน้อยกว่า', en: 'Take the lift up first and walk down; it is quieter' }, entry: { text: { th: '~¥1,200', en: '~¥1,200' } }, lat: 34.6873, lon: 135.5262 },
     { id: 'kuromon', time: '12:30', name: { th: 'ตลาดคุโรมง', en: 'Kuromon Market' }, photo: photos.kuromon, minutes: 120, checked: true,
       tip: { th: 'มาถึงก่อนเที่ยงจะเดินสบายกว่า เตรียมเงินสดไว้ด้วย', en: 'Arrive before noon for an easier walk, and bring cash' },
-      entry: { text: { th: 'ฟรี', en: 'Free' }, source: 'เว็บทางการ', at: '09:12' }, spend: { baht: 1200 }, lat: 34.6654, lon: 135.5066 },
+      entry: { text: { th: 'ฟรี', en: 'Free' }, source: 'official', at: '09:12' }, spend: { baht: 1200 }, lat: 34.6654, lon: 135.5066 },
     { id: 'shinsaibashi', time: '15:00', name: { th: 'ชินไซบาชิ', en: 'Shinsaibashi' }, photo: photos.shinsaibashi, minutes: 150, checked: true,
       tip: { th: 'ถนนช้อปปิ้งมีหลังคา เดินได้แม้ฝนตก', en: 'Covered shopping street, fine in the rain' }, entry: { text: { th: 'ฟรี', en: 'Free' } }, lat: 34.6722, lon: 135.5016 },
     { id: 'dotonbori', time: '18:00', name: { th: 'โดทงโบริ', en: 'Dotonbori' }, photo: photos.dotonbori, minutes: 120, checked: true,
@@ -67,14 +67,14 @@ export const agentTasks: (Omit<Task, 'state'> & { th: string; en: string })[] = 
   { id: 'watch', label: '', th: 'ตั้งเฝ้าราคาเที่ยวบินและอากาศ', en: 'Watch flight prices and weather' },
 ];
 
-export type Offer = Action & { lead: 'XJ' | ImageSource; note: L; why: L; source: string; at: string; logo: ImageSource; url: string };
+export type Offer = Action & { name: L; lead: 'XJ' | ImageSource; note: L; why: L; source: string; at: string; logo: ImageSource; url: string };
 
 /** สิ่งที่ต้องจ่ายเงิน จึงต้องรออนุมัติ (RA7) ลิงก์เป็นหน้าแรกของพันธมิตร ยังไม่ใช่ลิงก์จองจริง */
 export const offers: Offer[] = [
-  { id: 'flight', title: 'Thai AirAsia X', costBaht: 19600, reversible: false, lead: 'XJ', note: { th: 'BKK ⇄ KIX · บินตรง · 2 คน', en: 'BKK ⇄ KIX · direct · 2 people' },
+  { id: 'flight', title: 'flight', name: { th: 'Thai AirAsia X', en: 'Thai AirAsia X' } as L, costBaht: 19600, reversible: false, lead: 'XJ', note: { th: 'BKK ⇄ KIX · บินตรง · 2 คน', en: 'BKK ⇄ KIX · direct · 2 people' },
     why: { th: 'บินตรงและถูกสุด ขาไปถึงเช้า ไม่เสียค่าที่พักคืนแรก', en: 'Direct and cheapest; arrives in the morning, so no first-night hotel' },
     source: 'Aviasales', at: '09:12', logo: logos.aviasales, url: 'https://www.aviasales.com' },
-  { id: 'hotel', title: '[ชื่อโรงแรม A]', costBaht: 9800, reversible: true, lead: photos.hotel, note: { th: '4 คืน · เดิน 4 นาทีถึงนัมบะ', en: '4 nights · 4 min walk to Namba' },
+  { id: 'hotel', title: 'hotel', name: { th: 'โรงแรม 3 ดาว ย่านนัมบะ', en: '3-star hotel in Namba' } as L, costBaht: 9800, reversible: true, lead: photos.hotel, note: { th: '4 คืน · เดิน 4 นาทีถึงนัมบะ', en: '4 nights · 4 min walk to Namba' },
     why: { th: 'ใกล้ที่เที่ยววันที่ 1–2 และยกเลิกฟรี', en: 'Close to days 1–2, free cancellation' },
     source: 'Agoda', at: '09:12', logo: logos.agoda, url: 'https://www.agoda.com' },
 ];

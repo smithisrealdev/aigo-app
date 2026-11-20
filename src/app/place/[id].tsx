@@ -28,9 +28,9 @@ export default function Place() {
       )}
       <AiSays>{pick(p.tip)}</AiSays>
       <View>
-        <Row><View style={{ flex: 1 }}><Line label={t('place.duration')} value={`${p.minutes / 60} ชม.`} /></View></Row>
-        <Row last={!p.spend}><View style={{ flex: 1 }}><Line label="ค่าเข้า" value={pick(p.entry.text)} /><PriceTag source={p.entry.source} at={p.entry.at} /></View></Row>
-        {p.spend && <Row last><View style={{ flex: 1 }}><Line label="ค่ากิน 2 คน" value={'~' + baht(p.spend.baht)} /><PriceTag source={p.spend.source} /></View></Row>}
+        <Row><View style={{ flex: 1 }}><Line label={t('place.duration')} value={`${p.minutes / 60} ${pick({ th: 'ชม.', en: 'hr' })}`} /></View></Row>
+        <Row last={!p.spend}><View style={{ flex: 1 }}><Line label={pick({ th: 'ค่าเข้า', en: 'Admission' })} value={pick(p.entry.text)} /><PriceTag source={p.entry.source === 'official' ? pick({ th: 'เว็บทางการ', en: 'official site' }) : p.entry.source} at={p.entry.at} /></View></Row>
+        {p.spend && <Row last><View style={{ flex: 1 }}><Line label={pick({ th: 'ค่ากิน 2 คน', en: 'Food for 2' })} value={'~' + baht(p.spend.baht)} /><PriceTag source={p.spend.source} /></View></Row>}
       </View>
       <T v="smallBold" tone="muted">{t('place.askMore')}</T>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>

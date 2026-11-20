@@ -44,7 +44,7 @@ export default function Approvals() {
               ? <View style={{ width: 44, height: 44, borderRadius: radius.pill, backgroundColor: vivid.coral, alignItems: 'center', justifyContent: 'center' }} accessible={false}><T v="bodyBold" tone="pastel">XJ</T></View>
               : <Image source={o.lead} style={{ width: 44, height: 44, borderRadius: 12 }} contentFit="cover" accessible={false} />}
             <View style={{ flex: 1 }}>
-              <T v="subheading">{o.title}</T>
+              <T v="subheading">{pick(o.name)}</T>
               <T v="small" tone="muted">{pick(o.note)}</T>
             </View>
             <T v="price">{baht(o.costBaht)}</T>

@@ -42,7 +42,7 @@ const en: Record<Key, string> = {
   'work.title': 'AiGo is on it', 'work.intro': 'I will handle everything. No need to wait here; I will let you know. I only ask when you need to pay.',
   'work.waiting': '{n} waiting for your approval', 'work.see': 'Review and approve', 'work.tell': 'Tell AiGo more, e.g. a hotel with a bathtub',
   'appr.title': 'Waiting for you', 'appr.sub': '{n} items · AiGo did the rest', 'appr.paid': 'These cost money, so AiGo waits for you',
-  'appr.why': 'Why this one: {x}', 'appr.go': 'Approve and pay', 'appr.other': 'Show other options', 'appr.done': 'Done by AiGo, nothing to do',
+  'appr.why': 'Why this one: {x}', 'appr.go': 'Approve & pay', 'appr.other': 'Other options', 'appr.done': 'Done by AiGo, nothing to do',
   'appr.undo': 'Undo', 'appr.undone': 'Undone', 'appr.approved': 'Approved. The booking page is open.', 'appr.none': 'Nothing waiting for approval',
   'price.real': 'Real price · {src} · fetched {at}', 'price.est': 'AiGo estimate · no real price yet',
   'trips.title': 'Your trips', 'trips.sub': '{n} trip · saved on this phone', 'trips.next': 'Next trip · in {n} days', 'trips.open': 'Open plan',

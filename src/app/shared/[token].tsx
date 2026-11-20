@@ -21,7 +21,7 @@ export default function SharedTrip() {
     <ScrollView style={{ flex: 1, backgroundColor: colors.header.home }} contentContainerStyle={{ flexGrow: 1 }}>
       <View style={[wide, { paddingTop: insets.top + space.md, paddingHorizontal: space.lg, paddingBottom: space.lg, gap: space.xs }]}>
         <Image source={require('@/assets/brand/logo-white.svg')} style={{ width: 84, height: 36 }} contentFit="contain" contentPosition="left" accessibilityLabel="AiGo" />
-        <T v="smallBold" tone={fg}>{closed ? pick({ th: 'ลิงก์ที่คุณได้รับถูกปิด', en: 'This link has been turned off' }) : pick({ th: '[ชื่อเพื่อน] แชร์ทริปนี้ให้คุณ', en: '[Friend] shared this trip with you' })}</T>
+        <T v="smallBold" tone={fg}>{closed ? pick({ th: 'ลิงก์ที่คุณได้รับถูกปิด', en: 'This link has been turned off' }) : pick({ th: 'เพื่อนแชร์ทริปนี้ให้คุณ', en: 'A friend shared this trip with you' })}</T>
         <T v="title" tone={fg} accessibilityRole="header">{closed ? pick({ th: 'เปิดทริปนี้ไม่ได้แล้ว', en: 'This trip is no longer available' }) : pick(trip.title)}</T>
         {!closed && <T v="smallBold" tone={fg}>{pick({ th: `${pick(trip.dates)} · ดูได้อย่างเดียว`, en: `${pick(trip.dates)} · view only` })}</T>}
       </View>

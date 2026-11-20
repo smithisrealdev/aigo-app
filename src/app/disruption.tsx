@@ -5,7 +5,7 @@ import { View } from 'react-native';
 
 import { Icon } from '@/components/icon';
 import { AiSays, Button, Card, FadeIn, PriceTag, Row, Screen, T, Thumb, tap, useToast } from '@/components/ui';
-import { baht, logos, photos, poses } from '@/data/trip';
+import { baht, photos, poses } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
 import { space } from '@/theme/tokens';
 
@@ -58,7 +58,7 @@ export default function Disruption() {
             <T v="subheading" style={{ flex: 1 }}>{pick({ th: 'ฝากกระเป๋าใกล้นัมบะ 2 ใบ', en: 'Store 2 bags near Namba' })}</T>
             <T v="price">{baht(700)}</T>
           </View>
-          <PriceTag source="Radical Storage" at="14:07" logo={logos.radical} />
+          <PriceTag source="Radical Storage" at="14:07" />
           <T v="small">{t('appr.why', { x: pick({ th: 'เช็กเอาต์ 11:00 จะได้เดินเล่นตัวเปล่าถึงคืนนี้', en: 'Checkout is 11:00, so you can walk around bag-free until tonight' }) })}</T>
           <View style={{ flexDirection: 'row', gap: space.sm }}>
             <Button label={t('appr.go')} busy={state === 'opening'} busyLabel={t('appr.opening')} onPress={pay} style={{ flex: 1 }} />
