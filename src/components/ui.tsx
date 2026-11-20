@@ -3,7 +3,7 @@ import { Image, type ImageSource } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { usePathname } from 'expo-router';
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ComponentRef, type ReactNode } from 'react';
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextProps, type TextStyle, type ViewStyle } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextProps, type TextStyle, type ViewStyle } from 'react-native';
 import Animated, { Easing, FadeInUp, LinearTransition, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withSequence, withSpring, withTiming, ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
@@ -471,11 +471,15 @@ export function Screen({ title, subtitle, onBack, left, right, footer, hero, her
       <View style={{ marginTop: -radius.xl, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, backgroundColor: colors.bg }}>{content}</View>
     </>
   ) : top ? <>{top}{content}</> : content;
+  // ช่องพิมพ์ด้านล่างลอยอยู่ (absolute) คีย์บอร์ดจึงบังได้: ให้กล่องนอกเว้นที่เท่าส่วนที่คีย์บอร์ดทับ (iOS และ Android แบบ edge-to-edge)
+  // กล่องในหดตาม ช่องพิมพ์ที่ชิดล่างของกล่องในจึงขึ้นมาอยู่เหนือคีย์บอร์ด
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+    <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: colors.bg }}>
+    <View style={{ flex: 1 }}>
       {!overlay && bar}
       {scroll ? (
         <ScrollView ref={sv} style={{ flex: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
+          onLayout={follow ? () => { if (atEnd.current) sv.current?.scrollToEnd({ animated: false }); } : undefined}
           scrollEventThrottle={follow ? 100 : undefined}
           onScroll={follow ? (e) => { const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent; atEnd.current = contentSize.height - contentOffset.y - layoutMeasurement.height < 160; } : undefined}
           onContentSizeChange={follow ? () => { if (atEnd.current) sv.current?.scrollToEnd({ animated: true }); } : undefined}>
@@ -490,6 +494,7 @@ export function Screen({ title, subtitle, onBack, left, right, footer, hero, her
         </View>
       )}
     </View>
+    </KeyboardAvoidingView>
   );
 }
 

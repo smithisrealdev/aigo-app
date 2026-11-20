@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { View } from 'react-native';
 
-import { Button, Card, FadeIn, Peek, Screen, T, Ticket, useToast } from '@/components/ui';
+import { AiSays, Button, Card, FadeIn, Peek, Screen, T, Ticket, useToast } from '@/components/ui';
 import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
 import { space } from '@/theme/tokens';
@@ -27,6 +27,11 @@ export default function Paywall() {
             bottom={<Button label={pick({ th: 'ซื้อทริปนี้', en: 'Buy this trip' })} big onPress={notYet} />} />
           <Peek size={112} />
         </View>
+      </FadeIn>
+      {/* ยังขายไม่ได้: ให้ไปวางแผนฟรีต่อได้ (เซิร์ฟเวอร์จำกัดสัปดาห์ละ 1 ทริปต่อเครื่อง) ไม่ให้หน้านี้เป็นทางตัน */}
+      <FadeIn index={1} style={{ gap: space.md }}>
+        <AiSays>{pick({ th: 'ระหว่างที่ยังไม่เปิดขาย วางแผนฟรีได้สัปดาห์ละ 1 ทริป ทริปเดิมยังอยู่ครบ', en: 'Until sales open, you can plan 1 free trip a week. Your trips stay.' })}</AiSays>
+        <Button label={pick({ th: 'วางแผนทริปใหม่ฟรี', en: 'Plan a new trip for free' })} icon="next" onPress={() => router.navigate('/')} />
       </FadeIn>
       <FadeIn index={1}>
         <Card tone="paper" style={{ gap: space.sm }}>
