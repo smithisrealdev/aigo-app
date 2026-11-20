@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { AiSays, AskBar, Button, Card, FadeIn, Row, Screen, T, Thumb, tap, useToast } from '@/components/ui';
-import { photos } from '@/data/trip';
+import { photos, poses } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
 import { space } from '@/theme/tokens';
 
@@ -16,7 +16,7 @@ export default function Today() {
     ? { name: { th: 'สวนเท็นโนจิ', en: 'Tennoji Park' }, note: { th: 'ฝนตกช่วงนี้', en: 'Rain expected' }, warn: true }
     : { name: { th: 'ช้อปปิ้งชินไซบาชิ', en: 'Shinsaibashi shopping' }, note: { th: 'ย้ายมาแทนเพราะฝน · ตรวจแล้ว เปิดอยู่', en: 'Moved here for the rain · checked, open' }, warn: false };
   return (
-    <Screen tint={colors.header.travel} title={pick({ th: 'วันนี้ วันที่ 2', en: 'Today, day 2' })} subtitle={pick({ th: '13 ธ.ค. · โอซาก้า · เก็บไว้ในเครื่อง', en: '13 Dec · Osaka · saved offline' })} onBack={() => router.back()}
+    <Screen tint={colors.header.travel} title={pick({ th: 'วันนี้ วันที่ 2', en: 'Today, day 2' })} subtitle={pick({ th: '13 ธ.ค. · โอซาก้า · เก็บไว้ในเครื่อง', en: '13 Dec · Osaka · saved offline' })} onBack={() => router.back()} mascot={poses.rain}
       footer={<AskBar placeholder={pick({ th: 'ถาม AiGo เช่น แถวนี้มีคาเฟ่ไหม', en: 'Ask AiGo, e.g. any cafes nearby?' })} onSend={() => toast(pick({ th: 'ส่งให้ AiGo แล้ว', en: 'Sent to AiGo' }))} />}>
       <Card tone="navy" style={{ gap: space.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>

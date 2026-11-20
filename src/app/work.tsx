@@ -22,7 +22,7 @@ export default function Work() {
   const flightFound = done > agentTasks.findIndex((x) => x.id === 'flight');
   const waiting = offers.filter((o) => flightFound && (o.id === 'flight' || done > agentTasks.findIndex((x) => x.id === 'hotel')));
   return (
-    <Screen tint={colors.header.work} title={t('work.title')} subtitle={`${pick(trip.title)} · ${pick(trip.dates)}`} onBack={() => router.back()} mascot={poses.think}
+    <Screen tint={colors.header.work} title={t('work.title')} subtitle={`${pick(trip.title)} · ${pick(trip.dates)}`} onBack={() => router.back()} mascot={done >= agentTasks.length ? poses.happy : poses.think}
       footer={<AskBar placeholder={t('work.tell')} onSend={() => toast(t('toast.sent'))} />}>
       <AiSays>{t('work.intro')}</AiSays>
       <View accessibilityLiveRegion="polite">
@@ -45,7 +45,7 @@ export default function Work() {
               <Pressable key={o.id} accessibilityRole="button" accessibilityLabel={`${pick(o.name)} ${baht(o.costBaht)}`} onPress={() => router.push('/approvals')}
                 style={({ pressed }) => ({ width: 232, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.surfaceSoft, opacity: pressed ? 0.8 : 1 })}>
                 {o.lead === 'XJ'
-                  ? <View style={{ height: 112, alignItems: 'center', justifyContent: 'center', backgroundColor: '#2E2A5C' }}><T v="hero" tone="onTint">BKK ⇄ KIX</T></View>
+                  ? <View style={{ height: 112, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.header.money }}><T v="hero" tone="onTint">BKK ⇄ KIX</T></View>
                   : <Image source={o.lead} style={{ width: 232, height: 112 }} contentFit="cover" accessible={false} />}
                 <View style={{ padding: space.md, gap: space.xs }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>

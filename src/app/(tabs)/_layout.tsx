@@ -14,14 +14,14 @@ export default function TabLayout() {
   return (
     <Tabs screenOptions={{
       headerShown: false,
-      tabBarActiveTintColor: colors.ink,
+      tabBarActiveTintColor: colors.accent,
       tabBarInactiveTintColor: colors.muted,
       tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.line, height: 76, paddingTop: 6 },
       tabBarLabelStyle: { fontFamily: fonts.bodySemi, fontSize: 12 },
     }}>
       {TABS.map((tab) => (
         <Tabs.Screen key={tab.name} name={tab.name}
-          options={{ title: t(tab.key), tabBarIcon: ({ focused }) => <Icon name={tab.icon} color={focused ? colors.ink : colors.muted} /> }} />
+          options={{ title: t(tab.key), tabBarIcon: ({ focused }) => <Icon name={tab.icon} color={focused ? colors.accent : colors.muted} /> }} />
       ))}
     </Tabs>
   );

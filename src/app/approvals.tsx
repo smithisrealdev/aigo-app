@@ -6,7 +6,7 @@ import { View } from 'react-native';
 
 import { Icon } from '@/components/icon';
 import { Button, Card, FadeIn, FlightLeg, PriceTag, Row, Screen, T, tap, useToast } from '@/components/ui';
-import { autoDone, baht, offers } from '@/data/trip';
+import { autoDone, baht, offers, poses } from '@/data/trip';
 import { decide } from '@/lib/agent';
 import { useSettings } from '@/lib/settings';
 import { radius, space } from '@/theme/tokens';
@@ -35,7 +35,7 @@ export default function Approvals() {
     }
   };
   return (
-    <Screen tint={colors.header.money} title={t('appr.title')} subtitle={t('appr.sub', { n: pending.length })} onBack={() => router.back()}>
+    <Screen tint={colors.header.money} mascot={pending.length ? undefined : poses.happy} title={t('appr.title')} subtitle={t('appr.sub', { n: pending.length })} onBack={() => router.back()}>
       <T v="smallBold" tone="muted">{pending.length ? t('appr.paid') : t('appr.none')}</T>
       {pending.map((o) => (
         <Card key={o.id} style={{ gap: space.sm }}>

@@ -1,4 +1,4 @@
-// โทเคนดีไซน์ของ AiGo: เริ่มจากระบบ ChefJiw แล้วปรับให้นิ่งและเป็นผู้ใหญ่ขึ้นสำหรับแอปที่เกี่ยวกับเงิน (หัวจอสีเดียว พื้นการ์ดเป็นกลาง มุมโค้งน้อยลง) หน้าจอห้ามใส่รหัสสีเอง ให้ใช้จากที่นี่
+// โทเคนดีไซน์ของ AiGo: ฟ้าทะเล (หัวจอ, ลิงก์, สวิตช์) + ส้มพระอาทิตย์ (ปุ่มหลัก) บนพื้นขาวนวล หัวจอสีเดียวทั้งแอป หน้าจอห้ามใส่รหัสสีเอง ให้ใช้จากที่นี่
 export type Palette = {
   bg: string; surface: string; surfaceSoft: string; line: string;
   ink: string; muted: string; mutedStrong: string;
@@ -9,22 +9,23 @@ export type Palette = {
 };
 
 // ทุกคู่ข้อความ/พื้นผ่าน 4.5:1 สีการ์ดตามความหมาย (note ai done danger) สว่างในธีมสว่าง เข้มในธีมมืด ตัวอักษรในการ์ดตามธีม (ดู Card กับ T ใน ui.tsx)
-// 60-30-10: พื้นขาว 60, การ์ดเทากลาง 30, สีเน้นคราม 10 สีอื่นใช้เฉพาะสถานะที่มีความหมาย (เขียว = ตรวจแล้ว, ส้ม = เตือน)
+// 60-30-10: พื้นขาวนวล 60, การ์ดเทาอุ่น 30, ฟ้าทะเลกับส้มพระอาทิตย์ 10 สีอื่นใช้เฉพาะสถานะ (เขียว = ตรวจแล้ว, น้ำตาลส้ม = เตือน)
+// ตัวหนังสือขาวบนฟ้าทะเล 4.75:1 และบนส้ม 4.56:1 (เข้มกว่าสีตัวอย่างเล็กน้อยเพื่อให้ผ่าน 4.5:1)
 export const light: Palette = {
-  bg: '#FFFFFF', surface: '#FFFFFF', surfaceSoft: '#F5F5F7', line: '#E4E4EA',
+  bg: '#FFFDF9', surface: '#FFFFFF', surfaceSoft: '#F6F2EC', line: '#E8E1D7',
   ink: '#1C1C24', muted: '#666672', mutedStrong: '#4A4A56',
-  primary: '#1C1C24', onPrimary: '#FFFFFF',
-  accent: '#4350D9', onAccent: '#FFFFFF', note: '#FAF6E8', ai: '#F5F5F7', done: '#EDF6EF', danger: '#FBEFEA',
+  primary: '#D44226', onPrimary: '#FFFFFF',
+  accent: '#0A7F8B', onAccent: '#FFFFFF', note: '#FBF4E2', ai: '#F6F2EC', done: '#EDF6EF', danger: '#FBEFEA',
   success: '#1E7A45', warn: '#8A3B12', flame: '#C2512E',
-  // หัวจอสีเดียวทั้งแอป (กรมท่า) ให้รูปถ่ายเป็นตัวให้สี คีย์แยกตามจอยังเก็บไว้เผื่อปรับทีหลัง
-  header: { home: '#1B1D36', work: '#1B1D36', trips: '#1B1D36', place: '#1B1D36', travel: '#1B1D36', money: '#1B1D36' },
+  // หัวจอสีเดียวทั้งแอป (ฟ้าทะเล) คีย์แยกตามจอเก็บไว้เผื่อปรับทีหลัง
+  header: { home: '#0A7F8B', work: '#0A7F8B', trips: '#0A7F8B', place: '#0A7F8B', travel: '#0A7F8B', money: '#0A7F8B' },
 };
 
 export const dark: Palette = {
   bg: '#17151D', surface: '#23212C', surfaceSoft: '#2F2C3B', line: '#3D394B',
   ink: '#F3F1FA', muted: '#B9B4C9', mutedStrong: '#CFCADC',
-  primary: '#F3F1FA', onPrimary: '#24212B',
-  accent: '#8F9AFF', onAccent: '#17151D', note: '#322E22', ai: '#2F2C3B', done: '#1F3527', danger: '#40291F',
+  primary: '#FF8466', onPrimary: '#17151D',
+  accent: '#5CC8D3', onAccent: '#17151D', note: '#322E22', ai: '#2F2C3B', done: '#1F3527', danger: '#40291F',
   success: '#7FD9A0', warn: '#FFB38A', flame: '#FF9A6B',
   header: { home: '#17151D', work: '#17151D', trips: '#17151D', place: '#17151D', travel: '#17151D', money: '#17151D' },
 };
