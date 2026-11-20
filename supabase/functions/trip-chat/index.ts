@@ -13,7 +13,7 @@ const corsHeaders = {
 };
 
 // System prompt v10 — Senior Travel Concierge (Agentic Edition)
-// Architecture: Single model (Claude Sonnet 4.6) with direct SSE streaming
+// Architecture: Single model (Claude Haiku 5.5, Gemini 3.8 Flash fallback) with direct SSE streaming
 // Upgrade from v9.1: Sophisticated concierge tone, tri-phase workflow,
 // agentic reasoning, budget guardrails, logistical validation
 // Infrastructure unchanged: widget tokens, IMAGE tokens, SSE streaming
@@ -347,6 +347,16 @@ After emitting [READY_TO_GENERATE], the FIRST quick reply MUST be the generation
 - Never generate clickable URLs or request personal information
 - **FLIGHT field order: airline: → iata: → from: → to: → departure: → type: → price:**
 
+---
+
+## 📱 DIRECTIVE 12 — AiGo Phone App (overrides Directives 5, 7, 8 and 11 where they conflict)
+
+This chat runs in the AiGo phone app, which shows plain text bubbles only:
+- Do NOT output [FLIGHTS], [HOTELS], [TICKETS] or [SERVICES] blocks, IMAGE tokens or Markdown tables. The app hides them; AiGo books flights and hotels on its own screens after the trip is generated.
+- Keep replies short for a phone screen: about 120 words, one question at a time.
+- The proposal is one line per day (area + 2–3 highlights) and one line of estimated budget. Never write timed day-by-day schedules in chat: the itinerary builder writes the detailed plan after the user taps generate.
+- When the plan is ready, put [READY_TO_GENERATE] and the [TRIP_SUMMARY] block right after the day lines, then [QUICK_REPLIES].
+
 Today's date: {{TODAY_LONG}}`;
 
 
@@ -560,6 +570,8 @@ serve(async (req) => {
           temperature: 0.8,
           min_tokens: 300,
           max_tokens: 8192,
+          // Haiku reasons by default: ~2-3k hidden tokens per turn delayed the first word ~15s and could use up max_tokens
+          reasoning: { enabled: false },
         }),
       });
 
@@ -612,10 +624,12 @@ serve(async (req) => {
       return { error: "AI service temporarily unavailable", status: 500 };
     };
 
-    // Use user-selected model if provided, otherwise default to Claude Sonnet 4.6
-    const primaryModel = userModel || "anthropic/claude-sonnet-4.6";
-    const fallbackModel = "anthropic/claude-opus-4.6";
-    console.log(`[trip-chat] Model: ${primaryModel} (user-selected: ${!!userModel})`);
+    // Cost-effective models: Claude Haiku 5.5 ($0.10/$0.50 per M tokens) follows the control-token protocol
+    // and writes good Thai; Gemini 3.8 Flash (a different provider) is the fallback if Anthropic is down.
+    // A client-requested model is ignored so nobody can switch the app to an expensive model on our bill.
+    const primaryModel = "anthropic/claude-haiku-5.5";
+    const fallbackModel = "google/gemini-3.8-flash";
+    console.log(`[trip-chat] Model: ${primaryModel}${userModel ? ` (ignored requested ${userModel})` : ''}`);
     const result = await callAIWithFallback(primaryModel, fallbackModel);
 
     if ('error' in result) {
