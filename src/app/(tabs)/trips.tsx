@@ -8,7 +8,7 @@ import { AiSays, ArtCard, Badge, Button, Card, FadeIn, IconButton, PhotoCard, Ro
 import { art } from '@/data/trip';
 import { askAigo } from '@/lib/ask';
 import type { L } from '@/lib/i18n';
-import type { AppTrip } from '@/lib/itinerary';
+import { addDays, type AppTrip } from '@/lib/itinerary';
 import { usePhotos } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { daysUntil, useTrip } from '@/lib/tripStore';
@@ -27,6 +27,9 @@ export default function Trips() {
   const { trip, trips, openTrip } = useTrip();
   const places = trip.days.flat().length;
   const away = daysUntil(trip.startDate);
+  // ระหว่างเที่ยวหรือเที่ยวแล้ว ไม่ขึ้น "อีก 0 วัน"
+  const over = daysUntil(addDays(trip.startDate, trip.totalDays)) === 0;
+  const when = away > 0 ? 'soon' : over ? 'past' : 'now';
   // ทริปที่ AiGo สร้างไม่มีรูปปก ใช้รูปของเมืองปลายทาง
   const cover = usePhotos(trip.cover ? [] : [{ name: trip.destination.en }]);
   return (
@@ -41,7 +44,7 @@ export default function Trips() {
         <FadeIn>
           <View>
             <PhotoCard source={trip.cover ?? cover({ name: trip.destination.en })} height={260} title={pick(trip.title)} subtitle={`${pick(trip.dates)} · ${t('trips.offline')}`}
-              badge={<Badge label={pick({ th: 'ทริปถัดไป', en: 'Next trip' })} />} onPress={() => router.push('/itinerary')} label={`${pick(trip.title)}, ${t('trips.open')}`}>
+              badge={<Badge label={pick({ soon: { th: 'ทริปถัดไป', en: 'Next trip' }, now: { th: 'กำลังเที่ยว', en: 'On the trip' }, past: { th: 'ทริปที่ผ่านมา', en: 'Past trip' } }[when])} />} onPress={() => router.push('/itinerary')} label={`${pick(trip.title)}, ${t('trips.open')}`}>
               <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.sm }}>
                 {[pick({ th: `${trip.totalDays} วัน`, en: `${trip.totalDays} days` }), pick({ th: `${places} ที่`, en: `${places} places` }), pick({ th: `${trip.people} คน`, en: `${trip.people} people` })].map((s) => (
                   <View key={s} style={{ paddingHorizontal: space.md, paddingVertical: 4, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.22)' }}><T v="smallBold" tone="white">{s}</T></View>
@@ -50,7 +53,7 @@ export default function Trips() {
             </PhotoCard>
             {/* นับถอยหลังเป็นตราประทับบนรูป แบบตราในพาสปอร์ต */}
             <View pointerEvents="none" style={{ position: 'absolute', bottom: space.lg, right: space.lg }}>
-              <Stamp label={pick({ th: `อีก ${away} วัน`, en: `${away} days to go` })} color="#FFFFFF" size={84} rotate={-12} />
+              <Stamp label={pick(when === 'soon' ? { th: `อีก ${away} วัน`, en: `${away} days to go` } : when === 'now' ? { th: 'วันนี้', en: 'Today' } : { th: 'เที่ยวแล้ว', en: 'Done' })} color="#FFFFFF" size={84} rotate={-12} />
             </View>
           </View>
         </FadeIn>
