@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Linking, View } from 'react-native';
 
-import { AiSays, Button, Card, Chip, PriceTag, Row, Screen, T } from '@/components/ui';
+import { AiSays, Button, Card, Chip, PriceTag, Row, Screen, T, useToast } from '@/components/ui';
 import { allPlaces, baht, trip } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
 import { radius, space } from '@/theme/tokens';
@@ -12,6 +12,7 @@ const ASK = [{ th: 'แถวนี้กินอะไรดี', en: 'What to
 export default function Place() {
   const { colors, t, pick } = useSettings();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const toast = useToast();
   const p = allPlaces().find((x) => x.id === id);
   if (!p) return <Screen tint={colors.header.place} title={t('common.sample')} onBack={() => router.back()}><T>{id}</T></Screen>;
   return (
@@ -33,7 +34,7 @@ export default function Place() {
       </View>
       <T v="smallBold" tone="muted">{t('place.askMore')}</T>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
-        {ASK.map((a) => <Chip key={a.th} label={pick(a)} onPress={() => {}} />)}
+        {ASK.map((a) => <Chip key={a.th} label={pick(a)} onPress={() => toast(t('toast.ask', { x: pick(a) }))} />)}
       </View>
     </Screen>
   );

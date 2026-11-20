@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { Icon } from '@/components/icon';
-import { Button, Card, PriceTag, Row, Screen, T } from '@/components/ui';
+import { Button, Card, FadeIn, PriceTag, Row, Screen, T, tap, useToast } from '@/components/ui';
 import { autoDone, baht, offers } from '@/data/trip';
 import { decide } from '@/lib/agent';
 import { useSettings } from '@/lib/settings';
@@ -15,9 +15,23 @@ export default function Approvals() {
   const { colors, t, pick, autoEdit } = useSettings();
   const [approved, setApproved] = useState<string[]>([]);
   const [undone, setUndone] = useState<string[]>([]);
+  const [opening, setOpening] = useState<string | null>(null);
+  const toast = useToast();
   // ตัดสินด้วยกฎเดียวกับ AiGo: อะไรที่เสียเงินหรือย้อนกลับไม่ได้ต้องอยู่ในหน้านี้เสมอ
   const pending = offers.filter((o) => decide(o, autoEdit) === 'approve' && !approved.includes(o.id));
-  const approve = (id: string, url: string) => { setApproved((a) => [...a, id]); WebBrowser.openBrowserAsync(url).catch(() => {}); };
+  // จ่ายเงินไม่ทำแบบ optimistic: ปุ่มหมุนจนหน้าจองของพันธมิตรเปิดได้จริง แล้วค่อยย้ายรายการออก
+  const approve = async (id: string, url: string) => {
+    setOpening(id);
+    try {
+      await WebBrowser.openBrowserAsync(url);
+      tap('success');
+      setApproved((a) => [...a, id]);
+    } catch {
+      toast('เปิดหน้าจองไม่ได้ รายการยังรอคุณอยู่ ลองใหม่อีกครั้ง');
+    } finally {
+      setOpening(null);
+    }
+  };
   return (
     <Screen tint={colors.header.trips} title={t('appr.title')} subtitle={t('appr.sub', { n: pending.length })} onBack={() => router.back()}>
       <T v="smallBold" tone="muted">{pending.length ? t('appr.paid') : t('appr.none')}</T>
@@ -36,12 +50,12 @@ export default function Approvals() {
           <PriceTag source={o.source} at={o.at} logo={o.logo} />
           <T v="small">{t('appr.why', { x: pick(o.why) })}</T>
           <View style={{ flexDirection: 'row', gap: space.sm }}>
-            <Button label={t('appr.go')} onPress={() => approve(o.id, o.url)} style={{ flex: 1 }} />
-            <Button kind="secondary" label={t('appr.other')} onPress={() => {}} style={{ flex: 1 }} />
+            <Button label={t('appr.go')} busy={opening === o.id} busyLabel={t('appr.opening')} onPress={() => approve(o.id, o.url)} style={{ flex: 1 }} />
+            <Button kind="secondary" label={t('appr.other')} onPress={() => toast(t('toast.other'))} style={{ flex: 1 }} />
           </View>
         </Card>
       ))}
-      {approved.length > 0 && <Card tone="done"><T tone="pastel">{t('appr.approved')}</T></Card>}
+      {approved.length > 0 && <FadeIn><Card tone="done"><T tone="pastel">{t('appr.approved')}</T></Card></FadeIn>}
       <T v="smallBold" tone="muted">{t('appr.done')}</T>
       <View>
         {autoDone.map((a, i) => (
@@ -50,7 +64,7 @@ export default function Approvals() {
             <T v="small" tone={undone.includes(a.id) ? 'muted' : 'ink'} style={{ flex: 1 }}>{pick(a.text)}</T>
             {undone.includes(a.id)
               ? <T v="smallBold" tone="muted">{t('appr.undone')}</T>
-              : <Button kind="secondary" label={t('appr.undo')} onPress={() => setUndone((u) => [...u, a.id])} style={{ minHeight: 44, paddingHorizontal: space.md }} />}
+              : <Button kind="secondary" label={t('appr.undo')} onPress={() => { tap(); setUndone((u) => [...u, a.id]); }} style={{ minHeight: 44, paddingHorizontal: space.md }} />}
           </Row>
         ))}
       </View>

@@ -23,6 +23,9 @@ const th = {
   'it.tell': 'บอก AiGo เช่น ขอร้านราเมนเพิ่ม', 'it.open': 'ตรวจแล้ว เปิดอยู่', 'it.unchecked': 'ยังไม่ได้ตรวจ',
   'place.checked': 'ตรวจแล้ววันนี้ {at}', 'place.open': 'ยังเปิดกิจการ และเปิดในเวลาที่คุณจะไป', 'place.source': 'ที่มา: {x}',
   'place.tip': 'AiGo แนะนำ', 'place.duration': 'ใช้เวลา', 'place.askMore': 'ถาม AiGo ต่อ', 'place.navigate': 'นำทางไปที่นี่',
+  'toast.sent': 'ส่งให้ AiGo แล้ว จะปรับให้แล้วแจ้งคุณ', 'toast.mic': 'พูดสั่งงานยังใช้ไม่ได้ในรุ่นทดลองนี้ พิมพ์แทนได้เลย',
+  'toast.other': 'AiGo กำลังหาตัวเลือกใหม่ให้ เจอแล้วจะแจ้ง', 'toast.share': 'แชร์ทริปยังใช้ไม่ได้ในรุ่นทดลองนี้', 'toast.ask': 'ถาม AiGo แล้ว: {x}',
+  'appr.opening': 'กำลังเปิดหน้าจอง…', 'appr.opened': 'เปิดหน้าจองแล้ว', 'chat.thinking': 'AiGo กำลังคิด…', 'it.dayA11y': 'วันที่ {n}',
   'common.back': 'กลับ', 'common.send': 'ส่งข้อความ', 'common.sample': 'ข้อมูลตัวอย่าง ยังไม่ได้ต่อระบบจริง',
 } as const;
 
@@ -49,6 +52,9 @@ const en: Record<Key, string> = {
   'it.tell': 'Tell AiGo, e.g. add a ramen shop', 'it.open': 'Checked, open', 'it.unchecked': 'Not checked yet',
   'place.checked': 'Checked today {at}', 'place.open': 'Still in business and open when you go', 'place.source': 'Source: {x}',
   'place.tip': 'AiGo suggests', 'place.duration': 'Time needed', 'place.askMore': 'Ask AiGo more', 'place.navigate': 'Navigate here',
+  'toast.sent': 'Sent to AiGo. It will adjust and let you know', 'toast.mic': 'Voice is not available in this preview yet. Type instead',
+  'toast.other': 'AiGo is looking for other options and will tell you', 'toast.share': 'Sharing is not available in this preview yet', 'toast.ask': 'Asked AiGo: {x}',
+  'appr.opening': 'Opening booking page…', 'appr.opened': 'Booking page opened', 'chat.thinking': 'AiGo is thinking…', 'it.dayA11y': 'Day {n}',
   'common.back': 'Back', 'common.send': 'Send message', 'common.sample': 'Sample data, not connected yet',
 };
 

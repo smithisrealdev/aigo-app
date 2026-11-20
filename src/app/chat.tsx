@@ -1,8 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { AiSays, AskBar, Button, Card, Chip, Screen, T, Thumb } from '@/components/ui';
+import { AiSays, AskBar, Button, Card, Chip, FadeIn, Screen, T, Thinking, Thumb, useToast } from '@/components/ui';
 import { photos, trip } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
 import { radius, space } from '@/theme/tokens';
@@ -14,18 +14,23 @@ export default function Chat() {
   const { colors, t, pick } = useSettings();
   const { prompt } = useLocalSearchParams<{ prompt?: string }>();
   const [month, setMonth] = useState<number | null>(null);
+  const [thinking, setThinking] = useState(false);
+  const toast = useToast();
+  // shortcut: หน่วง 0.8 วินาทีแทนเวลาตอบจริงของ trip-chat
+  useEffect(() => { if (!thinking) return; const id = setTimeout(() => setThinking(false), 800); return () => clearTimeout(id); }, [thinking]);
   const tags = [pick(trip.dates), `${trip.people} คน`, `งบ ฿${trip.budget.toLocaleString('en-US')}`, 'ของกิน', 'เดินเล่น'];
   return (
     <Screen tint={colors.header.work} title={t('chat.title')} subtitle={t('chat.sub')} onBack={() => router.back()}
-      footer={<AskBar placeholder={t('chat.placeholder')} onSend={() => {}} />}>
+      footer={<AskBar placeholder={t('chat.placeholder')} onSend={() => toast(t('toast.sent'))} />}>
       <View style={{ alignSelf: 'flex-end', maxWidth: '80%', padding: space.md, borderRadius: radius.sm, backgroundColor: colors.primary }}>
         <T tone="onPrimary">{prompt || pick(trip.title)}</T>
       </View>
       <AiSays>{t('chat.ask')}</AiSays>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
-        {MONTHS.map((m, i) => <Chip key={m.th} label={pick(m)} selected={month === i} onPress={() => setMonth(i)} />)}
+        {MONTHS.map((m, i) => <Chip key={m.th} label={pick(m)} selected={month === i} onPress={() => { setMonth(i); setThinking(true); }} />)}
       </View>
-      {month !== null && <>
+      {thinking && <Thinking label={t('chat.thinking')} />}
+      {month !== null && !thinking && <FadeIn style={{ gap: space.md }}>
         <AiSays>{t('chat.ack')}</AiSays>
         <Card style={{ gap: space.sm }}>
           <T v="smallBold" tone="muted">{t('chat.understood', { n: 6, total: 6 })}</T>
@@ -38,7 +43,7 @@ export default function Chat() {
           </View>
           <Button label={t('chat.go')} big onPress={() => router.replace('/work')} />
         </Card>
-      </>}
+      </FadeIn>}
     </Screen>
   );
 }

@@ -5,7 +5,7 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/icon';
-import { Button, Card, IconButton, Row, T } from '@/components/ui';
+import { Button, Card, IconButton, Row, T, useToast } from '@/components/ui';
 import { photos, poses } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
 import { fonts, radius, space, type, wide } from '@/theme/tokens';
@@ -22,6 +22,7 @@ export default function Home() {
   const { colors, t, pick, isDark } = useSettings();
   const insets = useSafeAreaInsets();
   const [wish, setWish] = useState('');
+  const toast = useToast();
   const start = (text: string) => router.push({ pathname: '/chat', params: { prompt: text } });
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.header.home }} contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
@@ -42,8 +43,8 @@ export default function Home() {
             <TextInput accessibilityLabelledBy="wish-label" value={wish} onChangeText={setWish} multiline placeholder={t('home.placeholder')} placeholderTextColor={colors.muted}
               style={{ minHeight: 72, borderRadius: radius.sm, padding: space.md, backgroundColor: colors.bg, color: colors.ink, fontFamily: fonts.body, fontSize: type.md, textAlignVertical: 'top' }} />
             <View style={{ flexDirection: 'row', gap: space.sm, alignItems: 'center' }}>
-              {/* shortcut: ปุ่มไมค์ยังไม่ทำงาน, ต่อ speech-to-text เมื่อทำแชตจริง */}
-              <IconButton icon="mic" label={t('home.mic')} onPress={() => {}} />
+              {/* shortcut: ปุ่มไมค์บอกว่ายังใช้ไม่ได้, ต่อ speech-to-text เมื่อทำแชตจริง */}
+              <IconButton icon="mic" label={t('home.mic')} onPress={() => toast(t('toast.mic'))} />
               <Button label={t('home.go')} icon="next" big onPress={() => start(wish || pick(POPULAR[1]))} style={{ flex: 1 }} />
             </View>
           </Card>
@@ -51,7 +52,7 @@ export default function Home() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm }} style={{ marginHorizontal: -space.lg }}>
             <View style={{ width: space.sm }} />
             {POPULAR.map((p) => (
-              <Pressable key={p.th} accessibilityRole="button" onPress={() => start(pick(p))} style={{ width: 132, borderRadius: radius.sm, overflow: 'hidden', backgroundColor: colors.surfaceSoft }}>
+              <Pressable key={p.th} accessibilityRole="button" onPress={() => start(pick(p))} style={({ pressed }) => ({ width: 132, borderRadius: radius.sm, overflow: 'hidden', backgroundColor: colors.surfaceSoft, transform: [{ scale: pressed ? 0.97 : 1 }] })}>
                 <Image source={p.photo} style={{ width: 132, height: 84 }} contentFit="cover" accessible={false} />
                 <T v="bodyBold" style={{ padding: space.sm }}>{pick(p)}</T>
               </Pressable>

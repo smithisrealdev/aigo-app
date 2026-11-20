@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
-import { AskBar, Card, Chip, IconButton, Row, Screen, T, Thumb } from '@/components/ui';
+import { AskBar, Card, Chip, IconButton, Row, Screen, T, Thumb, useToast } from '@/components/ui';
 import { trip } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
 import { space } from '@/theme/tokens';
@@ -10,14 +10,15 @@ import { space } from '@/theme/tokens';
 export default function Itinerary() {
   const { colors, t, pick } = useSettings();
   const [day, setDay] = useState(0);
+  const toast = useToast();
   const places = trip.days[day] ?? [];
   const checked = places.filter((p) => p.checked).length;
   return (
     <Screen tint={colors.header.trips} title={pick(trip.title)} subtitle={`${pick(trip.dates)} · ${trip.people} คน`} onBack={() => router.back()}
-      right={<IconButton icon="share" label="แชร์ทริป" onPress={() => {}} onPastelBg />}
-      footer={<AskBar placeholder={t('it.tell')} onSend={() => {}} />}>
+      right={<IconButton icon="share" label="แชร์ทริป" onPress={() => toast(t('toast.share'))} onPastelBg />}
+      footer={<AskBar placeholder={t('it.tell')} onSend={() => toast(t('toast.sent'))} />}>
       <View style={{ flexDirection: 'row', gap: space.sm }}>
-        {[0, 1, 2, 3, 4].map((d) => <Chip key={d} label={d === 0 ? t('it.day', { n: 1 }) : String(d + 1)} selected={d === day} onPress={() => setDay(d)} />)}
+        {[0, 1, 2, 3, 4].map((d) => <Chip key={d} label={d === 0 ? t('it.day', { n: 1 }) : String(d + 1)} selected={d === day} a11y={t('it.dayA11y', { n: d + 1 })} onPress={() => setDay(d)} />)}
       </View>
       {places.length > 0 && (
         <Card tone="done">

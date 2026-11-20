@@ -1,6 +1,7 @@
 import { Image, type ImageSource } from 'expo-image';
-import { createContext, useContext, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextProps, type TextStyle, type ViewStyle } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { AccessibilityInfo, ActivityIndicator, Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextProps, type TextStyle, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, type IconName } from '@/components/icon';
@@ -8,6 +9,72 @@ import { useSettings } from '@/lib/settings';
 import { fonts, onPastel, onTint, radius, space, touch, type, vivid, wide } from '@/theme/tokens';
 
 // ยืมโครงจาก src/components/ui.tsx ของ ChefJiw: ตัด Mascot แบบขยับได้กับหน้าทำอาหารออก เพิ่ม PriceTag, TaskRow, AskBar สำหรับ AiGo
+
+// จังหวะการขยับชุดเดียวทั้งแอป: ขยับเฉพาะ opacity กับ transform ไม่ขยับขนาดหรือตำแหน่งที่ทำให้ layout เลื่อน
+export const motion = { fast: 150, base: 200, toast: 4000 } as const;
+const native = Platform.OS !== 'web';
+
+/** จริงเมื่อเครื่องตั้งค่าลดการเคลื่อนไหว: ทุกอย่างขึ้นทันทีโดยไม่ขยับ */
+function useReducedMotion() {
+  const [reduce, setReduce] = useState(false);
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduce).catch(() => {});
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduce);
+    return () => sub.remove();
+  }, []);
+  return reduce;
+}
+
+/** ค่อยๆ ขึ้นมา (จางเข้า + เลื่อนขึ้น 8 จุด) ใช้กับของที่เพิ่งปรากฏเพราะผลของการกระทำ เช่น คำตอบของ AiGo การ์ดรออนุมัติ */
+export function FadeIn({ children, delay = 0, style }: { children: ReactNode; delay?: number; style?: StyleProp<ViewStyle> }) {
+  const reduce = useReducedMotion();
+  const [v] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    if (reduce) { v.setValue(1); return; }
+    const a = Animated.timing(v, { toValue: 1, duration: motion.base, delay, easing: Easing.out(Easing.cubic), useNativeDriver: native });
+    a.start();
+    return () => a.stop();
+  }, [v, delay, reduce]);
+  return <Animated.View style={[{ opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] }, style]}>{children}</Animated.View>;
+}
+
+/** แตะเบาๆ ตอนยืนยันสิ่งสำคัญ (อนุมัติ เลิกทำ) เว็บไม่มี haptics จึงข้าม */
+export const tap = (kind: 'light' | 'success' = 'light') => {
+  if (!native) return;
+  (kind === 'success' ? Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success) : Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)).catch(() => {});
+};
+
+// ป้ายแจ้งผลชั่วคราวด้านล่างจอ: บอกสิ่งที่จอไม่ได้แสดงเอง หายเองใน 4 วินาที ไม่ขโมยโฟกัส มีได้ทีละ 3 อัน
+type ToastItem = { id: number; text: string };
+const ToastCtx = createContext<(text: string) => void>(() => {});
+export const useToast = () => useContext(ToastCtx);
+
+export function ToastProvider({ children }: { children: ReactNode }) {
+  const [items, setItems] = useState<ToastItem[]>([]);
+  const next = useRef(0);
+  const show = useCallback((text: string) => {
+    const id = ++next.current;
+    setItems((xs) => [...xs.slice(-2), { id, text }]);
+    setTimeout(() => setItems((xs) => xs.filter((x) => x.id !== id)), motion.toast);
+  }, []);
+  const insets = useSafeAreaInsets();
+  return (
+    <ToastCtx.Provider value={show}>
+      {children}
+      <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: insets.bottom + 92, alignItems: 'center', gap: space.sm, paddingHorizontal: space.lg }}>
+        {items.map((x) => <FadeIn key={x.id}><ToastView text={x.text} /></FadeIn>)}
+      </View>
+    </ToastCtx.Provider>
+  );
+}
+function ToastView({ text }: { text: string }) {
+  const { colors } = useSettings();
+  return (
+    <View accessibilityLiveRegion="polite" accessibilityRole="alert" style={{ maxWidth: 560, paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.lg, backgroundColor: colors.primary }}>
+      <Text style={{ fontFamily: fonts.bodySemi, fontSize: type.md, lineHeight: type.md * 1.5, color: colors.onPrimary }}>{text}</Text>
+    </View>
+  );
+}
 
 // จริงเมื่ออยู่ในการ์ดสีอ่อนตอนธีมมืด: ตัวอักษรกับปุ่มแบบ pastel ต้องเปลี่ยนตามธีม
 const OnThemed = createContext(false);
@@ -34,16 +101,18 @@ export function T({ v = 'body', tone = 'ink', style, children, ...rest }: { v?: 
   return <Text style={[VARIANT[v], { color }, style]} {...rest}>{children}</Text>;
 }
 
-export function Button({ label, onPress, kind = 'primary', icon, big, style }: { label: string; onPress: () => void; kind?: 'primary' | 'secondary' | 'accent' | 'onPastel' | 'onPastelLight'; icon?: IconName; big?: boolean; style?: StyleProp<ViewStyle> }) {
+export function Button({ label, onPress, kind = 'primary', icon, big, style, busy, busyLabel, done, doneLabel }: { label: string; onPress: () => void; kind?: 'primary' | 'secondary' | 'accent' | 'onPastel' | 'onPastelLight'; icon?: IconName; big?: boolean; style?: StyleProp<ViewStyle>; busy?: boolean; busyLabel?: string; done?: boolean; doneLabel?: string }) {
   const { colors } = useSettings();
   const themed = useContext(OnThemed);
   const bg = { primary: colors.primary, secondary: colors.surfaceSoft, accent: colors.accent, onPastel: themed ? colors.primary : onPastel.ink, onPastelLight: themed ? colors.surface : '#FFFFFF' }[kind];
   const fg = { primary: colors.onPrimary, secondary: colors.ink, accent: colors.onAccent, onPastel: themed ? colors.onPrimary : '#FFFFFF', onPastelLight: themed ? colors.ink : onPastel.ink }[kind];
+  // ระหว่างทำงานปุ่มยังสีเต็ม (ไม่จางเหมือนปิดใช้งาน) แสดงวงหมุนกับคำกริยา -ing และกันกดซ้ำ
+  const text = busy ? busyLabel ?? label : done ? doneLabel ?? label : label;
   return (
-    <Pressable accessibilityRole="button" onPress={onPress}
-      style={({ pressed }) => [s.button, { backgroundColor: bg, minHeight: big ? touch.big : 48, transform: [{ scale: pressed ? 0.97 : 1 }] }, style]}>
-      {icon && <Icon name={icon} color={fg} />}
-      <Text style={{ fontFamily: fonts.heading, fontSize: big ? type.lg : type.md, color: fg }}>{label}</Text>
+    <Pressable accessibilityRole="button" accessibilityState={{ busy: !!busy }} accessibilityLabel={text} onPress={busy ? undefined : onPress}
+      style={({ pressed }) => [s.button, { backgroundColor: bg, minHeight: big ? touch.big : 48, transform: [{ scale: pressed && !busy ? 0.97 : 1 }] }, style]}>
+      {busy ? <ActivityIndicator color={fg} /> : done ? <Icon name="check" color={fg} /> : icon && <Icon name={icon} color={fg} />}
+      <Text style={{ fontFamily: fonts.heading, fontSize: big ? type.lg : type.md, color: fg }}>{text}</Text>
     </Pressable>
   );
 }
@@ -59,10 +128,10 @@ export function IconButton({ icon, label, onPress, onPastelBg, filled }: { icon:
   );
 }
 
-export function Chip({ label, selected = false, onPress }: { label: string; selected?: boolean; onPress: () => void }) {
+export function Chip({ label, selected = false, onPress, a11y }: { label: string; selected?: boolean; onPress: () => void; a11y?: string }) {
   const { colors } = useSettings();
   return (
-    <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress}
+    <Pressable accessibilityRole="button" accessibilityState={{ selected }} accessibilityLabel={a11y} onPress={onPress}
       style={({ pressed }) => [s.chip, { backgroundColor: selected ? colors.primary : colors.surfaceSoft, transform: [{ scale: pressed ? 0.96 : 1 }] }]}>
       <Text style={{ fontFamily: fonts.bodySemi, fontSize: type.md, color: selected ? colors.onPrimary : colors.ink }}>{label}</Text>
     </Pressable>
@@ -126,7 +195,7 @@ export function AskBar({ placeholder, onSend }: { placeholder: string; onSend: (
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
       <TextInput accessibilityLabel={placeholder} placeholder={placeholder} placeholderTextColor={colors.muted} value={text} onChangeText={setText} onSubmitEditing={send}
-        style={{ flex: 1, minHeight: 48, borderRadius: radius.pill, paddingHorizontal: space.lg, backgroundColor: colors.surfaceSoft, color: colors.ink, fontFamily: fonts.body, fontSize: type.md }} />
+        style={{ flex: 1, minHeight: 48, borderRadius: radius.pill, paddingHorizontal: space.lg, backgroundColor: colors.surfaceSoft, color: colors.ink, fontFamily: fonts.body, fontSize: 16 }} />
       <IconButton icon="send" label={t('common.send')} filled onPress={send} />
     </View>
   );
@@ -153,6 +222,27 @@ export function Screen({ tint, title, subtitle, onBack, right, children, footer,
         {footer && <View style={[wide, { paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: Math.max(insets.bottom, space.md), borderTopWidth: 1, borderTopColor: colors.line, backgroundColor: colors.bg }]}>{footer}</View>}
       </View>
     </View>
+  );
+}
+
+/** AiGo กำลังคิด: แสดงทันทีระหว่างรอคำตอบ จุดสามจุดจางเข้าออก (ลดการเคลื่อนไหวแล้วเหลือข้อความนิ่ง) */
+export function Thinking({ label }: { label: string }) {
+  const { colors } = useSettings();
+  const reduce = useReducedMotion();
+  const [v] = useState(() => new Animated.Value(0.3));
+  useEffect(() => {
+    if (reduce) return;
+    const a = Animated.loop(Animated.sequence([Animated.timing(v, { toValue: 1, duration: 500, useNativeDriver: native }), Animated.timing(v, { toValue: 0.3, duration: 500, useNativeDriver: native })]));
+    a.start();
+    return () => a.stop();
+  }, [v, reduce]);
+  return (
+    <Card tone="ai" style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+      <View accessible accessibilityRole="progressbar" accessibilityLabel={label} style={{ flexDirection: 'row', gap: 4 }}>
+        {[0, 1, 2].map((i) => <Animated.View key={i} style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.muted, opacity: reduce ? 1 : v }} />)}
+      </View>
+      <T v="smallBold" tone="pastelMuted">{label}</T>
+    </Card>
   );
 }
 
