@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AiSays, Button, Card, CurveHero, FadeIn, Mascot, RouteList, Screen, Section, T } from '@/components/ui';
-import { legs, photos, poses, trip } from '@/data/trip';
+import { photos, poses, trip } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
 import { space, wide } from '@/theme/tokens';
 
@@ -64,7 +64,7 @@ export default function SharedTrip() {
           <RouteList
             start={{ title: pick({ th: 'เริ่มวัน · 12 ธ.ค.', en: 'Day starts · 12 Dec' }), sub: pick({ th: 'ออกจากที่พักย่านนัมบะ', en: 'From the hotel in Namba' }) }}
             stops={places.map((p) => ({ key: p.id, photo: p.photo, name: pick(p.name), time: p.time }))}
-            legs={places.map((p) => legs[p.id] && { mode: legs[p.id].mode, text: pick(legs[p.id].text) })}
+            legs={places.map((p) => trip.legs[p.id] && { mode: trip.legs[p.id].mode, text: pick(trip.legs[p.id].text) })}
             end={{ title: pick({ th: 'จบวัน', en: 'End of day' }), sub: pick({ th: 'กลับที่พัก', en: 'Back to the hotel' }) }} />
         </Section>
       </FadeIn>

@@ -215,12 +215,21 @@ export function Tape({ color, style, rotate = -8 }: { color: string; style?: Sty
   return <View pointerEvents="none" style={[{ position: 'absolute', width: 58, height: 20, borderRadius: 3, backgroundColor: color, opacity: 0.9, transform: [{ rotate: `${rotate}deg` }] }, style]} />;
 }
 
+/** รูป ถ้าไม่มีรูป (ทริปที่ AiGo สร้างยังไม่มีภาพ) ใช้ช่องสีพาสเทลมีหมุด สีเลือกจากชื่อให้คงที่ */
+export function PhotoBox({ source, seed = '', style }: { source?: ImageSource; seed?: string; style: StyleProp<ViewStyle> & { width: number; height: number } }) {
+  const { colors } = useSettings();
+  if (source) return <Image source={source} style={style as StyleProp<import('react-native').ImageStyle>} contentFit="cover" accessible={false} transition={200} />;
+  const tones = Object.values(colors.sticker);
+  const tone = tones[[...seed].reduce((n, c) => n + c.charCodeAt(0), 0) % tones.length];
+  return <View style={[style, { backgroundColor: tone, alignItems: 'center', justifyContent: 'center' }]}><Icon name="pin" color={colors.ink} size={Math.min(style.width, style.height) * 0.36} /></View>;
+}
+
 /** รูปโพลารอยด์ กรอบขาว เอียงได้ ติดเทปได้ */
-export function Polaroid({ source, caption, rotate = 0, width = 148, onPress, tape }: { source: ImageSource; caption: string; rotate?: number; width?: number; onPress?: () => void; tape?: string }) {
+export function Polaroid({ source, caption, rotate = 0, width = 148, onPress, tape }: { source?: ImageSource; caption: string; rotate?: number; width?: number; onPress?: () => void; tape?: string }) {
   const { isDark } = useSettings();
   const inner = (
     <View style={[{ width, padding: 8, paddingBottom: 10, borderRadius: 8, backgroundColor: '#FFFFFF' }, lift(isDark, 0.7)]}>
-      <Image source={source} style={{ width: width - 16, height: (width - 16) * 1.04, borderRadius: 4 }} contentFit="cover" accessible={false} />
+      <PhotoBox source={source} seed={caption} style={{ width: width - 16, height: (width - 16) * 1.04, borderRadius: 4 }} />
       <Text numberOfLines={1} style={{ marginTop: 8, fontFamily: fonts.bodyBold, fontSize: 14, lineHeight: 20, color: '#2A2622', textAlign: 'center' }}>{caption}</Text>
     </View>
   );
@@ -233,7 +242,7 @@ export function Polaroid({ source, caption, rotate = 0, width = 148, onPress, ta
 }
 
 /** แถวโพลารอยด์เลื่อนแนวนอน เอียงสลับซ้ายขวา */
-export function PhotoStrip({ items }: { items: { key: string; source: ImageSource; label: string; onPress?: () => void }[] }) {
+export function PhotoStrip({ items }: { items: { key: string; source?: ImageSource; label: string; onPress?: () => void }[] }) {
   const { colors } = useSettings();
   const tapes = ['#FFD966', '#9CD3FF', '#FFB3C4', '#9EE6C6'];
   return (
@@ -255,10 +264,10 @@ function Scrim({ from = 0.2, to = 0.8, top }: { from?: number; to?: number; top?
 }
 
 /** การ์ดรูปใหญ่ มุมมนมาก ตัวหนังสือขาววางบนรูป ป้ายมุมซ้ายบน */
-export function PhotoCard({ source, height = 220, title, subtitle, badge, onPress, label, children, style }: { source: ImageSource; height?: number; title?: string; subtitle?: string; badge?: ReactNode; onPress?: () => void; label?: string; children?: ReactNode; style?: StyleProp<ViewStyle> }) {
+export function PhotoCard({ source, height = 220, title, subtitle, badge, onPress, label, children, style }: { source?: ImageSource; height?: number; title?: string; subtitle?: string; badge?: ReactNode; onPress?: () => void; label?: string; children?: ReactNode; style?: StyleProp<ViewStyle> }) {
   const body = (
-    <View style={[{ height, borderRadius: radius.xl, overflow: 'hidden', backgroundColor: '#C9C2B8' }, style]}>
-      <Image source={source} style={StyleSheet.absoluteFill} contentFit="cover" accessible={false} transition={250} />
+    <View style={[{ height, borderRadius: radius.xl, overflow: 'hidden', backgroundColor: source ? '#C9C2B8' : '#2F6BFF' }, style]}>
+      {source && <Image source={source} style={StyleSheet.absoluteFill} contentFit="cover" accessible={false} transition={250} />}
       <Scrim />
       {badge && <View style={{ position: 'absolute', top: space.md, left: space.md }}>{badge}</View>}
       <View style={{ position: 'absolute', left: space.lg, right: space.lg, bottom: space.lg, gap: 2 }}>
@@ -592,13 +601,13 @@ export function Segmented({ options, value, onChange }: { options: string[]; val
 
 /** การ์ดจุดแวะแบบ Polarsteps: รูปมีเลขตรงกับหมุดบนแผนที่ ชื่อ รายละเอียด สถานะ และเวลาตัวใหญ่ทางขวา */
 export function StopCard({ n, photo, name, time, meta, status, statusTone = 'success', onPress, label }: {
-  n: number; photo: ImageSource; name: string; time?: string; meta?: string; status?: string; statusTone?: Tone; onPress?: () => void; label?: string;
+  n: number; photo?: ImageSource; name: string; time?: string; meta?: string; status?: string; statusTone?: Tone; onPress?: () => void; label?: string;
 }) {
   const { colors, isDark } = useSettings();
   const inner = (
     <View style={[{ flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.sm, paddingRight: space.lg, borderRadius: radius.lg, backgroundColor: colors.surface }, lift(isDark, 0.8), isDark && { borderWidth: 1, borderColor: colors.line }]}>
       <View>
-        <Image source={photo} style={{ width: 64, height: 64, borderRadius: radius.sm }} contentFit="cover" accessible={false} />
+        <PhotoBox source={photo} seed={name} style={{ width: 64, height: 64, borderRadius: radius.sm }} />
         <View style={{ position: 'absolute', left: -4, bottom: -4, width: 26, height: 26, borderRadius: 13, backgroundColor: colors.ink, borderWidth: 2, borderColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontFamily: fonts.bodyBold, fontSize: 13, color: colors.bg }}>{n}</Text>
         </View>
@@ -617,8 +626,8 @@ export function StopCard({ n, photo, name, time, meta, status, statusTone = 'suc
   return onPress ? <PressScale onPress={onPress} label={label ?? name} to={0.98}>{inner}</PressScale> : inner;
 }
 
-export type Leg = { mode: 'train' | 'walk'; text: string };
-export type RouteStop = { key: string; photo: ImageSource; name: string; time?: string; meta?: string; status?: string; statusTone?: Tone; onPress?: () => void };
+export type Leg = { mode: 'train' | 'walk' | 'car'; text: string };
+export type RouteStop = { key: string; photo?: ImageSource; name: string; time?: string; meta?: string; status?: string; statusTone?: Tone; onPress?: () => void };
 
 /**
  * แผนรายวันแบบ Polarsteps: แถวเริ่ม (บ้าน) → จุดแวะ → ป้ายการเดินทางระหว่างจุด → แถวจบ (ธง)
@@ -644,7 +653,7 @@ export function RouteList({ start, end, stops, legs = [], onAdd, addLabel }: {
         </View>
         {leg && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 4, paddingRight: space.md, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceSoft }}>
-            <View style={{ width: 24, height: 24, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: leg.mode === 'train' ? colors.sticker.blush : colors.sticker.mint }}><Icon name={leg.mode} color={colors.ink} size={15} /></View>
+            <View style={{ width: 24, height: 24, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: { train: colors.sticker.blush, walk: colors.sticker.mint, car: colors.sticker.sun }[leg.mode] }}><Icon name={leg.mode} color={colors.ink} size={15} /></View>
             <T v="smallBold" style={{ color: colors.mutedStrong }}>{leg.text}</T>
           </View>
         )}

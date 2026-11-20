@@ -2,14 +2,15 @@ import { router } from 'expo-router';
 import { View } from 'react-native';
 
 import { Button, Card, FadeIn, Peek, Screen, T, Ticket, useToast } from '@/components/ui';
-import { trip } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
+import { useTrip } from '@/lib/tripStore';
 import { space } from '@/theme/tokens';
 
 // ทริปที่สอง (R31–R33) ราคายังเป็นช่องว่างจนกว่าจะยืนยันราคากับ Stripe และส่วนแบ่งสโตร์
 // shortcut: ปุ่มซื้อแจ้งว่ายังใช้ไม่ได้, ต่อการซื้อในแอปของ App Store / Google Play
 export default function Paywall() {
   const { pick } = useSettings();
+  const { trip } = useTrip();
   const toast = useToast();
   const notYet = () => toast(pick({ th: 'การซื้อในแอปยังใช้ไม่ได้ในรุ่นทดลองนี้', en: 'In-app purchase is not available in this preview yet' }));
   return (

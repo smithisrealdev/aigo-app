@@ -3,8 +3,8 @@ import { useState } from 'react';
 import { Share, Switch, View } from 'react-native';
 
 import { AiSays, Badge, Button, Card, FadeIn, PhotoCard, Row, Screen, T, Tape, tap } from '@/components/ui';
-import { photos, trip } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
+import { useTrip } from '@/lib/tripStore';
 import { space } from '@/theme/tokens';
 
 // shortcut: ลิงก์แชร์เป็นลิงก์ตัวอย่าง, สร้าง share token จริงผ่าน get-shared-trip ของ backend เว็บ (R26)
@@ -12,6 +12,7 @@ const LINK = 'https://theaigo.co/shared/demo';
 
 export default function ShareTrip() {
   const { colors, pick } = useSettings();
+  const { trip } = useTrip();
   const [hideBudget, setHideBudget] = useState(true);
   const [closed, setClosed] = useState(false);
   const sw = { trackColor: { true: colors.accent, false: colors.line }, thumbColor: '#FFFFFF' };
@@ -21,7 +22,7 @@ export default function ShareTrip() {
       {/* ตัวอย่างหน้าที่เพื่อนจะเห็น ทำเป็นโปสการ์ดเอียงติดเทป */}
       <FadeIn style={{ paddingTop: space.sm, paddingHorizontal: space.xs }}>
         <View style={{ transform: [{ rotate: '-2deg' }] }}>
-          <PhotoCard source={photos.skyline} height={220} title={pick(trip.title)} subtitle={pick({ th: `${pick(trip.dates)} · ตรวจแล้วทุกที่`, en: `${pick(trip.dates)} · every place checked` })}
+          <PhotoCard source={trip.cover} height={220} title={pick(trip.title)} subtitle={pick({ th: `${pick(trip.dates)} · ตรวจแล้วทุกที่`, en: `${pick(trip.dates)} · every place checked` })}
             badge={<Badge icon="next" label={pick({ th: 'แตะดูหน้าที่เพื่อนจะเห็น', en: 'Tap to see what friends see' })} />}
             onPress={() => router.push({ pathname: '/shared/[token]', params: { token: 'demo' } })} label={pick({ th: 'ดูหน้าที่เพื่อนจะเห็น', en: 'See what friends will see' })} />
           <Tape color="#FFD966" style={{ top: -10, right: 36 }} rotate={8} />

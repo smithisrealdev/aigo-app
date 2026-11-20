@@ -7,7 +7,9 @@ import { AiSays, AskBar, Badge, Button, Chip, FadeIn, PhotoStrip, Screen, Sectio
 import { baht, logos, photos, trip } from '@/data/trip';
 import { streamTripChat, type ChatMessage } from '@/lib/backend';
 import { parseReply, shortDate, type TripSummary } from '@/lib/chat';
+import { peopleOf, requestFromSummary } from '@/lib/itinerary';
 import { useSettings } from '@/lib/settings';
+import { useTrip } from '@/lib/tripStore';
 import { radius, space } from '@/theme/tokens';
 
 const MONTHS = [{ th: 'ธ.ค. นี้', en: 'This Dec' }, { th: 'ม.ค.', en: 'Jan' }, { th: 'ยังไม่แน่ใจ', en: 'Not sure yet' }];
@@ -16,6 +18,7 @@ const TONES = ['sky', 'sun', 'mint', 'blush', 'lilac'] as const;
 // คุยกับ trip-chat จริงแบบสตรีม ถ้าต่อไม่ได้ตั้งแต่ข้อความแรก (เช่น backend ยังไม่มี key) ใช้บทสนทนาตัวอย่างแทน
 export default function Chat() {
   const { t, pick, lang } = useSettings();
+  const { setPending } = useTrip();
   const { prompt } = useLocalSearchParams<{ prompt?: string }>();
   const first = prompt || pick(trip.title);
   const toast = useToast();
@@ -53,7 +56,12 @@ export default function Chat() {
 
   const last = msgs[msgs.length - 1];
   const reply = mode === 'live' && draft === null && last.role === 'assistant' ? parseReply(last.content) : null;
-  const go = () => router.replace('/work');
+  // ส่งสรุปทริปต่อให้หน้างานของ AiGo สร้างแผนจริง ถ้าสรุปยังไม่พอ (ไม่มีที่หมายหรือวันที่) ใช้ตัวอย่าง
+  const go = () => {
+    const req = reply?.summary && requestFromSummary(reply.summary, lang, new Date().toISOString().slice(0, 10));
+    if (req) setPending({ request: req, people: peopleOf(reply?.summary?.travelers), messages: msgs });
+    router.replace('/work');
+  };
   return (
     <Screen follow title={t('chat.title')} subtitle={t('chat.sub')} onBack={() => router.back()}
       footer={<AskBar placeholder={t('chat.placeholder')} onSend={say} />}>

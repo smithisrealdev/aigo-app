@@ -2,8 +2,9 @@ import { router } from 'expo-router';
 import { View } from 'react-native';
 
 import { Button, Card, FadeIn, Polaroid, Row, Screen, StatusDot, T, tap } from '@/components/ui';
-import { photos, poses, trip } from '@/data/trip';
+import { poses } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
+import { useTrip } from '@/lib/tripStore';
 import { space } from '@/theme/tokens';
 
 // บันทึกทริป = จุดแรกที่ขอให้สมัคร (R14, R19) แล้วกลับไปทำต่อที่เดิม
@@ -16,11 +17,12 @@ const BENEFITS = [
 
 export default function Save() {
   const { pick, set } = useSettings();
+  const { trip } = useTrip();
   const signIn = () => { tap('success'); set({ signedIn: true }); router.back(); };
   return (
     <Screen title={pick({ th: 'เก็บแผนนี้ไว้กับคุณ', en: 'Keep this plan' })} subtitle={`${pick(trip.title)} · ${pick(trip.dates)}`} onBack={() => router.back()} mascot={poses.happy}>
       <FadeIn style={{ alignItems: 'center', paddingVertical: space.sm }}>
-        <Polaroid source={photos.skyline} caption={pick(trip.title)} rotate={-4} width={200} tape="#9CD3FF" />
+        <Polaroid source={trip.cover} caption={pick(trip.title)} rotate={-4} width={200} tape="#9CD3FF" />
       </FadeIn>
       <FadeIn index={1}>
         <Card tone="paper" style={{ paddingVertical: space.xs }}>

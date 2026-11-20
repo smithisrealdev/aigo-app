@@ -3,8 +3,9 @@ import { Linking, View } from 'react-native';
 
 import { Icon } from '@/components/icon';
 import { AiSays, Button, Card, Chip, FadeIn, PriceTag, Row, Screen, Section, T, useToast } from '@/components/ui';
-import { allPlaces, baht, trip } from '@/data/trip';
+import { baht } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
+import { useTrip } from '@/lib/tripStore';
 import { space } from '@/theme/tokens';
 
 const ASK = [{ th: 'แถวนี้กินอะไรดี', en: 'What to eat nearby' }, { th: 'หาตั๋วให้หน่อย', en: 'Find tickets' }, { th: 'เปลี่ยนเป็นที่อื่น', en: 'Swap for another place' }];
@@ -13,24 +14,36 @@ export default function Place() {
   const { colors, t, pick } = useSettings();
   const { id } = useLocalSearchParams<{ id: string }>();
   const toast = useToast();
-  const p = allPlaces().find((x) => x.id === id);
+  const { trip } = useTrip();
+  const day = trip.days.findIndex((d) => d.some((x) => x.id === id));
+  const p = trip.days[day]?.find((x) => x.id === id);
   if (!p) return <Screen title={t('common.sample')} onBack={() => router.back()}><T>{id}</T></Screen>;
+  // ไม่มีพิกัด (AI ไม่ได้ให้มา) ค้นหาด้วยชื่อแทน
+  const query = p.lat || p.lon ? `${p.lat},${p.lon}` : encodeURIComponent(pick(p.name));
   return (
-    <Screen hero={p.photo} heroHeight={340} title={pick(p.name)} subtitle={`${t('it.day', { n: 1 })} · ${p.time}`} onBack={() => router.back()}
-      footer={<Button label={t('place.navigate')} icon="pin" big onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}`)} />}>
+    <Screen hero={p.photo} heroHeight={340} title={pick(p.name)} subtitle={[t('it.day', { n: day + 1 }), p.time].filter(Boolean).join(' · ')} onBack={() => router.back()}
+      footer={<Button label={t('place.navigate')} icon="pin" big onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`)} />}>
+      {!p.checked && (
+        <FadeIn index={1}>
+          <Card>
+            <T v="smallBold" tone="muted">{t('it.unchecked')}</T>
+            <T>{pick({ th: 'เวลาเปิดและราคามาจาก AI ยังไม่ได้ตรวจกับแหล่งจริง AiGo จะตรวจให้ก่อนเดินทาง', en: 'Hours and prices come from AI and are not verified yet. AiGo will check them before you go.' })}</T>
+          </Card>
+        </FadeIn>
+      )}
       {p.checked && (
         <FadeIn index={1}>
           <Card tone="done" style={{ flexDirection: 'row', gap: space.md, alignItems: 'flex-start' }}>
             <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.success }}><Icon name="check" color={colors.bg} size={20} /></View>
             <View style={{ flex: 1, gap: 2 }}>
-              <T v="smallBold" tone="success">{t('place.checked', { at: trip.checkedAt })}</T>
+              <T v="smallBold" tone="success">{t('place.checked', { at: trip.checkedAt ?? '' })}</T>
               <T v="subheading">{t('place.open')}</T>
               <T v="small" style={{ color: colors.mutedStrong }}>{t('place.source', { x: 'Google Places' })}</T>
             </View>
           </Card>
         </FadeIn>
       )}
-      <FadeIn index={2}><AiSays>{pick(p.tip)}</AiSays></FadeIn>
+      {!!pick(p.tip) && <FadeIn index={2}><AiSays>{pick(p.tip)}</AiSays></FadeIn>}
       <FadeIn index={3}>
         <Card tone="paper" style={{ paddingVertical: space.xs }}>
           <Row><Line label={t('place.duration')} value={`${p.minutes / 60} ${pick({ th: 'ชม.', en: 'hr' })}`} /></Row>

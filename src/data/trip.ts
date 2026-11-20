@@ -2,6 +2,7 @@ import type { ImageSource } from 'expo-image';
 
 import type { Action, Task } from '@/lib/agent';
 import type { L } from '@/lib/i18n';
+import type { AppTrip, Leg, Place } from '@/lib/itinerary';
 
 // shortcut: ข้อมูลตัวอย่างของทริปเดียว (โอซาก้า) ตามที่ใช้ใน mockup แทนผลจาก backend, เปลี่ยนเป็นข้อมูลจาก Supabase เมื่อต่อ trip-chat และ generate-itinerary
 // ราคา เวลา และชื่อโรงแรมเป็นตัวอย่าง ภาพมาจาก Wikimedia Commons (assets/photos/CREDITS.md)
@@ -46,15 +47,18 @@ export const poses = {
   peek: require('@/assets/character/aigo-peek.svg'),
 } satisfies Record<string, ImageSource>;
 
-export type Place = {
-  id: string; time: string; name: L; photo: ImageSource; minutes: number; checked: boolean;
-  tip: L; entry: { text: L; source?: string; at?: string }; spend?: { baht: number; source?: string };
-  lat: number; lon: number;
+/** การเดินทางไปที่ถัดไป (เวลาโดยประมาณ) ใช้คั่นระหว่างสถานที่ในแผนรายวัน */
+const legs: Record<string, Leg> = {
+  castle: { mode: 'train', text: { th: 'รถไฟใต้ดิน · ~25 นาที', en: 'Subway · ~25 min' } },
+  kuromon: { mode: 'walk', text: { th: 'เดิน · ~12 นาที', en: 'Walk · ~12 min' } },
+  shinsaibashi: { mode: 'walk', text: { th: 'เดิน · ~6 นาที', en: 'Walk · ~6 min' } },
 };
 
-export const trip = {
-  id: 'osaka', title: { th: 'โอซาก้า 5 วัน', en: 'Osaka, 5 days' } as L, dates: { th: '12–16 ธ.ค.', en: '12–16 Dec' } as L,
-  people: 2, budget: 40000, daysAway: 22, checkedAt: '09:10',
+/** ทริปตัวอย่าง ใช้จนกว่า AiGo จะสร้างทริปจริงจากแชต (ดู src/lib/tripStore.tsx) */
+export const trip: AppTrip & { budget: number; checkedAt: string } = {
+  id: 'osaka', title: { th: 'โอซาก้า 5 วัน', en: 'Osaka, 5 days' }, dates: { th: '12–16 ธ.ค.', en: '12–16 Dec' },
+  destination: { th: 'โอซาก้า', en: 'Osaka' }, startDate: '2026-12-12', totalDays: 5,
+  people: 2, budget: 40000, checkedAt: '09:10', legs, cover: photos.skyline, hotel: { th: 'โรงแรมย่านนัมบะ', en: 'Hotel in Namba' }, sample: true,
   days: [[
     { id: 'castle', time: '10:00', name: { th: 'ปราสาทโอซาก้า', en: 'Osaka Castle' }, photo: photos.castle, minutes: 120, checked: true,
       tip: { th: 'ขึ้นลิฟต์ไปชั้นบนก่อนแล้วเดินลง คนน้อยกว่า', en: 'Take the lift up first and walk down; it is quieter' }, entry: { text: { th: '~¥1,200', en: '~¥1,200' } }, lat: 34.6873, lon: 135.5262 },
@@ -68,14 +72,6 @@ export const trip = {
   ] satisfies Place[]],
 };
 
-/** การเดินทางไปที่ถัดไป (เวลาโดยประมาณ) ใช้คั่นระหว่างสถานที่ในแผนรายวัน */
-export const legs: Record<string, { mode: 'train' | 'walk'; text: L }> = {
-  castle: { mode: 'train', text: { th: 'รถไฟใต้ดิน · ~25 นาที', en: 'Subway · ~25 min' } },
-  kuromon: { mode: 'walk', text: { th: 'เดิน · ~12 นาที', en: 'Walk · ~12 min' } },
-  shinsaibashi: { mode: 'walk', text: { th: 'เดิน · ~6 นาที', en: 'Walk · ~6 min' } },
-};
-
-export const allPlaces = (): Place[] => trip.days.flat();
 
 /** งานที่ AiGo ทำตามลำดับหลังผู้ใช้กด "ให้ AiGo จัดการทั้งหมด" */
 export const agentTasks: (Omit<Task, 'state'> & { th: string; en: string })[] = [
