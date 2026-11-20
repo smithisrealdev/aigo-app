@@ -5,6 +5,7 @@ import { Icon, type IconName } from '@/components/icon';
 import { AiSays, ArtCard, Badge, Button, Card, FadeIn, IconButton, PhotoCard, Row, Screen, Section, Stamp, T } from '@/components/ui';
 import { art, offers } from '@/data/trip';
 import type { L } from '@/lib/i18n';
+import { usePhotos } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { daysUntil, useTrip } from '@/lib/tripStore';
 import { space } from '@/theme/tokens';
@@ -21,12 +22,14 @@ export default function Trips() {
   const { trip } = useTrip();
   const places = trip.days.flat().length;
   const away = daysUntil(trip.startDate);
+  // ทริปที่ AiGo สร้างไม่มีรูปปก ใช้รูปของเมืองปลายทาง
+  const cover = usePhotos(trip.cover ? [] : [{ name: trip.destination.en }]);
   return (
     <Screen tabbed title={t('trips.title')} subtitle={t('trips.sub', { n: 1 })}
       right={<IconButton icon="user" label={pick({ th: 'บัญชีของฉัน', en: 'My account' })} onPress={() => router.push('/account')} />}>
       <FadeIn>
         <View>
-          <PhotoCard source={trip.cover} height={260} title={pick(trip.title)} subtitle={`${pick(trip.dates)} · ${t('trips.offline')}`}
+          <PhotoCard source={trip.cover ?? cover({ name: trip.destination.en })} height={260} title={pick(trip.title)} subtitle={`${pick(trip.dates)} · ${t('trips.offline')}`}
             badge={<Badge label={pick({ th: 'ทริปถัดไป', en: 'Next trip' })} />} onPress={() => router.push('/itinerary')} label={`${pick(trip.title)}, ${t('trips.open')}`}>
             <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.sm }}>
               {[pick({ th: `${trip.totalDays} วัน`, en: `${trip.totalDays} days` }), pick({ th: `${places} ที่`, en: `${places} places` }), pick({ th: `${trip.people} คน`, en: `${trip.people} people` })].map((s) => (

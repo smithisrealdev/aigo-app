@@ -2,11 +2,13 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
+import { TripCards } from '@/components/cards';
 import { Icon } from '@/components/icon';
 import { AskBar, Button, Chip, FadeIn, Glass, IconButton, Mascot, PressScale, RouteList, Screen, Segmented, SketchMap, T, useToast } from '@/components/ui';
 import { poses } from '@/data/trip';
 import { shortDate } from '@/lib/chat';
 import { addDays } from '@/lib/itinerary';
+import { usePhotos } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
 import { radius, space } from '@/theme/tokens';
@@ -20,6 +22,9 @@ export default function Itinerary() {
   const [day, setDay] = useState(0);
   const toast = useToast();
   const places = trip.days[day] ?? [];
+  // ทริปที่ AiGo สร้างไม่มีรูปมาด้วย ค้นรูปจากชื่อสถานที่ (ชื่อภาษาอังกฤษ) ในเมืองของทริป
+  const near = trip.destination.en;
+  const photo = usePhotos(places.filter((p) => !p.photo).map((p) => ({ name: p.name.en, near })));
   const checked = places.filter((p) => p.checked).length;
   const allChecked = places.length > 0 && checked === places.length;
   const date = shortDate(addDays(trip.startDate, day), lang);
@@ -76,7 +81,7 @@ export default function Itinerary() {
             ),
           }}
           stops={places.map((p) => ({
-            key: p.id, photo: p.photo, name: pick(p.name), time: p.time, meta: hours(p.minutes),
+            key: p.id, photo: p.photo ?? photo({ name: p.name.en, near }), name: pick(p.name), time: p.time, meta: hours(p.minutes),
             status: p.checked ? t('it.open') : t('it.unchecked'), statusTone: p.checked ? 'success' : 'muted',
             onPress: () => router.push({ pathname: '/place/[id]', params: { id: p.id } }),
           }))}
@@ -95,6 +100,13 @@ export default function Itinerary() {
             {trip.sample && <T tone="muted" style={{ textAlign: 'center' }}>{t('common.sample')}</T>}
             {!planning && <Button kind="dark" icon="spark" label={pick({ th: 'ให้ AiGo วางแผนวันนี้', en: 'Let AiGo plan this day' })} onPress={() => toast(t('toast.sent'))} style={{ marginTop: space.sm }} />}
           </View>
+        </FadeIn>
+      )}
+      {!!trip.bookings?.length && (
+        <FadeIn style={{ gap: space.md, marginTop: space.lg }}>
+          <T v="title">{pick({ th: 'การจองที่ AiGo แนะนำ', en: 'Bookings AiGo suggests' })}</T>
+          <TripCards cards={trip.bookings} only={['flight', 'hotel', 'food', 'ticket', 'service']}
+            trip={{ destination: near, startDate: trip.startDate, endDate: addDays(trip.startDate, trip.totalDays - 1), people: trip.people }} />
         </FadeIn>
       )}
     </Screen>

@@ -349,13 +349,55 @@ After emitting [READY_TO_GENERATE], the FIRST quick reply MUST be the generation
 
 ---
 
-## 📱 DIRECTIVE 12 — AiGo Phone App (overrides Directives 5, 7, 8 and 11 where they conflict)
+## 📱 DIRECTIVE 12 — AiGo Phone App (overrides Directives 3, 5, 7, 8 and 11 where they conflict)
 
-This chat runs in the AiGo phone app, which shows plain text bubbles only:
-- Do NOT output [FLIGHTS], [HOTELS], [TICKETS] or [SERVICES] blocks, IMAGE tokens or Markdown tables. The app hides them; AiGo books flights and hotels on its own screens after the trip is generated.
-- Keep replies short for a phone screen: about 120 words, one question at a time.
-- The proposal is one line per day (area + 2–3 highlights) and one line of estimated budget. Never write timed day-by-day schedules in chat: the itinerary builder writes the detailed plan after the user taps generate.
-- When the plan is ready, put [READY_TO_GENERATE] and the [TRIP_SUMMARY] block right after the day lines, then [QUICK_REPLIES].
+The app shows your words in a chat bubble and turns card blocks into swipeable cards with photos and booking links, so the cards are what make a reply useful.
+Keep the words short (about 80 words). No IMAGE tokens and no Markdown tables.
+
+Rule 1: once the destination is known, EVERY reply contains card blocks. Every place, hotel, restaurant, flight or ticket you mention goes into a card; a reply without cards looks empty in the app.
+Rule 2: ask at most 2 questions in the whole chat, one per reply. Take the home airport from the user location context, and pick exact dates yourself when the user gives a month or season ("late January 2027" → 2027-01-24 to 2027-01-28). As soon as you know where, roughly when, how long and who, send the proposal.
+
+Card format: one item per line, fields separated by " | ". Write "name" as the common English name (the app finds photos, maps and bookings by it); write "why", "area" and "price" in the user's language. Prices are estimates; never write URLs.
+[PLACES]
+[PLACE]name: Dotonbori | area: Namba | why: neon canal and street food at night[/PLACE]
+[/PLACES]
+[FLIGHTS]
+[FLIGHT]airline: AirAsia X | from: BKK | to: KIX | date: 2026-12-26 | departure: 08:30 | type: direct | price: ~6,000 THB per person[/FLIGHT]
+[/FLIGHTS]
+[HOTELS]
+[HOTEL]name: Hotel Hankyu Respire Osaka | area: Umeda | rating: 4.4 | price: ~4,000 THB per night | why: connected to Osaka Station[/HOTEL]
+[/HOTELS]
+[RESTAURANTS]
+[RESTAURANT]name: Kushikatsu Daruma | area: Shinsekai | cuisine: kushikatsu | price: ~1,000 THB per person | why: the original Osaka fried skewers[/RESTAURANT]
+[/RESTAURANTS]
+[TICKETS]
+[TICKET]name: Universal Studios Japan | price: ~8,600 JPY | why: book online, weekends sell out[/TICKET]
+[/TICKETS]
+[SERVICES]
+[SERVICE]type: car_rental | name: Car rental from New Chitose Airport | price: ~2,500 THB per day | why: Hokkaido's onsen towns are far apart[/SERVICE]
+[/SERVICES]
+Service types: car_rental, transfer, rail_pass, esim, insurance.
+
+Discovery reply = 2-3 sentences of insight, one question, [PLACES] with the 3-4 places the user would love, [QUICK_REPLIES]. Example (written in the user's language):
+Kyoto is best in slow early mornings, before the tour buses arrive. Who is coming with you?
+[PLACES]
+[PLACE]name: Fushimi Inari Taisha | area: Fushimi | why: thousands of red torii gates at sunrise[/PLACE]
+[PLACE]name: Arashiyama Bamboo Grove | area: Arashiyama | why: towering bamboo, quiet before 8am[/PLACE]
+[PLACE]name: Nishiki Market | area: Downtown Kyoto | why: 400 years of street food in one covered lane[/PLACE]
+[/PLACES]
+[QUICK_REPLIES]
+- 💑 Couple|I'm going with my partner
+- 🧍 Solo|I'm going alone
+[/QUICK_REPLIES]
+
+Proposal reply (the one with [READY_TO_GENERATE]), in this order:
+1. a one-line hook
+2. one line per day: "Day 1 Higashiyama: lantern-lit lanes to Kiyomizu-dera at dusk"
+3. one line of estimated total budget
+4. [READY_TO_GENERATE] and the [TRIP_SUMMARY] block (destination as "City, Country" in English)
+5. [PLACES] (the 4-5 best moments), [FLIGHTS] (outbound and return), [HOTELS] (3 price levels in the best area), [RESTAURANTS] (3 must-eats), [TICKETS] only for things that sell out, [SERVICES] only for what this trip needs (car rental for road trips or rural areas, rail pass for intercity trains, airport transfer, eSIM)
+6. [QUICK_REPLIES]
+Never write timed day-by-day schedules in chat: the itinerary builder writes the detailed plan after the user taps generate.
 
 Today's date: {{TODAY_LONG}}`;
 
@@ -546,7 +588,9 @@ serve(async (req) => {
       // The long system prompt is the same for everyone each day, so mark it for Anthropic prompt caching:
       // later messages within a few minutes read it from cache at about a tenth of the input price.
       // The per-user parts go in a second block after the cache breakpoint.
-      const dynamicContext = tripInfoContext + prefsContext + langInstruction;
+      // The card rule sits at the end of a long prompt, so repeat it last, right before the conversation
+      const appReminder = `\n\nAPP REMINDER (Directive 12): once the destination is known, every reply has card blocks, a discovery question too ([PLACES] with 3-4 places before [QUICK_REPLIES]); put every place, hotel, restaurant, flight and ticket you mention into cards, and send the proposal as soon as you know where, roughly when, how long and who.`;
+      const dynamicContext = tripInfoContext + prefsContext + langInstruction + appReminder;
       const systemContent = [
         { type: "text", text: getSystemPrompt(), cache_control: { type: "ephemeral" } },
         ...(dynamicContext.trim() ? [{ type: "text", text: dynamicContext }] : []),

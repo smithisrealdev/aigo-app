@@ -1,6 +1,6 @@
 import type { ImageSource } from 'expo-image';
 
-import { shortDate, type TripSummary } from './chat.ts';
+import { shortDate, type ChatCard, type TripSummary } from './chat.ts';
 import type { L } from './i18n.ts';
 
 // รูปแบบทริปที่แอปใช้ และตัวแปลงผลจาก generate-itinerary (JSON ตาม prompt ของเว็บ) มาเป็นรูปแบบนี้
@@ -15,6 +15,8 @@ export type Place = {
 export type AppTrip = {
   id: string; title: L; dates: L; destination: L; startDate: string; totalDays: number; people: number; budget?: number;
   checkedAt?: string; days: Place[][]; dayTitles?: L[]; legs: Record<string, Leg>; cover?: ImageSource; hotel?: L;
+  /** เที่ยวบิน ที่พัก ร้าน ตั๋ว และบริการที่ AI หาไว้ในแชต (ราคาประมาณ กดดูราคาจริงที่เว็บจอง) */
+  bookings?: ChatCard[];
   /** ทริปตัวอย่าง (โอซาก้า) ไม่ใช่ทริปที่ AiGo สร้างจริง */
   sample: boolean;
 };

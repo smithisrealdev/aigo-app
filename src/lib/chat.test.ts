@@ -62,3 +62,31 @@ test('ตาราง Markdown กลายเป็นบรรทัดอ่�
   const r = parseReply('งบประมาณ\n| รายการ | ราคา |\n|--------|------:|\n| ตั๋วเครื่องบิน | ~9,000 บาท |\n| โรงแรม | ~14,000 บาท |');
   assert.equal(r.text, 'งบประมาณ\nรายการ · ราคา\n\nตั๋วเครื่องบิน · ~9,000 บาท\nโรงแรม · ~14,000 บาท');
 });
+
+test('การ์ดจากบล็อกของ AI ทั้งรูปแบบ | และรูปแบบเดิมของ DIRECTIVE 7', () => {
+  const raw = `ไฮไลต์ที่ห้ามพลาด
+[PLACES]
+[PLACE]name: Dotonbori | area: Namba | why: คลองนีออนกับสตรีทฟู้ดยามค่ำ[/PLACE]
+[PLACE]area: Namba | why: ไม่มีชื่อ ต้องข้าม[/PLACE]
+[/PLACES]
+[FLIGHTS]
+[FLIGHT]airline: AirAsia X | iata: D7 | from: BKK | to: KIX | date: 2026-12-26 | departure: 08:30 | type: direct | price: ~6,000 THB/คน[/FLIGHT]
+[/FLIGHTS]
+[HOTELS]
+[HOTEL]name: Hotel Hankyu Respire Osaka area: Umeda, Osaka rating: 4.4 price: ~4,000 THB highlights: เชื่อมสถานี Umeda[/HOTEL]
+[/HOTELS]
+[RESTAURANTS]
+[RESTAURANT]name: Kushikatsu Daruma | area: Shinsekai | cuisine: kushikatsu | price: ~1,000 THB | why: ต้นตำรับเสียบไม้ทอด[/RESTAURANT]
+[/RESTAURANTS]
+[SERVICES]
+[SERVICE]type: rail_pass | name: Kansai Area Pass | price: ~2,800 THB | why: นั่งรถไฟไปเกียวโตกับนาราได้ไม่จำกัด[/SERVICE]
+[/SERVICES]`;
+  const r = parseReply(raw);
+  assert.deepEqual(r.cards.map((c) => [c.kind, c.name]), [['place', 'Dotonbori'], ['flight', 'AirAsia X'], ['hotel', 'Hotel Hankyu Respire Osaka'], ['food', 'Kushikatsu Daruma'], ['service', 'Kansai Area Pass']]);
+  assert.deepEqual(r.cards[1], { kind: 'flight', name: 'AirAsia X', area: undefined, why: undefined, price: '~6,000 THB/คน', rating: undefined, cuisine: undefined, airline: 'AirAsia X', from: 'BKK', to: 'KIX', date: '2026-12-26', departure: '08:30', type: 'direct', provider: undefined });
+  assert.equal(r.cards[2].area, 'Umeda, Osaka');
+  assert.equal(r.cards[2].why, 'เชื่อมสถานี Umeda', 'highlights ของรูปแบบเดิมเป็นเหตุผล');
+  assert.equal(r.cards[4].type, 'rail_pass');
+  assert.equal(r.text, 'ไฮไลต์ที่ห้ามพลาด', 'บล็อกการ์ดไม่โผล่ในข้อความ');
+  assert.deepEqual(parseReply('[PLACES]\n[PLACE]name: Dotonbori | area: Na', true).cards, [], 'การ์ดที่ยังมาไม่ครบไม่แสดง');
+});

@@ -1,10 +1,45 @@
-// แยกคำตอบของ trip-chat (Markdown + โทเคนควบคุมตาม system prompt ของเว็บ) เป็นส่วนที่แอปแสดง
+// แยกคำตอบของ trip-chat (Markdown + โทเคนควบคุมตาม system prompt) เป็นส่วนที่แอปแสดง
 // โทเคน: [QUICK_REPLIES] "- ป้าย|ข้อความที่ส่ง" ต่อบรรทัด, [TRIP_SUMMARY] "key: value" ต่อบรรทัด, [READY_TO_GENERATE]
-// บล็อกวิดเจ็ตอื่น ([FLIGHTS] [HOTELS] [TICKETS] [SERVICES] …) ไม่แสดงในแชต เพราะแอปให้ AiGo หาเที่ยวบินและที่พักในหน้างานของ AiGo แทน
+// การ์ด (DIRECTIVE 12): [PLACE] [FLIGHT] [HOTEL] [RESTAURANT] [TICKET] [SERVICE] "key: value | key: value" แอปแสดงเป็นการ์ดมีรูปและลิงก์จอง
 
 export type QuickReply = { label: string; message: string };
 export type TripSummary = Partial<Record<'destination' | 'startDate' | 'endDate' | 'duration' | 'budget' | 'travelers' | 'tripStyle', string>>;
-export type Reply = { text: string; quickReplies: QuickReply[]; summary: TripSummary | null; ready: boolean };
+export type CardKind = 'place' | 'flight' | 'hotel' | 'food' | 'ticket' | 'service';
+/** การ์ดหนึ่งใบจากคำตอบของ AI: ชื่อเป็นภาษาอังกฤษ (ใช้ค้นรูปและแผนที่) ราคาเป็นค่าประมาณของ AI */
+export type ChatCard = {
+  kind: CardKind; name: string; area?: string; why?: string; price?: string; rating?: string; cuisine?: string;
+  airline?: string; from?: string; to?: string; date?: string; departure?: string; type?: string; provider?: string;
+};
+export type Reply = { text: string; quickReplies: QuickReply[]; summary: TripSummary | null; ready: boolean; cards: ChatCard[] };
+
+const CARD_KIND: Record<string, CardKind> = { PLACE: 'place', FLIGHT: 'flight', HOTEL: 'hotel', RESTAURANT: 'food', TICKET: 'ticket', SERVICE: 'service' };
+const FIELDS = ['name', 'area', 'city', 'why', 'highlights', 'description', 'price', 'rating', 'cuisine', 'category', 'airline', 'iata', 'from', 'to', 'date', 'departure', 'type', 'provider'];
+const FIELD = new RegExp(`(?:^|[\\s|])(${FIELDS.join('|')})\\s*:\\s*`, 'gi');
+
+/** "name: X | area: Y" หรือ "name: X area: Y" (รูปแบบเดิมใน DIRECTIVE 7) เป็น { name, area } */
+function fields(body: string): Record<string, string> {
+  const marks = [...body.matchAll(FIELD)];
+  const out: Record<string, string> = {};
+  marks.forEach((m, i) => {
+    const value = body.slice(m.index + m[0].length, i + 1 < marks.length ? marks[i + 1].index : body.length).replace(/^[\s|]+|[\s|]+$/g, '');
+    if (value) out[m[1].toLowerCase()] = value;
+  });
+  return out;
+}
+
+/** การ์ดที่ได้รับครบแล้วในคำตอบ ตามลำดับที่ AI เขียน; ใบที่ไม่มีชื่อข้ามไป */
+export function cardsOf(raw: string): ChatCard[] {
+  return [...raw.matchAll(/\[(PLACE|FLIGHT|HOTEL|RESTAURANT|TICKET|SERVICE)\]([\s\S]*?)\[\/\1\]/g)].flatMap((m) => {
+    const f = fields(m[2]);
+    const kind = CARD_KIND[m[1]];
+    const name = f.name ?? (kind === 'flight' ? f.airline : undefined);
+    if (!name) return [];
+    return [{
+      kind, name, area: f.area ?? f.city, why: f.why ?? f.highlights ?? f.description, price: f.price, rating: f.rating, cuisine: f.cuisine ?? f.category,
+      airline: f.airline, from: f.from, to: f.to, date: f.date, departure: f.departure, type: f.type, provider: f.provider,
+    }];
+  });
+}
 
 const block = (raw: string, tag: string) => raw.match(new RegExp(`\\[${tag}\\]([\\s\\S]*?)\\[\\/${tag}\\]`))?.[1] ?? null;
 
@@ -42,7 +77,7 @@ export function parseReply(raw: string, streaming = false): Reply {
     .replace(/^[ \t]*\|(.+)\|[ \t]*$/gm, (_m, row: string) => row.split('|').map((c) => c.trim()).filter(Boolean).join(' · '))
     .replace(/\n{3,}/g, '\n\n')
     .trim();
-  return { text, quickReplies, summary, ready: raw.includes('[READY_TO_GENERATE]') };
+  return { text, quickReplies, summary, ready: raw.includes('[READY_TO_GENERATE]'), cards: cardsOf(raw) };
 }
 
 /** ข้อความที่เพิ่มมาจากหนึ่งบรรทัดของ SSE แบบ OpenRouter; บรรทัดอื่น (ความเห็น ": …", [DONE]) ได้สตริงว่าง */

@@ -422,7 +422,7 @@ Requirements:
 3. Include mix of categories based on trip style
 4. Provide realistic lat/lng coordinates for ${destinationStr}
 5. Include realistic costs in the local currency, durations, and travel times between places (omit travelToNext on the last place of a day)
-6. Group nearby places logically within each day
+6. Group nearby places logically within each day. Every place must be worth a visit or a meal: no hotel check-ins, stations, bus terminals or airports as places (put transfers in travelToNext and practical notes in tips), never the same attraction twice, and name specific well-known restaurants (e.g. "Kushikatsu Daruma", not "Shinsekai kushikatsu")
 7. Keep every text field short: names as people search for them, one tip of at most 15 words, day titles under 8 words. Write the trip title, day titles and tips in ${langName}; write place names as their common English names (e.g. "Dotonbori"), never mixing scripts inside a word
 8. Output ONLY valid JSON, no markdown or extra text
 ${detailedOutline ? `9. CRITICAL: Follow the DETAILED ITINERARY OUTLINE above closely. It was created from the user's full planning conversation and contains their exact preferences, must-visit places, and requirements. Convert it into the JSON structure faithfully.` : ''}

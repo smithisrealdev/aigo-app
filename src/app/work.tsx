@@ -3,19 +3,24 @@ import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
+import { TripCards } from '@/components/cards';
 import { AiSays, AskBar, Button, Card, FadeIn, PhotoStrip, PressScale, PriceTag, ProgressBar, Screen, Section, T, Ticket, TimelineItem, useToast } from '@/components/ui';
 import { agentTasks, baht, offers, poses, trip as sampleTrip } from '@/data/trip';
 import { stateWord } from '@/lib/agent';
 import { generateItinerary } from '@/lib/backend';
+import type { CardKind } from '@/lib/chat';
 import { dateRange, dayCount, toAppTrip, type GenDay } from '@/lib/itinerary';
+import { usePhotos } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { useTrip, type Pending } from '@/lib/tripStore';
 import { radius, space } from '@/theme/tokens';
 
 type Gen = { state: 'run' | 'done' | 'fail'; quota?: boolean };
+const BOOKING_KINDS: CardKind[] = ['flight', 'hotel', 'food', 'ticket', 'service'];
 
 // หน้างานของ AiGo มีสองแบบ
-// - มีสรุปทริปจากแชตจริง (pending): งาน "วางแผน" เรียก generate-itinerary จริง แต่ละวันขึ้นทันทีที่เสร็จ งานอื่นยังไม่เปิดในรุ่นทดลอง
+// - มีสรุปทริปจากแชตจริง (pending): งาน "วางแผน" เรียก generate-itinerary จริง แต่ละวันขึ้นทันทีที่เสร็จ
+//   งานหาเที่ยวบิน ที่พัก ร้าน และบริการ แสดงสิ่งที่ AI หาไว้ในแชต (ราคาประมาณ กดดูราคาจริงที่เว็บจอง)
 // - ไม่มี: ตัวอย่างทริปโอซาก้า งานเดินด้วยตัวจับเวลา (shortcut: เปลี่ยนเป็นสถานะจริงจากงานเบื้องหลังบน backend (RA5))
 export default function Work() {
   const { colors, t, pick, lang } = useSettings();
@@ -27,15 +32,17 @@ export default function Work() {
   // วันที่ได้แล้ว: เก็บเป็นทริปทันทีที่มาถึง (หน้าแผนเปิดดูได้เลย) และใช้ทำต่อเมื่อกดลองใหม่
   const got = useRef<GenDay[]>([]);
   const [ready, setReady] = useState(0);
+  const near = job?.request.destination;
+  const photo = usePhotos(job ? trip.days.slice(0, ready).flat().filter((p) => !p.photo).map((p) => ({ name: p.name.en, near })) : []);
 
   const run = useCallback((j: Pending) => {
     setPlanning(true);
     return generateItinerary(j.request, j.messages, (i, d) => {
       got.current[i] = d;
-      setTrip(toAppTrip({ days: got.current }, j.request, j.people));
+      setTrip({ ...toAppTrip({ days: got.current }, j.request, j.people), bookings: j.cards });
       setReady(got.current.length);
     }, got.current)
-      .then((g) => { setTrip(toAppTrip(g, j.request, j.people)); setGen({ state: 'done' }); })
+      .then((g) => { setTrip({ ...toAppTrip(g, j.request, j.people), bookings: j.cards }); setGen({ state: 'done' }); })
       .catch((e: Error) => setGen({ state: 'fail', quota: / 429$/.test(e.message) }))
       .finally(() => setPlanning(false));
   }, [setTrip, setPlanning]);
@@ -59,6 +66,15 @@ export default function Work() {
     const days = dayCount(job.request.startDate, job.request.endDate);
     const ok = gen.state === 'done';
     const retry = () => { setGen({ state: 'run' }); run(job); };
+    const cards = job.cards ?? [];
+    const found = (...kinds: CardKind[]) => cards.filter((c) => kinds.includes(c.kind)).length;
+    const tasks = [
+      { id: 'plan', label: pick({ th: `วางแผน ${days} วัน`, en: `Plan ${days} days` }), n: 0 },
+      { id: 'flight', label: pick({ th: 'หาเที่ยวบิน', en: 'Find flights' }), n: found('flight') },
+      { id: 'hotel', label: pick({ th: 'หาที่พักในงบ', en: 'Find a hotel within budget' }), n: found('hotel') },
+      { id: 'food', label: pick({ th: 'หาร้านที่ต้องลอง', en: 'Find must-eats' }), n: found('food') },
+      { id: 'service', label: pick({ th: 'ตั๋ว รถ รถไฟ และบริการที่ต้องใช้', en: 'Tickets, car, rail and essentials' }), n: found('ticket', 'service') },
+    ];
     return (
       <Screen title={t('work.title')} subtitle={`${job.request.destination} · ${dateRange(job.request.startDate, job.request.endDate, lang)}`} onBack={() => router.back()}
         mascot={ok ? poses.happy : gen.state === 'fail' ? poses.rain : poses.think} follow
@@ -68,18 +84,16 @@ export default function Work() {
           : t('work.intro')}</AiSays></FadeIn>
         <FadeIn index={1}>
           <View accessibilityLiveRegion="polite">
-            {agentTasks.map((task, i) => {
-              const state = i === 0 ? (ok ? 'done' : gen.state === 'run' ? 'now' : 'wait') : 'wait';
+            {tasks.map((task, i) => {
+              const state = i === 0 ? (ok ? 'done' : gen.state === 'run' ? 'now' : 'wait') : task.n ? 'done' : 'wait';
               const word = i === 0
                 ? (gen.state === 'fail' ? pick({ th: 'ไม่สำเร็จ', en: 'Failed' }) : stateWord(state))
-                : pick({ th: 'ยังไม่เปิด', en: 'Not yet' });
+                : task.n ? pick({ th: `เจอ ${task.n} ตัวเลือก`, en: `${task.n} found` }) : pick({ th: 'ยังไม่มี', en: 'None yet' });
               return (
-                <TimelineItem key={task.id} state={state} last={i === agentTasks.length - 1}>
+                <TimelineItem key={task.id} state={state} last={i === tasks.length - 1}>
                   <View style={{ minHeight: 56, paddingTop: 16, gap: 2 }}>
                     <View style={{ flexDirection: 'row', gap: space.sm }}>
-                      <T v={state === 'now' ? 'bodyBold' : 'body'} tone={state === 'wait' ? 'muted' : 'ink'} style={{ flex: 1 }}>
-                        {i === 0 ? pick({ th: `วางแผน ${days} วัน`, en: `Plan ${days} days` }) : task.id === 'hotel' ? pick({ th: 'หาที่พักในงบ', en: 'Find a hotel within budget' }) : pick(task)}
-                      </T>
+                      <T v={state === 'now' ? 'bodyBold' : 'body'} tone={state === 'wait' ? 'muted' : 'ink'} style={{ flex: 1 }}>{task.label}</T>
                       <T v="smallBold" tone={gen.state === 'fail' && i === 0 ? 'warn' : state === 'done' ? 'success' : state === 'now' ? 'accent' : 'muted'} style={{ paddingTop: 2 }}>{word}</T>
                     </View>
                     {i === 0 && gen.state === 'run' && (
@@ -117,13 +131,20 @@ export default function Work() {
           <FadeIn key={d}>
             <Section title={[t('it.day', { n: d + 1 }), trip.dayTitles?.[d] && pick(trip.dayTitles[d])].filter(Boolean).join(' · ')}
               action={pick({ th: 'ดูแผน', en: 'View plan' })} onAction={() => router.push('/itinerary')}>
-              <PhotoStrip items={places.map((p) => ({ key: p.id, source: p.photo, label: [p.time, pick(p.name)].filter(Boolean).join(' '), onPress: () => router.push('/itinerary') }))} />
+              <PhotoStrip items={places.map((p) => ({ key: p.id, source: p.photo ?? photo({ name: p.name.en, near }), label: [p.time, pick(p.name)].filter(Boolean).join(' '), onPress: () => router.push('/itinerary') }))} />
             </Section>
           </FadeIn>
         ))}
         {ok && (
           <FadeIn>
             <Button label={pick({ th: 'เปิดแผนทั้งหมด', en: 'Open the full plan' })} icon="next" onPress={() => router.push('/itinerary')} />
+          </FadeIn>
+        )}
+        {found(...BOOKING_KINDS) > 0 && (
+          <FadeIn style={{ gap: space.md }}>
+            <T v="title">{pick({ th: 'AiGo หาไว้ให้แล้ว', en: 'AiGo found these' })}</T>
+            <TripCards cards={cards} only={BOOKING_KINDS}
+              trip={{ destination: job.request.destination, startDate: job.request.startDate, endDate: job.request.endDate, people: job.people }} />
           </FadeIn>
         )}
       </Screen>

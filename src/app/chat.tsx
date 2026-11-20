@@ -3,11 +3,13 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 
+import { TripCards } from '@/components/cards';
 import { AiSays, AskBar, Badge, Button, Chip, FadeIn, PhotoStrip, Screen, Section, T, Thinking, Ticket, useToast } from '@/components/ui';
 import { baht, logos, photos, trip } from '@/data/trip';
 import { streamTripChat, type ChatMessage } from '@/lib/backend';
-import { parseReply, type TripSummary } from '@/lib/chat';
+import { parseReply, type Reply, type TripSummary } from '@/lib/chat';
 import { dateRange, peopleOf, requestFromSummary } from '@/lib/itinerary';
+import type { LinkTrip } from '@/lib/links';
 import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
 import { radius, space } from '@/theme/tokens';
@@ -54,21 +56,35 @@ export default function Chat() {
     run(failed);
   };
 
+  const parsed: (Reply | null)[] = msgs.map((m) => (m.role === 'assistant' ? parseReply(m.content) : null));
   const last = msgs[msgs.length - 1];
-  const reply = mode === 'live' && draft === null && last.role === 'assistant' ? parseReply(last.content) : null;
-  // ส่งสรุปทริปต่อให้หน้างานของ AiGo สร้างแผนจริง ถ้าสรุปยังไม่พอ (ไม่มีที่หมายหรือวันที่) ใช้ตัวอย่าง
+  const reply = mode === 'live' && draft === null && last.role === 'assistant' ? parsed[parsed.length - 1] : null;
+  // ที่หมาย วันที่ และจำนวนคนจากสรุปทริปล่าสุดถึงข้อความนั้น ใช้ทำลิงก์จองและค้นรูปของการ์ด
+  const tripAt = (i: number): LinkTrip => {
+    const s = parsed.slice(0, i + 1).reverse().find((r) => r?.summary)?.summary;
+    return s ? { destination: s.destination, startDate: s.startDate, endDate: s.endDate, people: peopleOf(s.travelers) } : {};
+  };
+  // ส่งสรุปทริปต่อให้หน้างานของ AiGo สร้างแผนจริง พร้อมเที่ยวบิน ที่พัก ร้าน และบริการที่ AI หาไว้ในแชต
   const go = () => {
     const req = reply?.summary && requestFromSummary(reply.summary, lang, new Date().toISOString().slice(0, 10));
-    if (req) setPending({ request: req, people: peopleOf(reply?.summary?.travelers), messages: msgs });
+    const picks = [...parsed].reverse().find((r) => r?.cards.some((c) => c.kind !== 'place'))?.cards ?? [];
+    if (req) setPending({ request: req, people: peopleOf(reply?.summary?.travelers), messages: msgs, cards: picks });
     router.replace('/work');
   };
   return (
     <Screen follow title={t('chat.title')} subtitle={t('chat.sub')} onBack={() => router.back()}
       footer={<AskBar placeholder={t('chat.placeholder')} onSend={say} />}>
       {mode === 'demo' ? <Demo first={first} /> : <>
-        {msgs.map((m, i) => (
-          <FadeIn key={i}>{m.role === 'user' ? <UserBubble text={m.content} /> : <AiSays>{parseReply(m.content).text}</AiSays>}</FadeIn>
-        ))}
+        {msgs.map((m, i) => {
+          const r = parsed[i];
+          if (!r) return <FadeIn key={i}><UserBubble text={m.content} /></FadeIn>;
+          return (
+            <FadeIn key={i} style={{ gap: space.lg }}>
+              <AiSays>{r.text}</AiSays>
+              <TripCards cards={r.cards} trip={tripAt(i)} />
+            </FadeIn>
+          );
+        })}
         {draft === '' && <FadeIn><Thinking label={t('chat.thinking')} /></FadeIn>}
         {!!draft && <AiSays>{parseReply(draft, true).text || '…'}</AiSays>}
         {failed && (

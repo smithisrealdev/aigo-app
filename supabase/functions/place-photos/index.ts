@@ -18,7 +18,8 @@ type Hit = { url: string | null; title: string | null };
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-const keyOf = (p: Place) => `${p.name}|${p.near}`.toLowerCase();
+// v2: rows from the first version (wrong photos for some places) are never read again
+const keyOf = (p: Place) => `v2|${p.name}|${p.near}`.toLowerCase();
 
 // Words that may differ between a name and its article title ("Mt. Moiwa" / "Mount Moiwa")
 const LOOSE = new Set(["the", "of", "and", "de", "la", "le", "el", "mount", "mt", "st", "saint"]);

@@ -38,6 +38,17 @@ async function post(fn: string, body: unknown, connectMs: number) {
   }
 }
 
+/** เรียก edge function ที่ตอบเป็น JSON */
+export async function postJson<T>(fn: string, body: unknown): Promise<T> {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/${fn}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: PUBLISHABLE_KEY },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`${fn} ${res.status}`);
+  return (await res.json()) as T;
+}
+
 /** อ่านคำตอบแบบสตรีมทีละบรรทัด (SSE) */
 async function eachLine(body: ReadableStream<Uint8Array>, onLine: (line: string) => void) {
   const reader = body.getReader();

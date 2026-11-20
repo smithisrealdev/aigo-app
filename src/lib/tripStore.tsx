@@ -3,13 +3,14 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 
 import { trip as sample } from '@/data/trip';
 import type { ChatMessage } from '@/lib/backend';
+import type { ChatCard } from '@/lib/chat';
 import type { AppTrip, GenRequest } from '@/lib/itinerary';
 
 // ทริปปัจจุบันของผู้ใช้: เริ่มจากทริปตัวอย่าง พอ AiGo สร้างทริปจริงได้ก็แทนที่ และเก็บในเครื่องให้เปิดได้แม้ไม่มีเน็ต
 const KEY = 'aigo.trip.v1';
 
-/** งานที่แชตส่งต่อให้หน้างานของ AiGo: สร้างแผนจริงจากสรุปทริป */
-export type Pending = { request: GenRequest; people: number; messages: ChatMessage[] };
+/** งานที่แชตส่งต่อให้หน้างานของ AiGo: สร้างแผนจริงจากสรุปทริป พร้อมเที่ยวบิน ที่พัก ร้าน และบริการที่ AI หาไว้ในแชต */
+export type Pending = { request: GenRequest; people: number; messages: ChatMessage[]; cards?: ChatCard[] };
 
 type Ctx = {
   ready: boolean; trip: AppTrip; setTrip: (t: AppTrip) => void; resetTrip: () => void;
