@@ -1,11 +1,9 @@
-import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 
 import { TripCards } from '@/components/cards';
-import { AiSays, AskBar, Badge, Button, Chip, FadeIn, PhotoStrip, Screen, Section, T, Thinking, Ticket, useToast } from '@/components/ui';
-import { baht, logos, photos, trip } from '@/data/trip';
+import { AiSays, AskBar, Badge, Button, Chip, FadeIn, Screen, T, Thinking, Ticket, useToast } from '@/components/ui';
 import { streamTripChat, type ChatMessage } from '@/lib/backend';
 import { parseReply, type Reply, type TripSummary } from '@/lib/chat';
 import { dateRange, peopleOf, requestFromSummary } from '@/lib/itinerary';
@@ -14,28 +12,25 @@ import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
 import { radius, space } from '@/theme/tokens';
 
-const MONTHS = [{ th: 'ธ.ค. นี้', en: 'This Dec' }, { th: 'ม.ค.', en: 'Jan' }, { th: 'ยังไม่แน่ใจ', en: 'Not sure yet' }];
 const TONES = ['sky', 'sun', 'mint', 'blush', 'lilac'] as const;
 
-// คุยกับ trip-chat จริงแบบสตรีม ถ้าต่อไม่ได้ตั้งแต่ข้อความแรก (เช่น backend ยังไม่มี key) ใช้บทสนทนาตัวอย่างแทน
+// คุยกับ trip-chat จริงแบบสตรีม ส่งไม่สำเร็จ (เน็ตหลุด เซิร์ฟเวอร์ไม่ตอบ ส่งถี่เกิน) บอกตรงๆ และให้กดส่งใหม่ ข้อความไม่หาย
 export default function Chat() {
   const { t, pick, lang } = useSettings();
   const { setPending } = useTrip();
   // about = แผนของทริปที่ถามมาจากหน้าแผน ส่งให้ AI แต่ไม่แสดงในฟองข้อความ
   const { prompt, about } = useLocalSearchParams<{ prompt?: string; about?: string }>();
-  const first = prompt || pick(trip.title);
+  const first = prompt || pick({ th: 'ช่วยวางแผนทริปให้หน่อย', en: 'Help me plan a trip' });
   const opening = about ? `${first}\n\n${about}` : first;
   const toast = useToast();
-  const [mode, setMode] = useState<'connecting' | 'live' | 'demo'>('connecting');
   const [msgs, setMsgs] = useState<ChatMessage[]>([{ role: 'user', content: opening }]);
   const [draft, setDraft] = useState<string | null>(''); // คำตอบที่กำลังมา: '' = รอคำแรก, null = ไม่มี
-  const [failed, setFailed] = useState<ChatMessage[] | null>(null);
+  const [failed, setFailed] = useState<{ history: ChatMessage[]; busy: boolean } | null>(null);
 
   const run = useCallback((history: ChatMessage[]) =>
     streamTripChat(history, lang, setDraft)
-      .then((full) => { setMsgs([...history, { role: 'assistant', content: full }]); setMode('live'); })
-      // ยังไม่เคยตอบได้เลย = ต่อ backend ไม่ได้ จึงใช้ตัวอย่าง; ถ้าคุยกันอยู่แล้วให้กดส่งใหม่
-      .catch(() => { if (history.length === 1) setMode('demo'); else setFailed(history); })
+      .then((full) => setMsgs([...history, { role: 'assistant', content: full }]))
+      .catch((e: Error) => setFailed({ history, busy: / 429$/.test(e.message) }))
       .finally(() => setDraft(null)), [lang]);
 
   const started = useRef(false);
@@ -46,21 +41,21 @@ export default function Chat() {
   }, [run, opening]);
 
   const say = (text: string) => {
-    if (mode === 'demo') { toast(pick({ th: 'ตอนนี้ต่อ AiGo ไม่ได้ ลองเปิดแชตใหม่อีกครั้ง', en: 'Cannot reach AiGo right now. Try opening the chat again' })); return; }
-    if (mode === 'connecting' || draft !== null) { toast(pick({ th: 'รอ AiGo ตอบข้อความก่อนหน้าก่อนนะ', en: 'Wait for AiGo to finish replying' })); return; }
+    if (draft !== null) { toast(pick({ th: 'รอ AiGo ตอบข้อความก่อนหน้าก่อนนะ', en: 'Wait for AiGo to finish replying' })); return; }
+    if (failed) { toast(pick({ th: 'ข้อความก่อนหน้ายังไม่ถึง AiGo กดส่งใหม่ก่อนนะ', en: 'Your last message has not reached AiGo yet. Tap Retry first' })); return; }
     const h: ChatMessage[] = [...msgs, { role: 'user', content: text }];
-    setMsgs(h); setDraft(''); setFailed(null);
+    setMsgs(h); setDraft('');
     run(h);
   };
   const retry = () => {
     if (!failed) return;
     setDraft(''); setFailed(null);
-    run(failed);
+    run(failed.history);
   };
 
   const parsed: (Reply | null)[] = msgs.map((m) => (m.role === 'assistant' ? parseReply(m.content) : null));
   const last = msgs[msgs.length - 1];
-  const reply = mode === 'live' && draft === null && last.role === 'assistant' ? parsed[parsed.length - 1] : null;
+  const reply = draft === null && last.role === 'assistant' ? parsed[parsed.length - 1] : null;
   // ที่หมาย วันที่ และจำนวนคนจากสรุปทริปล่าสุดถึงข้อความนั้น ใช้ทำลิงก์จองและค้นรูปของการ์ด
   const tripAt = (i: number): LinkTrip => {
     const s = parsed.slice(0, i + 1).reverse().find((r) => r?.summary)?.summary;
@@ -76,7 +71,7 @@ export default function Chat() {
   return (
     <Screen follow title={t('chat.title')} subtitle={t('chat.sub')} onBack={() => router.back()}
       footer={<AskBar placeholder={t('chat.placeholder')} onSend={say} />}>
-      {mode === 'demo' ? <Demo first={first} /> : <>
+      <>
         {msgs.map((m, i) => {
           const r = parsed[i];
           if (!r) return <FadeIn key={i}><UserBubble text={i === 0 ? first : m.content} /></FadeIn>;
@@ -91,7 +86,9 @@ export default function Chat() {
         {!!draft && <AiSays>{parseReply(draft, true).text || '…'}</AiSays>}
         {failed && (
           <FadeIn style={{ flexDirection: 'row', alignItems: 'center', gap: space.md, paddingLeft: 50 }}>
-            <T v="smallBold" tone="warn" style={{ flex: 1 }}>{pick({ th: 'ส่งไม่สำเร็จ ข้อความยังอยู่', en: 'Not sent. Your message is kept' })}</T>
+            <T v="smallBold" tone="warn" style={{ flex: 1 }}>{failed.busy
+              ? pick({ th: 'ส่งข้อความถี่เกินไป รอสักครู่แล้วกดส่งใหม่', en: 'Too many messages. Wait a moment, then retry' })
+              : pick({ th: 'ต่อ AiGo ไม่ได้ ตรวจอินเทอร์เน็ตแล้วกดส่งใหม่ ข้อความยังอยู่', en: 'Cannot reach AiGo. Check your internet and retry. Your message is kept' })}</T>
             <Button kind="secondary" label={pick({ th: 'ส่งใหม่', en: 'Retry' })} onPress={retry} style={{ minHeight: 44 }} />
           </FadeIn>
         )}
@@ -103,7 +100,7 @@ export default function Chat() {
         )}
         {reply?.summary && <FadeIn><Summary s={reply.summary} onGo={go} /></FadeIn>}
         {reply && reply.ready && !reply.summary && <FadeIn><Button label={t('chat.go')} icon="next" big onPress={go} /></FadeIn>}
-      </>}
+      </>
     </Screen>
   );
 }
@@ -135,54 +132,4 @@ function Summary({ s, onGo }: { s: TripSummary; onGo: () => void }) {
       </>}
       bottom={<Button label={t('chat.go')} icon="next" big onPress={onGo} />} />
   );
-}
-
-// shortcut: บทสนทนาตัวอย่างคงที่ (ถาม 1 ข้อแล้วสรุป) ใช้ตอนต่อ trip-chat ไม่ได้
-function Demo({ first }: { first: string }) {
-  const { t, pick } = useSettings();
-  const [month, setMonth] = useState<number | null>(null);
-  const [thinking, setThinking] = useState(false);
-  // shortcut: หน่วง 0.8 วินาทีแทนเวลาตอบจริง
-  useEffect(() => { if (!thinking) return; const id = setTimeout(() => setThinking(false), 800); return () => clearTimeout(id); }, [thinking]);
-  const tags = [pick(trip.dates), pick({ th: `${trip.people} คน`, en: `${trip.people} people` }), pick({ th: `งบ ${baht(trip.budget)}`, en: `Budget ${baht(trip.budget)}` }), pick({ th: 'ของกิน', en: 'Food' }), pick({ th: 'เดินเล่น', en: 'Walking' })];
-  return <>
-    <FadeIn style={{ alignItems: 'flex-end', gap: space.xs }}>
-      <UserBubble text={first} />
-      <T v="small" tone="muted">{t('common.sample')}</T>
-    </FadeIn>
-    <FadeIn index={1} style={{ gap: space.md }}>
-      <AiSays>{t('chat.ask')}</AiSays>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, paddingLeft: 50 }}>
-        {MONTHS.map((m, i) => <Chip key={m.th} label={pick(m)} selected={month === i} onPress={() => { setMonth(i); setThinking(true); }} />)}
-      </View>
-    </FadeIn>
-    {thinking && <FadeIn><Thinking label={t('chat.thinking')} /></FadeIn>}
-    {month !== null && !thinking && (
-      <FadeIn style={{ gap: space.lg }}>
-        <AiSays>{t('chat.ack')}</AiSays>
-        {/* สรุปทริปเป็นตั๋ว: ด้านบนคือสิ่งที่ AiGo เข้าใจ ด้านล่างคือที่มาที่จะใช้ และปุ่มไปต่อ */}
-        <Ticket
-          top={<>
-            <T v="smallBold" tone="accent">{t('chat.understood', { n: 6, total: 6 })}</T>
-            <Image source={photos.skyline} style={{ width: '100%', height: 132, borderRadius: radius.md }} contentFit="cover" accessible={false} />
-            <T v="title">{pick(trip.title)}</T>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.xs }}>
-              {tags.map((x, i) => <Badge key={x} label={x} tone={TONES[i % TONES.length]} />)}
-            </View>
-          </>}
-          bottom={<>
-            {/* ที่มาที่ AiGo ใช้วางแผน ให้เห็นว่าไม่ได้เดาเอง */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
-              <T v="smallBold" tone="muted" style={{ flex: 1 }}>{pick({ th: 'AiGo จะดูจาก', en: 'AiGo will check' })}</T>
-              {[logos.aviasales, logos.agoda].map((l, i) => <Image key={i} source={l} style={{ width: 20, height: 20 }} contentFit="contain" accessible={false} />)}
-              <T v="smallBold" tone="muted">Google Places</T>
-            </View>
-            <Button label={t('chat.go')} icon="next" big onPress={() => router.replace('/work')} />
-          </>} />
-        <Section title={pick({ th: 'ที่ฉันคิดว่าคุณน่าจะชอบ', en: 'Places I think you will like' })}>
-          <PhotoStrip items={trip.days[0].map((p) => ({ key: p.id, source: p.photo, label: pick(p.name), onPress: () => router.push({ pathname: '/place/[id]', params: { id: p.id } }) }))} />
-        </Section>
-      </FadeIn>
-    )}
-  </>;
 }
