@@ -37,9 +37,7 @@ export default function Chat() {
           <T v="smallBold" tone="muted">{t('chat.understood', { n: 6, total: 6 })}</T>
           <Image source={photos.skyline} style={{ width: '100%', height: 120, borderRadius: radius.sm }} contentFit="cover" accessible={false} />
           <T v="heading">{pick(trip.title)}</T>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
-            {tags.map((x) => <View key={x} style={{ paddingHorizontal: space.md, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.bg }}><T v="smallBold">{x}</T></View>)}
-          </View>
+          <T v="small" tone="muted">{tags.join(' · ')}</T>
           <Button label={t('chat.go')} big onPress={() => router.replace('/work')} />
         </Card>
         <T v="smallBold" tone="muted">{pick({ th: 'ที่ฉันคิดว่าคุณน่าจะชอบ', en: 'Places I think you will like' })}</T>

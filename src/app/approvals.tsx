@@ -9,7 +9,7 @@ import { Button, Card, FadeIn, PriceTag, Row, Screen, T, tap, useToast } from '@
 import { autoDone, baht, offers } from '@/data/trip';
 import { decide } from '@/lib/agent';
 import { useSettings } from '@/lib/settings';
-import { radius, space, vivid } from '@/theme/tokens';
+import { radius, space } from '@/theme/tokens';
 
 export default function Approvals() {
   const { colors, t, pick, autoEdit, signedIn } = useSettings();
@@ -41,8 +41,8 @@ export default function Approvals() {
         <Card key={o.id} style={{ gap: space.sm }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
             {o.lead === 'XJ'
-              ? <View style={{ width: 44, height: 44, borderRadius: radius.pill, backgroundColor: vivid.coral, alignItems: 'center', justifyContent: 'center' }} accessible={false}><T v="bodyBold" tone="pastel">XJ</T></View>
-              : <Image source={o.lead} style={{ width: 44, height: 44, borderRadius: 12 }} contentFit="cover" accessible={false} />}
+              ? <View style={{ width: 44, height: 44, borderRadius: radius.sm, backgroundColor: colors.header.money, alignItems: 'center', justifyContent: 'center' }} accessible={false}><T v="bodyBold" tone="onTint">XJ</T></View>
+              : <Image source={o.lead} style={{ width: 44, height: 44, borderRadius: radius.sm }} contentFit="cover" accessible={false} />}
             <View style={{ flex: 1 }}>
               <T v="subheading">{pick(o.name)}</T>
               <T v="small" tone="muted">{pick(o.note)}</T>

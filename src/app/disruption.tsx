@@ -5,7 +5,7 @@ import { View } from 'react-native';
 
 import { Icon } from '@/components/icon';
 import { AiSays, Button, Card, FadeIn, PriceTag, Row, Screen, T, Thumb, tap, useToast } from '@/components/ui';
-import { baht, photos, poses } from '@/data/trip';
+import { baht, photos } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
 import { space } from '@/theme/tokens';
 
@@ -27,7 +27,7 @@ export default function Disruption() {
     catch { setState('wait'); toast(pick({ th: 'เปิดหน้าจองไม่ได้ ลองใหม่อีกครั้ง', en: 'Could not open the booking page. Try again' })); }
   };
   return (
-    <Screen tint={colors.header.travel} title={pick({ th: 'AiGo แก้ให้แล้ว', en: 'AiGo fixed it' })} subtitle={pick({ th: 'วันที่ 5 · 16 ธ.ค. · โอซาก้า', en: 'Day 5 · 16 Dec · Osaka' })} onBack={() => router.back()} mascot={poses.rain}>
+    <Screen tint={colors.header.travel} title={pick({ th: 'AiGo แก้ให้แล้ว', en: 'AiGo fixed it' })} subtitle={pick({ th: 'วันที่ 5 · 16 ธ.ค. · โอซาก้า', en: 'Day 5 · 16 Dec · Osaka' })} onBack={() => router.back()}>
       <Card tone="danger">
         <T v="smallBold" tone="muted">{pick({ th: 'แจ้งจากสายการบิน · 14:05', en: 'From the airline · 14:05' })}</T>
         <T v="heading" tone="warn">{pick({ th: 'เที่ยวบินกลับดีเลย์ 3 ชั่วโมง', en: 'Return flight delayed 3 hours' })}</T>

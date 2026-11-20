@@ -36,7 +36,7 @@ export default function Home() {
         </View>
         <T v="bodyBold" tone={isDark ? 'muted' : 'onTint'}>{t('home.sub')}</T>
       </View>
-      <View style={{ flex: 1, borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: colors.bg }}>
+      <View style={{ flex: 1, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, backgroundColor: colors.bg }}>
         <View style={[wide, { padding: space.lg, gap: space.md }]}>
           <Card tone="ai" style={{ gap: space.md }}>
             <T v="smallBold" tone="pastelMuted" nativeID="wish-label">{t('home.label')}</T>

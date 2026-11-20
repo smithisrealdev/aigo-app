@@ -4,7 +4,7 @@ import { View } from 'react-native';
 
 import { Icon } from '@/components/icon';
 import { Button, Row, Screen, T, tap } from '@/components/ui';
-import { photos, poses, trip } from '@/data/trip';
+import { photos, trip } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
 import { radius, space } from '@/theme/tokens';
 
@@ -20,7 +20,7 @@ export default function Save() {
   const { colors, pick, set } = useSettings();
   const signIn = () => { tap('success'); set({ signedIn: true }); router.back(); };
   return (
-    <Screen tint={colors.header.trips} title={pick({ th: 'เก็บแผนนี้ไว้กับคุณ', en: 'Keep this plan' })} subtitle={`${pick(trip.title)} · ${pick(trip.dates)}`} onBack={() => router.back()} mascot={poses.happy}>
+    <Screen tint={colors.header.trips} title={pick({ th: 'เก็บแผนนี้ไว้กับคุณ', en: 'Keep this plan' })} subtitle={`${pick(trip.title)} · ${pick(trip.dates)}`} onBack={() => router.back()}>
       <Image source={photos.skyline} style={{ width: '100%', height: 130, borderRadius: radius.lg }} contentFit="cover" accessible={false} />
       <View>
         {BENEFITS.map((x, i) => (

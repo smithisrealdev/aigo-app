@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AiSays, Button, Card, Row, T, Thumb } from '@/components/ui';
 import { poses, trip } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
-import { space, wide } from '@/theme/tokens';
+import { radius, space, wide } from '@/theme/tokens';
 
 // หน้าที่เพื่อนเห็นจากลิงก์แชร์ (R26c–e) token "closed" แสดงกรณีเจ้าของปิดลิงก์แล้ว
 // shortcut: ไม่ได้ตรวจ token กับ backend, แสดงทริปตัวอย่างเสมอยกเว้น "closed"
@@ -25,7 +25,7 @@ export default function SharedTrip() {
         <T v="title" tone={fg} accessibilityRole="header">{closed ? pick({ th: 'เปิดทริปนี้ไม่ได้แล้ว', en: 'This trip is no longer available' }) : pick(trip.title)}</T>
         {!closed && <T v="smallBold" tone={fg}>{pick({ th: `${pick(trip.dates)} · ดูได้อย่างเดียว`, en: `${pick(trip.dates)} · view only` })}</T>}
       </View>
-      <View style={{ flex: 1, borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: colors.bg }}>
+      <View style={{ flex: 1, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, backgroundColor: colors.bg }}>
         <View style={[wide, { padding: space.lg, gap: space.md, paddingBottom: insets.bottom + space.xl }]}>
           {closed ? <>
             <Card tone="danger"><T v="subheading" tone="warn">{pick({ th: 'เจ้าของทริปหยุดแชร์แผนนี้', en: 'The owner stopped sharing this plan' })}</T><T>{pick({ th: 'ถ้ายังอยากดู ขอลิงก์ใหม่จากเพื่อนที่ส่งมาได้', en: 'Ask your friend for a new link if you still want to see it' })}</T></Card>

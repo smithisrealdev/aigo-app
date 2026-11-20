@@ -7,7 +7,7 @@ import { Icon } from '@/components/icon';
 import { AiSays, Button, Card, IconButton, Row, Screen, T } from '@/components/ui';
 import { offers, photos, trip } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
-import { radius, space } from '@/theme/tokens';
+import { space } from '@/theme/tokens';
 
 export default function Trips() {
   const { colors, t, pick } = useSettings();
@@ -19,15 +19,13 @@ export default function Trips() {
         <View style={{ padding: space.lg, gap: space.sm }}>
           <T v="smallBold" tone="muted">{t('trips.next', { n: trip.daysAway })}</T>
           <T v="title">{pick(trip.title)}</T>
-          <View style={{ flexDirection: 'row', gap: space.sm, flexWrap: 'wrap' }}>
-            {[pick(trip.dates), t('trips.offline')].map((x) => <View key={x} style={{ paddingHorizontal: space.md, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.bg }}><T v="smallBold">{x}</T></View>)}
-          </View>
+          <T v="small" tone="muted">{pick(trip.dates)} · {t('trips.offline')}</T>
           <Button label={t('trips.open')} onPress={() => router.push('/itinerary')} />
         </View>
       </Card>
       <AiSays>{t('trips.waiting', { n: offers.length })}</AiSays>
       <Button label={t('work.see')} onPress={() => router.push('/approvals')} />
-      <Button kind="accent" label={t('trips.new')} onPress={() => router.push('/paywall')} />
+      <Button kind="secondary" label={t('trips.new')} onPress={() => router.push('/paywall')} />
       {/* shortcut: ทางเข้าหน้าตัวอย่างระหว่างเที่ยว ในแอปจริงหน้าเหล่านี้เปิดจาก push notification และลิงก์แชร์ */}
       <T v="smallBold" tone="muted" style={{ marginTop: space.lg }}>{pick({ th: 'ตัวอย่างหน้าจอระหว่างเที่ยว', en: 'Preview: during the trip' })}</T>
       <View>

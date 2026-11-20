@@ -146,8 +146,8 @@ export function Card({ tone = 'soft', children, style, onPress, label }: { tone?
   const bg = { soft: colors.surfaceSoft, note: colors.note, ai: colors.ai, done: colors.done, danger: colors.danger, navy: vivid.navy, coral: vivid.coral }[tone];
   const themed = isDark && tone !== 'navy' && tone !== 'coral';
   const body = onPress
-    ? <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [s.card, { backgroundColor: bg, transform: [{ scale: pressed ? 0.98 : 1 }] }, style]}>{children}</Pressable>
-    : <View style={[s.card, { backgroundColor: bg }, style]}>{children}</View>;
+    ? <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [s.card, { backgroundColor: bg, borderColor: tone === 'navy' || tone === 'coral' ? bg : colors.line, transform: [{ scale: pressed ? 0.98 : 1 }] }, style]}>{children}</Pressable>
+    : <View style={[s.card, { backgroundColor: bg, borderColor: tone === 'navy' || tone === 'coral' ? bg : colors.line }, style]}>{children}</View>;
   return <OnThemed.Provider value={themed}>{body}</OnThemed.Provider>;
 }
 
@@ -218,7 +218,7 @@ export function AskBar({ placeholder, onSend }: { placeholder: string; onSend: (
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
       <TextInput accessibilityLabel={placeholder} placeholder={placeholder} placeholderTextColor={colors.muted} value={text} onChangeText={setText} onSubmitEditing={send}
-        style={{ flex: 1, minHeight: 48, borderRadius: radius.pill, paddingHorizontal: space.lg, backgroundColor: colors.surfaceSoft, color: colors.ink, fontFamily: fonts.body, fontSize: 16 }} />
+        style={{ flex: 1, minHeight: 48, borderRadius: radius.lg, paddingHorizontal: space.lg, backgroundColor: colors.surfaceSoft, color: colors.ink, fontFamily: fonts.body, fontSize: 16 }} />
       <IconButton icon="send" label={t('common.send')} filled onPress={send} />
     </View>
   );
@@ -297,10 +297,10 @@ export function PhotoStrip({ items }: { items: { key: string; source: ImageSourc
 }
 
 const s = StyleSheet.create({
-  button: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm, paddingHorizontal: space.xl, borderRadius: radius.pill },
+  button: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm, paddingHorizontal: space.xl, borderRadius: 14 },
   iconButton: { width: touch.min, height: touch.min, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
-  chip: { minHeight: touch.min, paddingHorizontal: space.lg, borderRadius: radius.pill, justifyContent: 'center' },
-  card: { borderRadius: radius.lg, padding: space.lg, gap: space.xs },
+  chip: { minHeight: touch.min, paddingHorizontal: space.lg, borderRadius: radius.sm, justifyContent: 'center' },
+  card: { borderRadius: radius.lg, borderWidth: 1, padding: space.lg, gap: space.xs },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.lg, paddingBottom: space.lg, gap: space.md },
-  sheet: { flex: 1, borderTopLeftRadius: 32, borderTopRightRadius: 32, overflow: 'hidden' },
+  sheet: { flex: 1, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, overflow: 'hidden' },
 });
