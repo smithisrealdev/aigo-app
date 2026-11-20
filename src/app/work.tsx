@@ -1,12 +1,13 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Image } from 'expo-image';
+import { Pressable, ScrollView, View } from 'react-native';
 
-import { AiSays, AskBar, Button, Card, FadeIn, PhotoStrip, Screen, T, TaskRow, useToast } from '@/components/ui';
-import { agentTasks, offers, poses, trip } from '@/data/trip';
+import { AiSays, AskBar, Button, FadeIn, PhotoStrip, PriceTag, Screen, T, TaskRow, useToast } from '@/components/ui';
+import { agentTasks, baht, offers, poses, trip } from '@/data/trip';
 import { stateWord } from '@/lib/agent';
 import { useSettings } from '@/lib/settings';
-import { space } from '@/theme/tokens';
+import { radius, space } from '@/theme/tokens';
 
 // shortcut: งานเดินหน้าด้วยตัวจับเวลาเพื่อให้เห็นการทำงานของ AiGo, เปลี่ยนเป็นสถานะจริงจากงานเบื้องหลังบน backend (RA5)
 export default function Work() {
@@ -37,10 +38,28 @@ export default function Work() {
         </FadeIn>
       )}
       {waiting.length > 0 && (
-        <FadeIn><Card tone="note" style={{ gap: space.sm }}>
-          <T v="smallBold" tone="pastelMuted">{t('work.waiting', { n: waiting.length })}</T>
-          <Button kind="onPastel" label={t('work.see')} onPress={() => router.push('/approvals')} />
-        </Card></FadeIn>
+        <FadeIn style={{ gap: space.sm }}>
+          <T v="smallBold" tone="muted">{t('work.waiting', { n: waiting.length })}</T>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm }}>
+            {waiting.map((o) => (
+              <Pressable key={o.id} accessibilityRole="button" accessibilityLabel={`${pick(o.name)} ${baht(o.costBaht)}`} onPress={() => router.push('/approvals')}
+                style={({ pressed }) => ({ width: 232, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.surfaceSoft, opacity: pressed ? 0.8 : 1 })}>
+                {o.lead === 'XJ'
+                  ? <View style={{ height: 112, alignItems: 'center', justifyContent: 'center', backgroundColor: '#2E2A5C' }}><T v="hero" tone="onTint">BKK ⇄ KIX</T></View>
+                  : <Image source={o.lead} style={{ width: 232, height: 112 }} contentFit="cover" accessible={false} />}
+                <View style={{ padding: space.md, gap: space.xs }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+                    <T v="bodyBold" numberOfLines={1} style={{ flex: 1 }}>{pick(o.name)}</T>
+                    <T v="bodyBold">{baht(o.costBaht)}</T>
+                  </View>
+                  <T v="small" tone="muted" numberOfLines={1}>{pick(o.note)}</T>
+                  <PriceTag source={o.source} at={o.at} logo={o.logo} />
+                </View>
+              </Pressable>
+            ))}
+          </ScrollView>
+          <Button label={t('work.see')} onPress={() => router.push('/approvals')} />
+        </FadeIn>
       )}
     </Screen>
   );
