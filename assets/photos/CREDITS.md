@@ -1,6 +1,6 @@
 # ที่มาของภาพ
 
-ภาพทั้งหมดจาก Wikimedia Commons ใช้ตามสัญญาอนุญาตที่ระบุ ภาพที่เป็น CC BY และ CC BY-SA ต้องแสดงชื่อผู้ถ่ายเมื่อนำไปเผยแพร่
+ภาพจาก Wikimedia Commons ใช้ตามสัญญาอนุญาตที่ระบุ ภาพที่เป็น CC BY และ CC BY-SA ต้องแสดงชื่อผู้ถ่ายเมื่อนำไปเผยแพร่
 
 | ไฟล์ | ภาพต้นฉบับ | ผู้ถ่าย | สัญญาอนุญาต |
 |---|---|---|---|
@@ -12,5 +12,11 @@
 | `hotel-room.jpg` | [Osaka hotel.jpg](https://commons.wikimedia.org/wiki/File:Osaka_hotel.jpg) | Aspiringshortlot | CC BY-SA 4.0 |
 | `hotel-room-2.jpg` | [Hotel Lutetia Paris Room 419.jpg](https://commons.wikimedia.org/wiki/File:Hotel_Lutetia_Paris_Room_419.jpg) | Gary Bembridge from London, UK | CC BY 2.0 |
 | `osaka-skyline.jpg` | [Osaka Japan from Kuchu Teien (Floating Garden) atop Umeda Sky building by Don Ramey Logan.jpg](https://commons.wikimedia.org/wiki/File:Osaka_Japan_from_Kuchu_Teien_(Floating_Garden)_atop_Umeda_Sky_building_by_Don_Ramey_Logan.jpg) | Don Ramey Logan | CC BY 4.0 |
+| `seoul.jpg` | [Front view of the Imperial Throne Hall Geunjeongjeon at Gyeongbokgung Palace with blue sky in Seoul.jpg](https://commons.wikimedia.org/wiki/File:Front_view_of_the_Imperial_Throne_Hall_Geunjeongjeon_at_Gyeongbokgung_Palace_with_blue_sky_in_Seoul.jpg) | Basile Morin | CC BY-SA 4.0 |
+| `taipei.jpg` | [Taipei Taiwan Taipei-101-Tower-01.jpg](https://commons.wikimedia.org/wiki/File:Taipei_Taiwan_Taipei-101-Tower-01.jpg) | CEphoto, Uwe Aranas | CC BY-SA 3.0 |
 
-โลโก้ใน `assets/partners/` คัดลอกจาก repo เว็บ `ai-travel-buddy-13/public/brand/partners/`
+## แหล่งอื่น
+
+- `tokyo.jpg`: คัดลอกจาก `ai-travel-buddy-13/src/assets/places/tokyo-skyline.jpg` ยังไม่ได้ตรวจที่มาและสิทธิ์
+- `map-day1.jpg`: ต่อจาก tile ของ OpenStreetMap ซูม 15 ต้องแสดง "© OpenStreetMap contributors" (ODbL) ในแอปจริงให้ใช้ผู้ให้บริการแผนที่ที่มีสัญญา เช่น Google Maps ที่เว็บใช้อยู่
+- โลโก้ใน `assets/partners/`: คัดลอกจาก `ai-travel-buddy-13/public/brand/partners/`
