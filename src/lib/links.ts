@@ -40,13 +40,13 @@ export function flightLink(c: ChatCard, t: LinkTrip): string {
 
 /** Booking.com ค้นตามชื่อที่พักกับวันเข้าออกของทริป (ลิงก์ค้นของ Agoda เด้งกลับหน้าแรก ทดสอบแล้ว 20 พ.ย. 2026) */
 export function hotelLink(c: ChatCard, t: LinkTrip): string {
-  const q = new URLSearchParams({ ss: [c.name, t.destination].filter(Boolean).join(', ') });
-  const checkIn = isoDate(t.startDate), checkOut = isoDate(t.endDate);
-  if (checkIn) q.set('checkin', checkIn);
-  if (checkOut) q.set('checkout', checkOut);
-  q.set('group_adults', String(Math.max(1, t.people ?? 2)));
-  q.set('no_rooms', '1');
-  return `https://www.booking.com/searchresults.html?${q.toString()}`;
+  // ประกอบเองแทน URLSearchParams: ตัวของ React Native บางรุ่นไม่มี set() (โยน "not implemented")
+  const form = (v: string) => encodeURIComponent(v).replace(/%20/g, '+');
+  const q: [string, string | undefined][] = [
+    ['ss', [c.name, t.destination].filter(Boolean).join(', ')], ['checkin', isoDate(t.startDate)], ['checkout', isoDate(t.endDate)],
+    ['group_adults', String(Math.max(1, t.people ?? 2))], ['no_rooms', '1'],
+  ];
+  return `https://www.booking.com/searchresults.html?${q.filter(([, v]) => v).map(([k, v]) => `${k}=${form(v!)}`).join('&')}`;
 }
 
 /** ลิงก์ของการ์ดหนึ่งใบ */
