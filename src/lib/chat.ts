@@ -37,6 +37,9 @@ export function parseReply(raw: string, streaming = false): Reply {
     .replace(/^>\s?/gm, '')
     .replace(/^\s*[-*]\s+/gm, '• ')
     .replace(/^-{3,}\s*$/gm, '')
+    // ตาราง Markdown: ตัดแถวเส้นคั่น แถวอื่นเหลือเป็นข้อความคั่นด้วย ·
+    .replace(/^[ \t]*\|?[ \t]*:?-{2,}:?[ \t]*(\|[ \t]*:?-{2,}:?[ \t]*)*\|?[ \t]*$/gm, '')
+    .replace(/^[ \t]*\|(.+)\|[ \t]*$/gm, (_m, row: string) => row.split('|').map((c) => c.trim()).filter(Boolean).join(' · '))
     .replace(/\n{3,}/g, '\n\n')
     .trim();
   return { text, quickReplies, summary, ready: raw.includes('[READY_TO_GENERATE]') };

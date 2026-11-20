@@ -112,7 +112,7 @@ export function peopleOf(travelers = ''): number {
 
 export type GenEvent =
   | { type: 'progress'; day?: number; message?: string; dayTitle?: string }
-  | { type: 'day_complete'; dayIndex?: number; totalDays?: number }
+  | { type: 'day_complete'; dayIndex?: number; totalDays?: number; day?: NonNullable<GenItinerary['days']>[number] }
   | { type: 'complete'; itinerary: GenItinerary }
   | { type: 'error'; error?: string };
 

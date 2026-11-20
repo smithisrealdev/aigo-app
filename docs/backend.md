@@ -26,9 +26,22 @@ publishable key (ใส่ในแอปได้): `sb_publishable_ThF183z7kk5
   ทริปที่สร้างยังไม่มีรูป ราคาเป็นค่าประมาณของ AI และยังไม่ได้ตรวจเวลาเปิด (แอปบอกตรงๆ) ผู้เยี่ยมชมสร้างได้สัปดาห์ละ 1 ทริป (โควตาใน `guest_sessions`)
 - ยังเป็นข้อมูลตัวอย่าง: เที่ยวบินและที่พักที่รออนุมัติ (ต้อง deploy `search-flights` / `search-hotels`) หน้าระหว่างเที่ยว และเที่ยวบินดีเลย์
 
+## ฟังก์ชันที่ deploy อยู่ (โค้ดอยู่ใน `supabase/functions/`)
+
+โค้ดตั้งต้นมาจาก repo เว็บ แก้แล้วดังนี้ ถ้าจะ deploy ใหม่ให้ใช้ไฟล์ใน repo นี้ ไม่ใช่ของเว็บ
+
+- `trip-chat` (Claude Sonnet 4.6): จำกัดคำตอบไว้ที่ 8,192 token (OpenRouter จองเครดิตตาม max_tokens; ไม่ตั้งจะจอง 64K แล้วตอบ 402 เมื่อเครดิตเหลือน้อย)
+  ให้ OpenRouter เก็บ prompt ระบบไว้ใช้ซ้ำ (prompt caching ของ Anthropic) และจำกัดผู้เยี่ยมชมไว้ที่ 60 ข้อความต่อชั่วโมงต่อ IP กับ 40 ข้อความต่อชั่วโมงต่อเครื่อง
+- `generate-itinerary` (Claude Haiku 5.5, สำรองด้วย Gemini 3.5 Flash Lite): เดิมใช้ Sonnet ราว 70 วินาทีต่อวัน เกินเวลาที่ Supabase ให้ (~150 วินาที) จึงโดนตัด
+  ตอนนี้แผน 5 วันเสร็จใน 35–50 วินาที ขอเฉพาะฟิลด์ที่แอปใช้ กำหนดภาษาของข้อความตามผู้ใช้ และจำกัดผู้เยี่ยมชมไว้ที่ 5 ทริปต่อวันต่อ IP (นอกจากโควตา 1 ทริปต่อสัปดาห์ต่อเครื่อง)
+  แผนที่เคยสร้างแล้ว (ที่หมาย จำนวนวัน สไตล์ และภาษาเดียวกัน) ดึงจาก `itinerary_skeleton_cache` ไม่เสียเงิน 7 วัน
+- ตัวนับจำกัดจำนวนครั้ง: ตาราง `edge_rate_limits` และฟังก์ชัน `hit_rate_limit` ([../supabase/rate_limits.sql](../supabase/rate_limits.sql)) ใช้ได้เฉพาะ service role
+
+ค่าใช้จ่ายที่วัดได้ (20 พ.ย. 2026): แชตข้อความแรกราว $0.03 (รวมค่าเก็บ prompt ครั้งแรก) ข้อความถัดไปราว $0.01–0.03 ตามความยาวคำตอบ สร้างแผน 5 วันด้วย Haiku 5.5 ไม่ถึง $0.01
+
 ## ยังขาด
 
-1. **OPENROUTER_API_KEY**: ใส่ที่ Supabase Dashboard → Edge Functions → Secrets ตอนนี้ทั้งสองฟังก์ชันตอบ 500 เพราะไม่มี key
+1. ตั้งวงเงินของ key บน OpenRouter ไว้เสมอ และเติมเครดิตก่อนให้คนอื่นทดลอง
 2. edge function อีกราว 58 ตัวยังไม่ได้ deploy วิธีที่เร็วที่สุดคือรันจากเครื่องที่มี Supabase CLI ในโฟลเดอร์ของ repo เว็บ:
    `supabase functions deploy --project-ref vjblrglalptgdxabteqm`
 3. secret อื่นที่ฟังก์ชันใช้: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `GOOGLE_SEARCH_API_KEY`, `GOOGLE_SEARCH_CX`, `ELEVENLABS_API_KEY`, `FIRECRAWL_API_KEY`, `TAVILY_API_KEY`

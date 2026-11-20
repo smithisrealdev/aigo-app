@@ -6,8 +6,8 @@ import { View } from 'react-native';
 import { AiSays, AskBar, Badge, Button, Chip, FadeIn, PhotoStrip, Screen, Section, T, Thinking, Ticket, useToast } from '@/components/ui';
 import { baht, logos, photos, trip } from '@/data/trip';
 import { streamTripChat, type ChatMessage } from '@/lib/backend';
-import { parseReply, shortDate, type TripSummary } from '@/lib/chat';
-import { peopleOf, requestFromSummary } from '@/lib/itinerary';
+import { parseReply, type TripSummary } from '@/lib/chat';
+import { dateRange, peopleOf, requestFromSummary } from '@/lib/itinerary';
 import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
 import { radius, space } from '@/theme/tokens';
@@ -103,7 +103,7 @@ function UserBubble({ text }: { text: string }) {
 function Summary({ s, onGo }: { s: TripSummary; onGo: () => void }) {
   const { t, pick, lang } = useSettings();
   const tags = [
-    s.startDate && s.endDate ? `${shortDate(s.startDate, lang)} – ${shortDate(s.endDate, lang)}` : undefined,
+    s.startDate && s.endDate ? dateRange(s.startDate, s.endDate, lang) : undefined,
     s.duration && pick({ th: `${s.duration} วัน`, en: `${s.duration} days` }), s.travelers, s.budget, s.tripStyle,
   ].filter((x): x is string => !!x);
   return (

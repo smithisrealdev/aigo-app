@@ -74,14 +74,18 @@ export async function generateItinerary(req: GenRequest, messages: ChatMessage[]
   const body = await post('generate-itinerary', { ...req, conversationMessages: messages.slice(-40) }, 30000);
   let result: GenItinerary | null = null;
   let failure: string | null = null;
+  const days: NonNullable<GenItinerary['days']> = [];
   await eachLine(body, (line) => {
     const e = genEvent(line);
     if (!e) return;
     if (e.type === 'progress') onProgress({ day: e.day ?? 0, message: e.dayTitle || e.message });
+    else if (e.type === 'day_complete' && e.day) days[e.dayIndex ?? days.length] = e.day;
     else if (e.type === 'complete') result = e.itinerary;
     else if (e.type === 'error') failure = e.error ?? 'generation failed';
   });
-  if (failure) throw new Error(failure);
-  if (!result) throw new Error('generate-itinerary ended without a trip');
-  return result;
+  if (result) return result;
+  // ฟังก์ชันถูกตัดก่อนจบ (เกินเวลาที่ Supabase ให้) แต่ได้บางวันมาแล้ว ใช้วันที่ได้ดีกว่าทิ้งทั้งหมด
+  const got = days.filter(Boolean);
+  if (got.length) return { destination: req.destination, startDate: req.startDate, endDate: req.endDate, days: got };
+  throw new Error(failure ?? 'generate-itinerary ended without a trip');
 }
