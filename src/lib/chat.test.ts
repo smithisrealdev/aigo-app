@@ -29,9 +29,10 @@ tripStyle: Food
 test('แยกปุ่มตอบด่วน สรุปทริป และสัญญาณพร้อมสร้างแผน ออกจากข้อความ', () => {
   const r = parseReply(REPLY);
   assert.equal(r.text, 'โอซาก้า 5 วัน\nปราสาทโอซาก้า เปิด 09:00\n• เดินเล่นโดทงโบริ');
+  // ดีไซน์ไม่ใช้อีโมจิ: ตัดออกจากป้าย ส่วนปุ่ม 🚀 จำไว้ว่าเป็นปุ่มสร้างแผน
   assert.deepEqual(r.quickReplies, [
-    { label: '🚀 Generate trip', message: 'Generate my detailed itinerary now' },
-    { label: '✏️ Change dates', message: '✏️ Change dates' },
+    { label: 'Generate trip', message: 'Generate my detailed itinerary now', go: true },
+    { label: 'Change dates', message: 'Change dates', go: false },
   ]);
   assert.equal(r.summary?.destination, 'Osaka, Japan');
   assert.equal(r.summary?.budget, '40000 THB');
@@ -41,7 +42,7 @@ test('แยกปุ่มตอบด่วน สรุปทริป แล
 test('ระหว่างสตรีม ซ่อนบล็อกที่ยังไม่ปิดและแท็กที่มาไม่ครบ', () => {
   assert.equal(parseReply('ไปช่วงไหนดี\n[QUICK_REPLIES]\n- ธ.ค.|ไปเดือน', true).text, 'ไปช่วงไหนดี');
   assert.equal(parseReply('ไปช่วงไหนดี\n[QUICK_RE', true).text, 'ไปช่วงไหนดี');
-  assert.equal(parseReply('พร้อมแล้ว [READY_TO_GENERATE] ต่อด้วยข้อความ', true).text, 'พร้อมแล้ว  ต่อด้วยข้อความ');
+  assert.equal(parseReply('พร้อมแล้ว [READY_TO_GENERATE] ต่อด้วยข้อความ', true).text, 'พร้อมแล้ว ต่อด้วยข้อความ');
   assert.equal(parseReply('ข้อความธรรมดา').summary, null);
 });
 
@@ -89,4 +90,8 @@ test('การ์ดจากบล็อกของ AI ทั้งรูป�
   assert.equal(r.cards[4].type, 'rail_pass');
   assert.equal(r.text, 'ไฮไลต์ที่ห้ามพลาด', 'บล็อกการ์ดไม่โผล่ในข้อความ');
   assert.deepEqual(parseReply('[PLACES]\n[PLACE]name: Dotonbori | area: Na', true).cards, [], 'การ์ดที่ยังมาไม่ครบไม่แสดง');
+});
+
+test('ตัดอีโมจิออกจากข้อความของ AI แต่เก็บตัวอักษรไทย ตัวเลข และลูกศร', () => {
+  assert.equal(parseReply('สวัสดีค่ะ 😊 ทริปนี้ ✈️ บินตรง\n🍜 ราเมนต้องลอง → 5 ร้าน').text, 'สวัสดีค่ะ ทริปนี้ บินตรง\nราเมนต้องลอง → 5 ร้าน');
 });

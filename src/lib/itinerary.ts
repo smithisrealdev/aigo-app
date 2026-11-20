@@ -101,6 +101,27 @@ export function toAppTrip(gen: GenItinerary, req: GenRequest, people = 2): AppTr
   };
 }
 
+/** ที่แวะของแต่ละวันเป็นบรรทัด ข้ามวันที่ยังว่าง */
+const dayLines = (trip: AppTrip, th: boolean, sep: string, time: boolean) => trip.days
+  .map((d, i) => (d.length ? `${th ? 'วันที่' : 'Day'} ${i + 1}: ${d.map((p) => (time && p.time ? `${p.time} ` : '') + p.name.en).join(sep)}` : ''))
+  .filter(Boolean);
+
+/** แผนของทริปเป็นข้อความสั้น แนบไปกับคำถามจากหน้าแผน สถานที่ วันนี้ และหน้างาน ให้ trip-chat ตอบเรื่องทริปนี้ */
+export function tripContext(trip: AppTrip, lang: 'th' | 'en', day?: number): string {
+  const th = lang === 'th';
+  return [
+    `${th ? 'ทริปของฉันที่ AiGo วางไว้' : 'My trip planned by AiGo'}: ${trip.destination.en}, ${th ? trip.dates.th : trip.dates.en}, ${trip.people} ${th ? 'คน' : 'people'}`,
+    ...dayLines(trip, th, ', ', false),
+    ...(day === undefined ? [] : [th ? `ตอนนี้ฉันดูวันที่ ${day + 1}` : `I am looking at day ${day + 1}`]),
+  ].join('\n');
+}
+
+/** แผนเป็นข้อความสำหรับส่งให้เพื่อน (ยังไม่มีลิงก์แชร์จริง) */
+export function planText(trip: AppTrip, lang: 'th' | 'en'): string {
+  const th = lang === 'th';
+  return [`${th ? trip.title.th : trip.title.en} (${th ? trip.dates.th : trip.dates.en})`, ...dayLines(trip, th, ' → ', true), th ? 'วางแผนด้วย AiGo' : 'Planned with AiGo'].join('\n');
+}
+
 /**
  * คำขอ generate-itinerary จากสรุปทริปในแชต; ไม่มีวันที่แต่รู้จำนวนวัน ให้เริ่มอีก 14 วันจากวันนี้
  * shortcut: เดาวันเริ่มแบบง่าย ไม่ดูฤดูที่ผู้ใช้พูดถึง, ให้ trip-chat ส่ง startDate มาเสมอหรือถามผู้ใช้ก่อนส่ง

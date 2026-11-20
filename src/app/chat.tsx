@@ -21,11 +21,13 @@ const TONES = ['sky', 'sun', 'mint', 'blush', 'lilac'] as const;
 export default function Chat() {
   const { t, pick, lang } = useSettings();
   const { setPending } = useTrip();
-  const { prompt } = useLocalSearchParams<{ prompt?: string }>();
+  // about = แผนของทริปที่ถามมาจากหน้าแผน ส่งให้ AI แต่ไม่แสดงในฟองข้อความ
+  const { prompt, about } = useLocalSearchParams<{ prompt?: string; about?: string }>();
   const first = prompt || pick(trip.title);
+  const opening = about ? `${first}\n\n${about}` : first;
   const toast = useToast();
   const [mode, setMode] = useState<'connecting' | 'live' | 'demo'>('connecting');
-  const [msgs, setMsgs] = useState<ChatMessage[]>([{ role: 'user', content: first }]);
+  const [msgs, setMsgs] = useState<ChatMessage[]>([{ role: 'user', content: opening }]);
   const [draft, setDraft] = useState<string | null>(''); // คำตอบที่กำลังมา: '' = รอคำแรก, null = ไม่มี
   const [failed, setFailed] = useState<ChatMessage[] | null>(null);
 
@@ -40,12 +42,12 @@ export default function Chat() {
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    run([{ role: 'user', content: first }]);
-  }, [run, first]);
+    run([{ role: 'user', content: opening }]);
+  }, [run, opening]);
 
   const say = (text: string) => {
-    if (mode !== 'live') { toast(t('toast.sent')); return; }
-    if (draft !== null) return;
+    if (mode === 'demo') { toast(pick({ th: 'ตอนนี้ต่อ AiGo ไม่ได้ ลองเปิดแชตใหม่อีกครั้ง', en: 'Cannot reach AiGo right now. Try opening the chat again' })); return; }
+    if (mode === 'connecting' || draft !== null) { toast(pick({ th: 'รอ AiGo ตอบข้อความก่อนหน้าก่อนนะ', en: 'Wait for AiGo to finish replying' })); return; }
     const h: ChatMessage[] = [...msgs, { role: 'user', content: text }];
     setMsgs(h); setDraft(''); setFailed(null);
     run(h);
@@ -77,7 +79,7 @@ export default function Chat() {
       {mode === 'demo' ? <Demo first={first} /> : <>
         {msgs.map((m, i) => {
           const r = parsed[i];
-          if (!r) return <FadeIn key={i}><UserBubble text={m.content} /></FadeIn>;
+          if (!r) return <FadeIn key={i}><UserBubble text={i === 0 ? first : m.content} /></FadeIn>;
           return (
             <FadeIn key={i} style={{ gap: space.lg }}>
               <AiSays>{r.text}</AiSays>
@@ -93,10 +95,10 @@ export default function Chat() {
             <Button kind="secondary" label={pick({ th: 'ส่งใหม่', en: 'Retry' })} onPress={retry} style={{ minHeight: 44 }} />
           </FadeIn>
         )}
-        {reply && reply.quickReplies.length > 0 && (
+        {reply && reply.quickReplies.some((q) => !(reply.ready && q.go)) && (
           <FadeIn style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, paddingLeft: 50 }}>
-            {/* หลัง [READY_TO_GENERATE] ปุ่ม 🚀 (ตาม system prompt คือ "สร้างแผน") ส่งต่อให้ AiGo จัดการเลย ไม่ต้องถามซ้ำ */}
-            {reply.quickReplies.map((q) => <Chip key={q.label} label={q.label} onPress={() => (reply.ready && q.label.startsWith('🚀') ? go() : say(q.message))} />)}
+            {/* หลัง [READY_TO_GENERATE] ปุ่มสร้างแผนอยู่ในตั๋วสรุปแล้ว จึงไม่แสดงชิปสร้างแผนซ้ำ (ป้ายของ AI บางทีเป็นภาษาอังกฤษ) */}
+            {reply.quickReplies.filter((q) => !(reply.ready && q.go)).map((q) => <Chip key={q.label} label={q.label} onPress={() => say(q.message)} />)}
           </FadeIn>
         )}
         {reply?.summary && <FadeIn><Summary s={reply.summary} onGo={go} /></FadeIn>}

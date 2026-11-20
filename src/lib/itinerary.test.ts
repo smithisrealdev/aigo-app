@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { dateRange, dayCount, genEvent, legOf, minutesOf, peopleOf, plannedText, requestFromSummary, toAppTrip } from './itinerary.ts';
+import { dateRange, dayCount, genEvent, legOf, minutesOf, peopleOf, plannedText, planText, requestFromSummary, toAppTrip, tripContext } from './itinerary.ts';
 
 const REQ = { destination: 'Tokyo', startDate: '2026-12-28', endDate: '2027-01-01', language: 'th' };
 
@@ -78,4 +78,11 @@ test('จำนวนคนและเหตุการณ์ SSE', () => {
   assert.equal(peopleOf('คู่รัก'), 2);
   assert.deepEqual(genEvent('data: {"type":"progress","day":2,"message":"Planning Day 2"}'), { type: 'progress', day: 2, message: 'Planning Day 2' });
   assert.equal(genEvent(': keep-alive'), null);
+});
+
+test('แผนเป็นข้อความ: บริบทที่แนบให้ AI และข้อความที่ส่งให้เพื่อน', () => {
+  const trip = toAppTrip({ days: [{ places: [{ name: 'Nijo Market', startTime: '08:00' }, { name: 'Odori Park', startTime: '10:00' }] }, { places: [] }] },
+    { destination: 'Sapporo, Japan', startDate: '2027-01-24', endDate: '2027-01-25', language: 'th' }, 2);
+  assert.equal(tripContext(trip, 'th', 0), 'ทริปของฉันที่ AiGo วางไว้: Sapporo, Japan, 24–25 ม.ค., 2 คน\nวันที่ 1: Nijo Market, Odori Park\nตอนนี้ฉันดูวันที่ 1');
+  assert.equal(planText(trip, 'en'), 'Sapporo, Japan, 2 days (24–25 Jan)\nDay 1: 08:00 Nijo Market → 10:00 Odori Park\nPlanned with AiGo');
 });

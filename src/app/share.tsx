@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { Share, Switch, View } from 'react-native';
 
 import { AiSays, Badge, Button, Card, FadeIn, PhotoCard, Row, Screen, T, Tape, tap } from '@/components/ui';
+import { planText } from '@/lib/itinerary';
+import { usePhotos } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
 import { space } from '@/theme/tokens';
@@ -11,6 +13,38 @@ import { space } from '@/theme/tokens';
 const LINK = 'https://theaigo.co/shared/demo';
 
 export default function ShareTrip() {
+  const { trip } = useTrip();
+  return trip.sample ? <SampleShare /> : <TextShare />;
+}
+
+/** ทริปจริงยังไม่มีลิงก์ให้เพื่อนเปิด (ต้องบันทึกทริปเข้าบัญชีก่อน) จึงส่งแผนเป็นข้อความผ่านแอปไหนก็ได้ */
+function TextShare() {
+  const { pick, lang } = useSettings();
+  const { trip } = useTrip();
+  const cover = usePhotos(trip.cover ? [] : [{ name: trip.destination.en }]);
+  const text = planText(trip, lang);
+  return (
+    <Screen title={pick({ th: 'แชร์ทริป', en: 'Share trip' })} subtitle={pick({ th: 'ส่งแผนเป็นข้อความ เพื่อนอ่านได้ทุกแอป', en: 'Send the plan as text, readable in any app' })} onBack={() => router.back()}
+      footer={<Button label={pick({ th: 'ส่งแผนให้เพื่อน', en: 'Send the plan' })} icon="share" big onPress={() => Share.share({ message: text }).catch(() => {})} />}>
+      <FadeIn style={{ paddingTop: space.sm, paddingHorizontal: space.xs }}>
+        <View style={{ transform: [{ rotate: '-2deg' }] }}>
+          <PhotoCard source={trip.cover ?? cover({ name: trip.destination.en })} height={200} title={pick(trip.title)} subtitle={pick(trip.dates)} />
+          <Tape color="#FFD966" style={{ top: -10, right: 36 }} rotate={8} />
+        </View>
+      </FadeIn>
+      <FadeIn index={1}>
+        <Card tone="paper" style={{ gap: space.xs }}>
+          <T v="smallBold" tone="muted">{pick({ th: 'ข้อความที่เพื่อนจะได้', en: 'What your friends get' })}</T>
+          <T>{text}</T>
+        </Card>
+      </FadeIn>
+      <FadeIn index={2}><AiSays>{pick({ th: 'ตอนนี้ส่งเป็นข้อความก่อน ลิงก์ที่เพื่อนกดเปิดดูแผนได้จะมาเมื่อบันทึกทริปเข้าบัญชีได้', en: 'For now the plan goes as text. A link friends can open comes once trips can be saved to an account.' })}</AiSays></FadeIn>
+    </Screen>
+  );
+}
+
+// ทริปตัวอย่าง: หน้าแชร์ตาม mockup (ลิงก์ตัวอย่าง)
+function SampleShare() {
   const { colors, pick } = useSettings();
   const { trip } = useTrip();
   const [hideBudget, setHideBudget] = useState(true);

@@ -8,6 +8,7 @@ import { Icon } from '@/components/icon';
 import { ArtCard, Button, Card, CurveHero, FadeIn, IconButton, lift, Mascot, PhotoStrip, Row, Screen, Section, T, useToast } from '@/components/ui';
 import { art, photos, poses } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
+import { useTrip } from '@/lib/tripStore';
 import { fonts, radius, space, type, wide } from '@/theme/tokens';
 
 const POPULAR = [
@@ -22,6 +23,7 @@ export default function Home() {
   const { colors, t, pick, isDark } = useSettings();
   const insets = useSafeAreaInsets();
   const [wish, setWish] = useState('');
+  const { trip } = useTrip();
   const toast = useToast();
   const start = (text: string) => router.push({ pathname: '/chat', params: { prompt: text } });
   const hero = (
@@ -54,14 +56,20 @@ export default function Home() {
         </View>
       </FadeIn>
 
-      <FadeIn index={1}>
-        <Section title={pick({ th: 'AiGo กำลังทำงานให้คุณ', en: 'AiGo is working for you' })}>
-          <ArtCard tone="sun" art={art.flight} onPress={() => router.push('/approvals')}
-            title={pick({ th: 'รอคุณอนุมัติ 2 รายการ', en: '2 items waiting for you' })} body={pick({ th: 'โอซาก้า 5 วัน · เที่ยวบินและที่พัก', en: 'Osaka, 5 days · flight and hotel' })} />
-          <ArtCard tone="mint" art={art.watch} onPress={() => router.push('/work')}
-            title={pick({ th: 'เฝ้าราคา BKK ⇄ KIX', en: 'Watching BKK ⇄ KIX' })} body={pick({ th: '฿19,600 · ยังไม่ลด จะแจ้งถ้าลดเกิน ฿1,000', en: '฿19,600 · no drop yet. I will alert you past ฿1,000' })} />
-        </Section>
-      </FadeIn>
+      {/* ทริปที่ AiGo วางไว้แล้ว ยังไม่มีทริปก็ไม่แสดงส่วนนี้ */}
+      {!trip.sample && (
+        <FadeIn index={1}>
+          <Section title={pick({ th: 'ทริปของคุณ', en: 'Your trip' })}>
+            <ArtCard tone="sun" art={art.plan} onPress={() => router.push('/itinerary')}
+              title={pick(trip.title)} body={`${pick(trip.dates)} · ${pick({ th: `${trip.days.flat().length} ที่`, en: `${trip.days.flat().length} places` })}`} />
+            {!!trip.bookings?.length && (
+              <ArtCard tone="mint" art={art.flight} onPress={() => router.push('/itinerary')}
+                title={pick({ th: `AiGo หาไว้ให้ ${trip.bookings.length} รายการ`, en: `AiGo found ${trip.bookings.length} options` })}
+                body={pick({ th: 'เที่ยวบิน ที่พัก ร้าน และบริการ กดดูราคาจริงที่เว็บจอง', en: 'Flights, hotels, food and services. Tap for real prices' })} />
+            )}
+          </Section>
+        </FadeIn>
+      )}
 
       <FadeIn index={2}>
         <Section title={t('home.popular')}>

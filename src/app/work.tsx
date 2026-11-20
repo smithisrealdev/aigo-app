@@ -7,6 +7,7 @@ import { TripCards } from '@/components/cards';
 import { AiSays, AskBar, Button, Card, FadeIn, PhotoStrip, PressScale, PriceTag, ProgressBar, Screen, Section, T, Ticket, TimelineItem, useToast } from '@/components/ui';
 import { agentTasks, baht, offers, poses, trip as sampleTrip } from '@/data/trip';
 import { stateWord } from '@/lib/agent';
+import { askAigo } from '@/lib/ask';
 import { generateItinerary } from '@/lib/backend';
 import type { CardKind } from '@/lib/chat';
 import { dateRange, dayCount, toAppTrip, type GenDay } from '@/lib/itinerary';
@@ -78,7 +79,9 @@ export default function Work() {
     return (
       <Screen title={t('work.title')} subtitle={`${job.request.destination} · ${dateRange(job.request.startDate, job.request.endDate, lang)}`} onBack={() => router.back()}
         mascot={ok ? poses.happy : gen.state === 'fail' ? poses.rain : poses.think} follow
-        footer={<AskBar placeholder={t('work.tell')} onSend={() => toast(t('toast.sent'))} />}>
+        footer={<AskBar placeholder={t('work.tell')} onSend={(q) => (gen.state === 'run'
+          ? toast(pick({ th: 'รอฉันวางแผนให้เสร็จก่อนนะ แล้วบอกได้เลยว่าอยากแก้อะไร', en: 'Let me finish the plan first, then tell me what to change' }))
+          : askAigo(q, trip, lang))} />}>
         <FadeIn><AiSays>{ok
           ? pick({ th: `แผน ${days} วันเสร็จแล้ว ราคาและเวลาเปิดยังเป็นค่าประมาณ ฉันจะตรวจให้ก่อนเดินทาง`, en: `Your ${days}-day plan is ready. Prices and hours are estimates; I will check them before you go.` })
           : t('work.intro')}</AiSays></FadeIn>
@@ -113,7 +116,7 @@ export default function Work() {
             <Card tone="danger" style={{ gap: space.md }}>
               <T v="subheading" tone="warn">{pick({ th: 'สร้างแผนไม่สำเร็จ', en: 'Could not make the plan' })}</T>
               <T>{gen.quota
-                ? pick({ th: 'ทริปฟรีของสัปดาห์นี้ใช้ไปแล้ว เข้าสู่ระบบหรือซื้อทริปเพื่อวางแผนต่อ', en: 'This week\'s free trip is used. Sign in or buy a trip to plan more.' })
+                ? pick({ th: 'ทริปฟรีของสัปดาห์นี้ใช้ไปแล้ว วางแผนทริปใหม่ได้อีกครั้งสัปดาห์หน้า', en: 'This week\'s free trip is used. You can plan a new one next week.' })
                 : ready
                   ? pick({ th: `ได้แผน ${ready} จาก ${days} วันแล้ว กดลองใหม่เพื่อวางวันที่เหลือต่อ`, en: `${ready} of ${days} days are planned. Try again to plan the rest.` })
                   : pick({ th: 'ระบบ AI ไม่ตอบ ลองใหม่อีกครั้งได้ สรุปทริปยังอยู่ครบ', en: 'The AI did not answer. You can try again; your trip summary is kept.' })}</T>

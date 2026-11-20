@@ -2,7 +2,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { ScrollView, View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/icon';
-import { Badge, PhotoBox, PressScale, Section, T, lift } from '@/components/ui';
+import { Badge, PhotoBox, PressScale, PriceTag, Section, T, lift } from '@/components/ui';
 import { shortDate, type CardKind, type ChatCard } from '@/lib/chat';
 import type { L } from '@/lib/i18n';
 import { cardLink, type LinkTrip } from '@/lib/links';
@@ -11,7 +11,7 @@ import { useSettings } from '@/lib/settings';
 import { radius, space } from '@/theme/tokens';
 
 // การ์ดจากคำตอบของ AI (สถานที่ เที่ยวบิน ที่พัก ร้าน ตั๋ว บริการ) กดแล้วเปิดเว็บดูราคาจริง จอง หรือแผนที่
-// ราคาบนการ์ดเป็นค่าประมาณของ AI บอกไว้ใต้การ์ดทุกชุด
+// ราคาบนการ์ดเป็นค่าประมาณของ AI: ขึ้นต้นด้วย ~ และมีป้าย "AiGo ประมาณ" ทุกใบ (R15b) ท้ายรายการบอกว่าราคาอาจเปลี่ยนและ AiGo ได้ค่าแนะนำ (R25c)
 
 const GROUPS: { kind: CardKind; title: L; action: L }[] = [
   { kind: 'place', title: { th: 'ที่ห้ามพลาด', en: 'Must-see places' }, action: { th: 'แผนที่', en: 'Map' } },
@@ -27,6 +27,9 @@ const SERVICE: Record<string, { icon: IconName; tone: 'sky' | 'sun' | 'mint' | '
   esim: { icon: 'spark', tone: 'lilac' }, insurance: { icon: 'check', tone: 'blush' },
 };
 const TILE = 232;
+const BOOKABLE: CardKind[] = ['flight', 'hotel', 'ticket', 'service'];
+/** ราคาประมาณขึ้นต้นด้วย ~ (ยกเว้นของฟรี) */
+const approx = (p: string) => (/^\s*(~|ฟรี|free)/i.test(p) ? p.trim() : `~${p.trim()}`);
 
 /** การ์ดทุกชุดในคำตอบ เรียงเป็นกลุ่ม; only = แสดงเฉพาะบางแบบ (หน้าแผนไม่ต้องซ้ำสถานที่) */
 export function TripCards({ cards, trip, only }: { cards: ChatCard[]; trip: LinkTrip; only?: CardKind[] }) {
@@ -56,7 +59,8 @@ export function TripCards({ cards, trip, only }: { cards: ChatCard[]; trip: Link
         );
       })}
       <T v="small" tone="muted">{[
-        shown.some((c) => c.price) && pick({ th: 'ราคาเป็นค่าประมาณของ AiGo กดการ์ดเพื่อดูราคาจริงที่เว็บจอง', en: 'Prices are AiGo estimates; tap a card for real prices on the booking site' }),
+        shown.some((c) => c.price) && pick({ th: 'กดการ์ดเพื่อดูราคาจริงที่เว็บจอง ราคาอาจเปลี่ยนตอนจอง', en: 'Tap a card for the real price on the booking site. Prices may change when you book' }),
+        shown.some((c) => BOOKABLE.includes(c.kind)) && pick({ th: 'AiGo ได้ค่าแนะนำจากลิงก์จองโดยราคาไม่เพิ่ม', en: 'AiGo earns a referral fee from booking links at no extra cost to you' }),
         shown.some((c) => PHOTO_KINDS.includes(c.kind)) && pick({ th: 'ภาพจาก Wikipedia และ Wikimedia Commons', en: 'Photos from Wikipedia and Wikimedia Commons' }),
       ].filter(Boolean).join(' · ')}</T>
     </View>
@@ -65,11 +69,11 @@ export function TripCards({ cards, trip, only }: { cards: ChatCard[]; trip: Link
 
 /** การ์ดรูป: รูปด้านบน ชื่อ เหตุผลที่ควรไป ราคาและคะแนน */
 function PhotoTile({ c, source, action, onPress }: { c: ChatCard; source?: import('expo-image').ImageSource; action: string; onPress: () => void }) {
-  const { colors, isDark } = useSettings();
+  const { colors, isDark, t } = useSettings();
   const tag = c.kind === 'food' ? c.cuisine : c.area;
-  const facts = [c.price, c.rating && `★ ${c.rating}`].filter(Boolean).join(' · ');
+  const facts = [c.price && approx(c.price), c.rating && `★ ${c.rating}`].filter(Boolean).join(' · ');
   return (
-    <PressScale onPress={onPress} label={`${c.name}. ${c.why ?? ''} ${facts}. ${action}`}>
+    <PressScale onPress={onPress} label={`${c.name}. ${c.why ?? ''} ${facts}${c.price ? `, ${t('price.est')}` : ''}. ${action}`}>
       <View style={[{ width: TILE, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.surface }, lift(isDark, 0.7), isDark && { borderWidth: 1, borderColor: colors.line }]}>
         <PhotoBox source={source} seed={c.name} style={{ width: TILE, height: 140 }} />
         {tag && <View style={{ position: 'absolute', top: space.sm, left: space.sm }}><Badge label={tag} /></View>}
@@ -77,6 +81,7 @@ function PhotoTile({ c, source, action, onPress }: { c: ChatCard; source?: impor
           <T v="bodyBold" numberOfLines={1}>{c.name}</T>
           {c.why && <T v="small" tone="muted" numberOfLines={2}>{c.why}</T>}
           <View style={{ flex: 1 }} />
+          {c.price && <PriceTag />}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.xs }}>
             <T v="smallBold" numberOfLines={1} style={{ flex: 1 }}>{facts}</T>
             <T v="smallBold" tone="accent">{action} ›</T>
@@ -89,14 +94,14 @@ function PhotoTile({ c, source, action, onPress }: { c: ChatCard; source?: impor
 
 /** แถวสำหรับเที่ยวบินและบริการ: ไอคอน เส้นทางหรือชื่อ รายละเอียด ราคา */
 function RowTile({ c, action, onPress }: { c: ChatCard; action: string; onPress: () => void }) {
-  const { colors, isDark, lang, pick } = useSettings();
+  const { colors, isDark, lang, pick, t } = useSettings();
   const flight = c.kind === 'flight';
   const look = flight ? { icon: 'plane' as IconName, tone: 'sky' as const } : SERVICE[c.type ?? ''] ?? { icon: 'bag' as IconName, tone: 'sun' as const };
   const title = flight ? [c.from && c.to ? `${c.from} → ${c.to}` : undefined, c.airline].filter(Boolean).join(' · ') : c.name;
   const stops = c.type && /direct|nonstop|ตรง/i.test(c.type) ? pick({ th: 'บินตรง', en: 'Direct' }) : c.type;
   const sub = flight ? [c.date && shortDate(c.date, lang === 'th' ? 'th' : 'en'), c.departure, stops].filter(Boolean).join(' · ') : c.why;
   return (
-    <PressScale onPress={onPress} label={`${title}. ${sub ?? ''}. ${c.price ?? ''}. ${action}`}>
+    <PressScale onPress={onPress} label={`${title}. ${sub ?? ''}. ${c.price ? `${approx(c.price)}, ${t('price.est')}` : ''}. ${action}`}>
       <View style={[{ flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.lg, backgroundColor: colors.surface }, lift(isDark, 0.6), isDark && { borderWidth: 1, borderColor: colors.line }]}>
         <View style={{ width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.sticker[look.tone] }}>
           <Icon name={look.icon} color={colors.ink} size={22} />
@@ -104,7 +109,8 @@ function RowTile({ c, action, onPress }: { c: ChatCard; action: string; onPress:
         <View style={{ flex: 1, gap: 2 }}>
           <T v="bodyBold" numberOfLines={1}>{title}</T>
           {!!sub && <T v="small" tone="muted" numberOfLines={2}>{sub}</T>}
-          {c.price && <T v="smallBold">{c.price}</T>}
+          {c.price && <T v="smallBold">{approx(c.price)}</T>}
+          {c.price && <PriceTag />}
         </View>
         <T v="smallBold" tone="accent">{action} ›</T>
       </View>

@@ -2,7 +2,8 @@
 // โทเคน: [QUICK_REPLIES] "- ป้าย|ข้อความที่ส่ง" ต่อบรรทัด, [TRIP_SUMMARY] "key: value" ต่อบรรทัด, [READY_TO_GENERATE]
 // การ์ด (DIRECTIVE 12): [PLACE] [FLIGHT] [HOTEL] [RESTAURANT] [TICKET] [SERVICE] "key: value | key: value" แอปแสดงเป็นการ์ดมีรูปและลิงก์จอง
 
-export type QuickReply = { label: string; message: string };
+/** go = ปุ่มสร้างแผน (ป้ายขึ้นต้นด้วย 🚀 ตาม system prompt) */
+export type QuickReply = { label: string; message: string; go?: boolean };
 export type TripSummary = Partial<Record<'destination' | 'startDate' | 'endDate' | 'duration' | 'budget' | 'travelers' | 'tripStyle', string>>;
 export type CardKind = 'place' | 'flight' | 'hotel' | 'food' | 'ticket' | 'service';
 /** การ์ดหนึ่งใบจากคำตอบของ AI: ชื่อเป็นภาษาอังกฤษ (ใช้ค้นรูปและแผนที่) ราคาเป็นค่าประมาณของ AI */
@@ -41,6 +42,10 @@ export function cardsOf(raw: string): ChatCard[] {
   });
 }
 
+// ดีไซน์ไม่ใช้อีโมจิ: ตัดอีโมจิและสัญลักษณ์ภาพที่ AI ใส่มาออกจากข้อความและปุ่ม (ช่วงอักขระชัดเจน ไม่พึ่ง \p{} ของ regex)
+const EMOJI = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}\u{20E3}]/gu;
+const noEmoji = (s: string) => s.replace(EMOJI, '').replace(/[ \t]{2,}/g, ' ').replace(/^[ \t]+/gm, '');
+
 const block = (raw: string, tag: string) => raw.match(new RegExp(`\\[${tag}\\]([\\s\\S]*?)\\[\\/${tag}\\]`))?.[1] ?? null;
 
 /** แปลงข้อความดิบเป็นส่วนที่แสดง; streaming = ยังรับไม่ครบ จึงซ่อนบล็อกที่เปิดแล้วยังไม่ปิดและแท็กที่ขาดครึ่ง */
@@ -48,7 +53,7 @@ export function parseReply(raw: string, streaming = false): Reply {
   const qr = block(raw, 'QUICK_REPLIES');
   const quickReplies = (qr ?? '').split('\n').map((l) => l.trim().replace(/^[-*•]\s*/, '')).filter(Boolean).map((l) => {
     const [label, ...rest] = l.split('|');
-    return { label: label.trim(), message: (rest.join('|') || label).trim() };
+    return { label: noEmoji(label).trim(), message: noEmoji(rest.join('|') || label).trim(), go: /^\s*🚀/u.test(label) };
   });
   const ts = block(raw, 'TRIP_SUMMARY');
   let summary: TripSummary | null = null;
@@ -77,6 +82,7 @@ export function parseReply(raw: string, streaming = false): Reply {
     .replace(/^[ \t]*\|(.+)\|[ \t]*$/gm, (_m, row: string) => row.split('|').map((c) => c.trim()).filter(Boolean).join(' · '))
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+  text = noEmoji(text).trim();
   return { text, quickReplies, summary, ready: raw.includes('[READY_TO_GENERATE]'), cards: cardsOf(raw) };
 }
 

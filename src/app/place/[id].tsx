@@ -2,8 +2,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Linking, View } from 'react-native';
 
 import { Icon } from '@/components/icon';
-import { AiSays, Button, Card, Chip, FadeIn, PriceTag, Row, Screen, Section, T, useToast } from '@/components/ui';
+import { AiSays, Button, Card, Chip, FadeIn, PriceTag, Row, Screen, Section, T } from '@/components/ui';
 import { baht } from '@/data/trip';
+import { askAigo } from '@/lib/ask';
 import { usePhotos } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
@@ -12,9 +13,8 @@ import { space } from '@/theme/tokens';
 const ASK = [{ th: 'แถวนี้กินอะไรดี', en: 'What to eat nearby' }, { th: 'หาตั๋วให้หน่อย', en: 'Find tickets' }, { th: 'เปลี่ยนเป็นที่อื่น', en: 'Swap for another place' }];
 
 export default function Place() {
-  const { colors, t, pick } = useSettings();
+  const { colors, t, pick, lang } = useSettings();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const toast = useToast();
   const { trip } = useTrip();
   const day = trip.days.findIndex((d) => d.some((x) => x.id === id));
   const p = trip.days[day]?.find((x) => x.id === id);
@@ -69,7 +69,7 @@ export default function Place() {
       <FadeIn index={4}>
         <Section title={t('place.askMore')}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
-            {ASK.map((a) => <Chip key={a.th} label={pick(a)} onPress={() => toast(t('toast.ask', { x: pick(a) }))} />)}
+            {ASK.map((a) => <Chip key={a.th} label={pick(a)} onPress={() => askAigo(`${pick(a)} (${pick(p.name)})`, trip, lang, day)} />)}
           </View>
         </Section>
       </FadeIn>

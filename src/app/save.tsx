@@ -1,14 +1,14 @@
 import { router } from 'expo-router';
 import { View } from 'react-native';
 
-import { Button, Card, FadeIn, Polaroid, Row, Screen, StatusDot, T, tap } from '@/components/ui';
+import { Button, Card, FadeIn, Polaroid, Row, Screen, StatusDot, T, useToast } from '@/components/ui';
 import { poses } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
 import { space } from '@/theme/tokens';
 
 // บันทึกทริป = จุดแรกที่ขอให้สมัคร (R14, R19) แล้วกลับไปทำต่อที่เดิม
-// shortcut: ปุ่มเข้าสู่ระบบแค่ตั้งค่า signedIn ในเครื่อง, ต่อ Supabase Auth (Apple, Google, อีเมล) และ migrate-guest-trips เมื่อมี backend
+// shortcut: เข้าสู่ระบบยังไม่เปิด ปุ่มบอกตรงๆ แทนการทำเป็นเข้าระบบ; เปิด Apple, Google และ SMTP ของอีเมลใน Supabase Auth แล้วต่อ migrate-guest-trips
 const BENEFITS = [
   { th: 'เปิดแผนได้แม้ไม่มีเน็ต', en: 'Open your plan without internet' },
   { th: 'แผนตามไปทุกเครื่องที่คุณเข้าสู่ระบบ', en: 'Your plan follows you to every device' },
@@ -16,9 +16,10 @@ const BENEFITS = [
 ];
 
 export default function Save() {
-  const { pick, set } = useSettings();
+  const { pick } = useSettings();
+  const toast = useToast();
   const { trip } = useTrip();
-  const signIn = () => { tap('success'); set({ signedIn: true }); router.back(); };
+  const signIn = () => toast(pick({ th: 'การเข้าสู่ระบบยังไม่เปิดในรุ่นทดลองนี้ ทริปของคุณเก็บไว้ในเครื่องนี้แล้ว', en: 'Sign-in is not open in this preview yet. Your trip is saved on this phone.' }));
   return (
     <Screen title={pick({ th: 'เก็บแผนนี้ไว้กับคุณ', en: 'Keep this plan' })} subtitle={`${pick(trip.title)} · ${pick(trip.dates)}`} onBack={() => router.back()} mascot={poses.happy}>
       <FadeIn style={{ alignItems: 'center', paddingVertical: space.sm }}>

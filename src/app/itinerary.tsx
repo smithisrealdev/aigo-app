@@ -4,8 +4,9 @@ import { ScrollView, View } from 'react-native';
 
 import { TripCards } from '@/components/cards';
 import { Icon } from '@/components/icon';
-import { AskBar, Button, Chip, FadeIn, Glass, IconButton, Mascot, PressScale, RouteList, Screen, Segmented, SketchMap, T, useToast } from '@/components/ui';
+import { AskBar, Button, Chip, FadeIn, Glass, IconButton, Mascot, PressScale, RouteList, Screen, Segmented, SketchMap, T } from '@/components/ui';
 import { poses } from '@/data/trip';
+import { askAigo } from '@/lib/ask';
 import { shortDate } from '@/lib/chat';
 import { addDays } from '@/lib/itinerary';
 import { usePhotos } from '@/lib/photos';
@@ -20,7 +21,7 @@ export default function Itinerary() {
   const { colors, t, pick, lang } = useSettings();
   const { trip, planning } = useTrip();
   const [day, setDay] = useState(0);
-  const toast = useToast();
+  const ask = (q: string) => askAigo(q, trip, lang, day);
   const places = trip.days[day] ?? [];
   // ทริปที่ AiGo สร้างไม่มีรูปมาด้วย ค้นรูปจากชื่อสถานที่ (ชื่อภาษาอังกฤษ) ในเมืองของทริป
   const near = trip.destination.en;
@@ -59,7 +60,7 @@ export default function Itinerary() {
   return (
     <Screen top={top} title={pick(trip.title)} subtitle={`${pick(trip.dates)} · ${pick({ th: `${trip.people} คน`, en: `${trip.people} people` })}`} onBack={() => router.back()}
       right={<IconButton icon="share" label={pick({ th: 'แชร์ทริป', en: 'Share trip' })} onPress={() => router.push('/share')} />}
-      footer={<AskBar placeholder={t('it.tell')} onSend={() => toast(t('toast.sent'))} />}>
+      footer={<AskBar placeholder={t('it.tell')} onSend={ask} />}>
       <FadeIn index={1}>
         <Segmented options={[pick({ th: 'แผนทั้งหมด', en: 'Plan' }), pick({ th: 'วันนี้', en: 'Today' })]} value={0} onChange={() => router.replace('/today')} />
       </FadeIn>
@@ -86,7 +87,7 @@ export default function Itinerary() {
             onPress: () => router.push({ pathname: '/place/[id]', params: { id: p.id } }),
           }))}
           legs={places.map((p) => trip.legs[p.id] && { mode: trip.legs[p.id].mode, text: pick(trip.legs[p.id].text) })}
-          onAdd={(i) => toast(t('toast.ask', { x: pick({ th: `หาที่แวะ${between(i)}`, en: `find a stop ${between(i)}` }) }))}
+          onAdd={(i) => ask(pick({ th: `ช่วยหาที่แวะ${between(i)}`, en: `Find me a stop ${between(i)}` }))}
           addLabel={(i) => pick({ th: `ขอให้ AiGo เพิ่มที่แวะ${between(i)}`, en: `Ask AiGo to add a stop ${between(i)}` })}
           end={{ title: pick({ th: 'จบวัน · กลับที่พัก', en: 'End of day · back to the hotel' }), sub: trip.hotel && pick(trip.hotel) }} />
       ) : (
@@ -98,7 +99,7 @@ export default function Itinerary() {
               ? pick({ th: `AiGo กำลังวางแผน${t('it.day', { n: day + 1 })}`, en: `AiGo is planning ${t('it.day', { n: day + 1 })}` })
               : pick({ th: `${t('it.day', { n: day + 1 })} ยังว่างอยู่`, en: `${t('it.day', { n: day + 1 })} is still open` })}</T>
             {trip.sample && <T tone="muted" style={{ textAlign: 'center' }}>{t('common.sample')}</T>}
-            {!planning && <Button kind="dark" icon="spark" label={pick({ th: 'ให้ AiGo วางแผนวันนี้', en: 'Let AiGo plan this day' })} onPress={() => toast(t('toast.sent'))} style={{ marginTop: space.sm }} />}
+            {!planning && <Button kind="dark" icon="spark" label={pick({ th: 'ให้ AiGo วางแผนวันนี้', en: 'Let AiGo plan this day' })} onPress={() => ask(pick({ th: `ช่วยวางแผน${t('it.day', { n: day + 1 })}ให้หน่อย`, en: `Plan ${t('it.day', { n: day + 1 })} for me` }))} style={{ marginTop: space.sm }} />}
           </View>
         </FadeIn>
       )}
