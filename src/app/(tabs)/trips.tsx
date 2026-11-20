@@ -7,7 +7,7 @@ import { Icon } from '@/components/icon';
 import { AiSays, Button, Card, IconButton, Row, Screen, T } from '@/components/ui';
 import { offers, photos, trip } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
-import { space } from '@/theme/tokens';
+import { radius, space } from '@/theme/tokens';
 
 export default function Trips() {
   const { colors, t, pick } = useSettings();
@@ -15,7 +15,15 @@ export default function Trips() {
     <Screen tint={colors.header.trips} title={t('trips.title')} subtitle={t('trips.sub', { n: 1 })}
       right={<IconButton icon="user" label={pick({ th: 'บัญชีของฉัน', en: 'My account' })} onPress={() => router.push('/account')} onPastelBg />}>
       <Card style={{ padding: 0, overflow: 'hidden' }}>
-        <Image source={photos.skyline} style={{ width: '100%', height: 140 }} contentFit="cover" accessibilityLabel="Osaka" accessible />
+        <View>
+          <Image source={photos.skyline} style={{ width: '100%', height: 140 }} contentFit="cover" accessibilityLabel="Osaka" accessible />
+          {/* นับถอยหลังแบบป้ายปฏิทินบนรูป */}
+          <View accessible accessibilityLabel={t('trips.next', { n: trip.daysAway })} style={{ position: 'absolute', top: space.md, right: space.md, width: 64, borderRadius: radius.sm, overflow: 'hidden', backgroundColor: colors.surface, alignItems: 'center' }}>
+            <View style={{ alignSelf: 'stretch', paddingVertical: 2, backgroundColor: colors.header.money, alignItems: 'center' }}><T v="smallBold" tone="onTint">{pick({ th: 'อีก', en: 'in' })}</T></View>
+            <T v="title" style={{ fontVariant: ['tabular-nums'] }}>{trip.daysAway}</T>
+            <T v="small" tone="muted" style={{ marginTop: -4, marginBottom: 4 }}>{pick({ th: 'วัน', en: 'days' })}</T>
+          </View>
+        </View>
         <View style={{ padding: space.lg, gap: space.sm }}>
           <T v="smallBold" tone="muted">{t('trips.next', { n: trip.daysAway })}</T>
           <T v="title">{pick(trip.title)}</T>

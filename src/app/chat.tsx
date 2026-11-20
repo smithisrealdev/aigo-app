@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { AiSays, AskBar, Button, Card, Chip, FadeIn, PhotoStrip, Screen, T, Thinking, useToast } from '@/components/ui';
-import { photos, trip } from '@/data/trip';
+import { logos, photos, trip } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
 import { radius, space } from '@/theme/tokens';
 
@@ -38,6 +38,12 @@ export default function Chat() {
           <Image source={photos.skyline} style={{ width: '100%', height: 120, borderRadius: radius.sm }} contentFit="cover" accessible={false} />
           <T v="heading">{pick(trip.title)}</T>
           <T v="small" tone="muted">{tags.join(' · ')}</T>
+          {/* ที่มาที่ AiGo ใช้วางแผน แบบแถบแหล่งข้อมูล ให้เห็นว่าไม่ได้เดาเอง */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingVertical: space.xs, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.line }}>
+            <T v="smallBold" tone="muted" style={{ flex: 1 }}>{pick({ th: 'AiGo จะดูจาก', en: 'AiGo will check' })}</T>
+            {[logos.aviasales, logos.agoda].map((l, i) => <Image key={i} source={l} style={{ width: 20, height: 20 }} contentFit="contain" accessible={false} />)}
+            <T v="small" tone="muted">Google Places</T>
+          </View>
           <Button label={t('chat.go')} big onPress={() => router.replace('/work')} />
         </Card>
         <T v="smallBold" tone="muted">{pick({ th: 'ที่ฉันคิดว่าคุณน่าจะชอบ', en: 'Places I think you will like' })}</T>

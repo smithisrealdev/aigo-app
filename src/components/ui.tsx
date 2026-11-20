@@ -282,6 +282,35 @@ export function Thumb({ source, size = 56, label }: { source: ImageSource; size?
   return <Image source={source} style={{ width: size, height: size, borderRadius: radius.sm }} contentFit="cover" accessibilityLabel={label} accessible={!!label} />;
 }
 
+/** เส้นทางบินแบบบัตรขึ้นเครื่อง: เวลาออกและถึงตัวใหญ่ คั่นด้วยเส้นประ ถ้าเวลาเปลี่ยนแสดงเวลาเดิมขีดฆ่าไว้ข้างกัน */
+export function FlightLeg({ from, fromTime, to, toTime, was, label }: { from: string; fromTime: string; to: string; toTime: string; was?: string; label?: string }) {
+  const { colors } = useSettings();
+  const time = { fontFamily: fonts.heading, fontSize: type.xxl, lineHeight: type.xxl * 1.2, color: colors.ink, fontVariant: ['tabular-nums'] as const };
+  return (
+    <View accessible accessibilityLabel={`${from} ${fromTime} → ${to} ${toTime}${was ? ` (${was})` : ''}`} style={{ flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm }}>
+      <View>
+        <Text style={time}>{fromTime}</Text>
+        <View style={{ flexDirection: 'row', gap: space.xs }}>
+          <T v="smallBold" tone="muted">{from}</T>
+          {was && <T v="small" tone="muted" style={{ textDecorationLine: 'line-through' }}>{was}</T>}
+        </View>
+      </View>
+      <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', gap: space.xs }}>
+          <View style={{ flex: 1, borderTopWidth: 1, borderStyle: 'dashed', borderColor: colors.muted }} />
+          <Text style={{ fontSize: 14, color: colors.muted }}>✈</Text>
+          <View style={{ flex: 1, borderTopWidth: 1, borderStyle: 'dashed', borderColor: colors.muted }} />
+        </View>
+        {label && <T v="small" tone="muted">{label}</T>}
+      </View>
+      <View style={{ alignItems: 'flex-end' }}>
+        <Text style={time}>{toTime}</Text>
+        <T v="smallBold" tone="muted">{to}</T>
+      </View>
+    </View>
+  );
+}
+
 /** แถวรูปสถานที่เลื่อนแนวนอน: ให้เห็นว่าทริปพาไปไหน แตะรูปเพื่อดูสถานที่ */
 export function PhotoStrip({ items }: { items: { key: string; source: ImageSource; label: string; onPress?: () => void }[] }) {
   return (

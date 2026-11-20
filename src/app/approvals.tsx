@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { Icon } from '@/components/icon';
-import { Button, Card, FadeIn, PriceTag, Row, Screen, T, tap, useToast } from '@/components/ui';
+import { Button, Card, FadeIn, FlightLeg, PriceTag, Row, Screen, T, tap, useToast } from '@/components/ui';
 import { autoDone, baht, offers } from '@/data/trip';
 import { decide } from '@/lib/agent';
 import { useSettings } from '@/lib/settings';
@@ -49,6 +49,7 @@ export default function Approvals() {
             </View>
             <T v="price">{baht(o.costBaht)}</T>
           </View>
+          {o.id === 'flight' && <FlightLeg from="BKK" fromTime="23:55" to="KIX" toTime="07:30" label={pick({ th: 'บินตรง 5 ชม. 35 น.', en: 'Direct, 5h 35m' })} />}
           <PriceTag source={o.source} at={o.at} logo={o.logo} />
           <T v="small">{t('appr.why', { x: pick(o.why) })}</T>
           <View style={{ flexDirection: 'row', gap: space.sm }}>

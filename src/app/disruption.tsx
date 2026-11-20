@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { Icon } from '@/components/icon';
-import { AiSays, Button, Card, FadeIn, PriceTag, Row, Screen, T, Thumb, tap, useToast } from '@/components/ui';
+import { AiSays, Button, Card, FadeIn, FlightLeg, PriceTag, Row, Screen, T, Thumb, tap, useToast } from '@/components/ui';
 import { baht, photos } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
 import { space } from '@/theme/tokens';
@@ -31,7 +31,7 @@ export default function Disruption() {
       <Card tone="danger">
         <T v="smallBold" tone="muted">{pick({ th: 'แจ้งจากสายการบิน · 14:05', en: 'From the airline · 14:05' })}</T>
         <T v="heading" tone="warn">{pick({ th: 'เที่ยวบินกลับดีเลย์ 3 ชั่วโมง', en: 'Return flight delayed 3 hours' })}</T>
-        <T>{pick({ th: 'ออกใหม่ 02:55 แทน 23:55 คืนนี้', en: 'Now leaving 02:55 instead of 23:55 tonight' })}</T>
+        <FlightLeg from="KIX" fromTime="02:55" was="23:55" to="BKK" toTime="06:55" label="XJ 611" />
       </Card>
       <AiSays>{pick({ th: 'ไม่ต้องห่วง ฉันปรับแผนคืนนี้ให้แล้ว ใช้เวลาที่ได้เพิ่มมาให้คุ้ม', en: 'No worries, I already adjusted tonight to make use of the extra time.' })}</AiSays>
       <T v="smallBold" tone="muted">{t('appr.done')}</T>
