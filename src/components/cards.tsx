@@ -27,6 +27,13 @@ const SERVICE: Record<string, { icon: IconName; tone: 'sky' | 'sun' | 'mint' | '
   esim: { icon: 'spark', tone: 'lilac' }, insurance: { icon: 'check', tone: 'blush' },
 };
 const TILE = 232;
+// รหัสสายการบินในวงกลมแทนโลโก้ จนกว่าจะได้สิทธิ์ใช้โลโก้ (R25e); ไม่รู้จักชื่อใช้รูปเครื่องบิน
+const AIRLINE: Record<string, string> = {
+  'thai airways': 'TG', 'thai airasia': 'FD', airasia: 'FD', 'thai airasia x': 'XJ', 'airasia x': 'XJ', 'thai lion air': 'SL', 'thai vietjet': 'VZ',
+  vietjet: 'VJ', 'bangkok airways': 'PG', 'japan airlines': 'JL', jal: 'JL', ana: 'NH', 'all nippon airways': 'NH', peach: 'MM', zipair: 'ZG',
+  'korean air': 'KE', 'asiana airlines': 'OZ', 'jeju air': '7C', 'jin air': 'LJ', 'eva air': 'BR', 'china airlines': 'CI', starlux: 'JX',
+  'cathay pacific': 'CX', 'singapore airlines': 'SQ', scoot: 'TR', jetstar: 'JQ', emirates: 'EK', 'qatar airways': 'QR',
+};
 const BOOKABLE: CardKind[] = ['flight', 'hotel', 'ticket', 'service'];
 /** ราคาประมาณขึ้นต้นด้วย ~ (ยกเว้นของฟรี) */
 const approx = (p: string) => (/^\s*(~|ฟรี|free)/i.test(p) ? p.trim() : `~${p.trim()}`);
@@ -96,6 +103,7 @@ function PhotoTile({ c, source, action, onPress }: { c: ChatCard; source?: impor
 function RowTile({ c, action, onPress }: { c: ChatCard; action: string; onPress: () => void }) {
   const { colors, isDark, lang, pick, t } = useSettings();
   const flight = c.kind === 'flight';
+  const code = flight ? AIRLINE[(c.airline ?? c.name).trim().toLowerCase()] : undefined;
   const look = flight ? { icon: 'plane' as IconName, tone: 'sky' as const } : SERVICE[c.type ?? ''] ?? { icon: 'bag' as IconName, tone: 'sun' as const };
   const title = flight ? [c.from && c.to ? `${c.from} → ${c.to}` : undefined, c.airline].filter(Boolean).join(' · ') : c.name;
   const stops = c.type && /direct|nonstop|ตรง/i.test(c.type) ? pick({ th: 'บินตรง', en: 'Direct' }) : c.type;
@@ -104,7 +112,7 @@ function RowTile({ c, action, onPress }: { c: ChatCard; action: string; onPress:
     <PressScale onPress={onPress} label={`${title}. ${sub ?? ''}. ${c.price ? `${approx(c.price)}, ${t('price.est')}` : ''}. ${action}`}>
       <View style={[{ flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.lg, backgroundColor: colors.surface }, lift(isDark, 0.6), isDark && { borderWidth: 1, borderColor: colors.line }]}>
         <View style={{ width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.sticker[look.tone] }}>
-          <Icon name={look.icon} color={colors.ink} size={22} />
+          {code ? <T v="bodyBold" style={{ color: colors.ink }}>{code}</T> : <Icon name={look.icon} color={colors.ink} size={22} />}
         </View>
         <View style={{ flex: 1, gap: 2 }}>
           <T v="bodyBold" numberOfLines={1}>{title}</T>
