@@ -9,5 +9,9 @@ create table if not exists public.place_photos (
   created_at timestamptz not null default now()
 );
 
+-- พิกัดของบทความ Wikipedia ที่เป็นเรื่องของที่นั้นเอง ใช้ตรวจหมุดบนแผนที่ (migration place_photos_geo):
+-- {"lat":..,"lon":..} = มี, {} = ไม่มี (ไม่มีบทความของที่นั้น หรือรูปมาจาก Commons), null = แถวเก่าที่ยังไม่ได้ดู (place-photos เติมเองตอนมีคนถาม)
+alter table public.place_photos add column if not exists geo jsonb;
+
 -- ไม่มี policy: อ่านเขียนได้เฉพาะ service role ผ่าน edge function
 alter table public.place_photos enable row level security;

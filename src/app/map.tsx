@@ -6,7 +6,7 @@ import { TripMap } from '@/components/tripMap';
 import { Button, Chip, FadeIn, Screen, StopCard, T } from '@/components/ui';
 import { mapsLink, navLink } from '@/lib/links';
 import { dayPoints } from '@/lib/mapPoints';
-import { usePhotos } from '@/lib/photos';
+import { usePhotos, usePlaceGeo } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
 import { radius, space } from '@/theme/tokens';
@@ -26,12 +26,14 @@ export default function MapScreen() {
   const n = p ? places.indexOf(p) + 1 : 0;
   const near = trip.destination.en;
   const photo = usePhotos(places.filter((x) => !x.photo).map((x) => ({ name: x.name.en, near })));
-  // ทริปตัวอย่างมีพิกัดที่ตรวจแล้ว ทริปที่ AiGo วางใช้พิกัดที่ AI เดา
-  const { points, missing } = dayPoints(places, (x) => pick(x.name), trip.sample);
-  const where = !p ? undefined : missing.includes(p.id) ? 'none' : trip.sample ? 'ok' : 'approx';
+  // ทริปตัวอย่างมีพิกัดที่ตรวจแล้ว ทริปที่ AiGo วางตรวจกับพิกัดของบทความ Wikipedia (ได้มาพร้อมรูป) ที่เหลือเป็นตำแหน่งที่ AI เดา
+  const geo = usePlaceGeo(trip.sample ? [] : places.map((x) => ({ name: x.name.en, near })));
+  const { points, missing } = dayPoints(places, (x) => pick(x.name), trip.sample ? (x) => x : (x) => geo({ name: x.name.en, near }));
+  const where = !p ? undefined : missing.includes(p.id) ? 'none' : points.find((x) => x.key === p.id)?.approx ? 'approx' : 'ok';
   const search = () => p && Linking.openURL(mapsLink(`${p.name.en} ${near}`));
   // ไม่ได้ปักหมุด (ไม่มีพิกัดหรือพิกัดไกลผิดเมือง) นำทางด้วยชื่อแทนพิกัด
-  const navigate = () => p && Linking.openURL(navLink(where === 'none' ? { name: `${p.name.en}, ${near}` } : { name: p.name.en, lat: p.lat, lon: p.lon }, Platform.OS));
+  const pin = points.find((x) => x.key === p?.id);
+  const navigate = () => p && Linking.openURL(navLink(pin ? { name: p.name.en, lat: pin.lat, lon: pin.lon } : { name: `${p.name.en}, ${near}` }, Platform.OS));
   const top = (
     <View style={{ height: MAP_H }}>
       <TripMap points={points} selected={p?.id} onSelect={setSel} showUser pad={{ top: 0.28, bottom: 0.14, x: 0.12 }} />

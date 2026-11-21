@@ -19,6 +19,8 @@ export type TripMapProps = {
 };
 
 const FAR_KM = 50;
+/** พิกัดที่ตรวจแล้ว (บทความ Wikipedia) ใช้แทนของ AI เมื่อห่างกันไม่เกินนี้ เกินนี้อาจเป็นที่ชื่อเดียวกันในเมืองอื่น */
+const CHECK_KM = 5;
 const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 const km = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) => {
   const r = Math.PI / 180;
@@ -28,17 +30,22 @@ const km = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) =>
 
 /**
  * หมุดของหนึ่งวัน: เลขตามลำดับในแผน (ที่ที่ไม่ได้ปักยังนับเลข) ที่ที่ไม่มีพิกัด หรือห่างจากกลางกลุ่มของวันเกิน 50 กม.
- * ไม่ปัก (missing) เพราะพิกัดจาก AI เดาเอง ผิดแบบนี้บนแผนที่จริงจะเห็นชัด; verified = พิกัดตรวจแล้ว (ทริปตัวอย่าง)
- * ที่เหลือเป็น "ตำแหน่งโดยประมาณ"
+ * ไม่ปัก (missing) เพราะพิกัดจาก AI เดาเอง ผิดแบบนี้บนแผนที่จริงจะเห็นชัด
+ * checked = พิกัดที่ตรวจแล้วของที่นั้น (ทริปตัวอย่างใช้พิกัดของตัวเอง ทริปอื่นใช้พิกัดของบทความ Wikipedia จาก place-photos):
+ * ห่างจากของ AI ไม่เกิน 5 กม. ปักที่พิกัดที่ตรวจแล้ว ที่เหลือปักที่พิกัดของ AI เป็น "ตำแหน่งโดยประมาณ"
  */
-export function dayPoints<P extends { id: string; lat: number; lon: number }>(places: P[], label: (p: P) => string, verified: boolean): { points: MapPoint[]; missing: string[] } {
+export function dayPoints<P extends { id: string; lat: number; lon: number }>(places: P[], label: (p: P) => string, checked: (p: P) => { lat: number; lon: number } | undefined): { points: MapPoint[]; missing: string[] } {
   const located = places.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon) && (p.lat || p.lon));
   const centre = { lat: median(located.map((p) => p.lat)), lon: median(located.map((p) => p.lon)) };
   const points: MapPoint[] = [];
   const missing: string[] = [];
   places.forEach((p, i) => {
     if (!located.includes(p) || km(p, centre) > FAR_KM) missing.push(p.id);
-    else points.push({ key: p.id, lat: p.lat, lon: p.lon, n: i + 1, label: label(p), approx: !verified });
+    else {
+      const c = checked(p);
+      const ok = !!c && km(p, c) <= CHECK_KM;
+      points.push({ key: p.id, lat: ok ? c.lat : p.lat, lon: ok ? c.lon : p.lon, n: i + 1, label: label(p), approx: !ok });
+    }
   });
   return { points, missing };
 }

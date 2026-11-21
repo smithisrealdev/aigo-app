@@ -10,7 +10,7 @@ import { shortDate } from '@/lib/chat';
 import { addDays, type Place } from '@/lib/itinerary';
 import { navLink } from '@/lib/links';
 import { dayPoints } from '@/lib/mapPoints';
-import { usePhotos } from '@/lib/photos';
+import { usePhotos, usePlaceGeo } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
 import { radius, space } from '@/theme/tokens';
@@ -39,9 +39,10 @@ function TripToday() {
   const rest = next ? places.slice(at + 1) : [];
   const near = trip.destination.en;
   const photo = usePhotos(places.filter((p) => !p.photo).map((p) => ({ name: p.name.en, near })));
-  const { points, missing } = dayPoints(places, (p) => pick(p.name), trip.sample);
-  // ที่ไม่ได้ปักหมุด (ไม่มีพิกัดหรือพิกัดไกลผิดเมือง) นำทางด้วยชื่อแทนพิกัด
-  const navigate = (p: Place) => Linking.openURL(navLink(missing.includes(p.id) ? { name: `${p.name.en}, ${near}` } : { name: p.name.en, lat: p.lat, lon: p.lon }, Platform.OS));
+  const geo = usePlaceGeo(trip.sample ? [] : places.map((p) => ({ name: p.name.en, near })));
+  const { points } = dayPoints(places, (p) => pick(p.name), trip.sample ? (p) => p : (p) => geo({ name: p.name.en, near }));
+  // นำทางไปที่หมุด (พิกัดที่ตรวจแล้วถ้ามี); ที่ไม่ได้ปักหมุด (ไม่มีพิกัดหรือพิกัดไกลผิดเมือง) นำทางด้วยชื่อแทน
+  const navigate = (p: Place) => { const pin = points.find((x) => x.key === p.id); Linking.openURL(navLink(pin ? { name: p.name.en, lat: pin.lat, lon: pin.lon } : { name: `${p.name.en}, ${near}` }, Platform.OS)); };
   const note = idx < 0
     ? pick({ th: `อีก ${-idx} วันถึงวันเดินทาง ระหว่างเที่ยวหน้านี้จะบอกที่ถัดไปให้ทุกวัน ตอนนี้ดูวันแรกไว้ก่อนได้`, en: `${-idx} days to go. During the trip this page shows your next stop each day. Here is day 1 for now.` })
     : !during ? pick({ th: 'ทริปนี้จบแล้ว นี่คือวันสุดท้ายของแผน', en: 'This trip is over. Here is its last day.' })

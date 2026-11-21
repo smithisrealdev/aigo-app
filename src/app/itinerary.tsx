@@ -12,7 +12,7 @@ import { replanDay } from '@/lib/backend';
 import { shortDate } from '@/lib/chat';
 import { addDays, toAppTrip, type AppTrip } from '@/lib/itinerary';
 import { dayPoints } from '@/lib/mapPoints';
-import { usePhotos } from '@/lib/photos';
+import { usePhotos, usePlaceGeo } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
 import { radius, space } from '@/theme/tokens';
@@ -65,7 +65,8 @@ export default function Itinerary() {
   };
   // แผนที่ของวันที่เลือก (วันที่ยังว่างใช้วันแรก) เป็นภาพหัวหน้า แตะปุ่มแผนที่เพื่อเปิดแผนที่เต็มของวันนั้น
   const mapAt = places.length ? day : 0;
-  const { points } = dayPoints(trip.days[mapAt] ?? [], (p) => pick(p.name), trip.sample);
+  const geo = usePlaceGeo(trip.sample ? [] : (trip.days[mapAt] ?? []).map((p) => ({ name: p.name.en, near })));
+  const { points } = dayPoints(trip.days[mapAt] ?? [], (p) => pick(p.name), trip.sample ? (p) => p : (p) => geo({ name: p.name.en, near }));
   const top = (
     <View style={{ height: MAP_H }}>
       <TripMap points={points} interactive={false} pad={{ top: 0.3, bottom: 0.17, x: 0.12 }} />
