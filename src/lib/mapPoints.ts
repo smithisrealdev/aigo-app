@@ -1,7 +1,5 @@
 // หมุดบนแผนที่ของหนึ่งวัน (สเปก R12 และ docs/superpowers/specs/2026-11-21-in-app-map-design.md)
 // ใช้ทั้งแผนที่ Mapbox (src/components/tripMap.native.tsx) และแผนที่วาดบนเว็บ (src/components/tripMap.tsx)
-import type { StyleProp, ViewStyle } from 'react-native';
-
 export type MapPoint = { key: string; lat: number; lon: number; n: number; label: string; approx: boolean };
 
 export type TripMapProps = {
@@ -15,7 +13,6 @@ export type TripMapProps = {
   showUser?: boolean;
   /** ระยะเว้นขอบเป็นสัดส่วนของกรอบ ให้หมุดไม่ไปอยู่ใต้ปุ่มหรือแผ่นข้อมูล (โลโก้และเครดิตแผนที่อยู่เหนือขอบล่างนี้) */
   pad: { top: number; bottom: number; x: number };
-  style?: StyleProp<ViewStyle>;
 };
 
 const FAR_KM = 50;

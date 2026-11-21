@@ -4,9 +4,9 @@ import { StyleSheet, View } from 'react-native';
 import { SketchMap } from '@/components/ui';
 import type { TripMapProps } from '@/lib/mapPoints';
 
-export function TripMap({ points, selected, onSelect, interactive = true, pad, style }: TripMapProps) {
+export function TripMap({ points, selected, onSelect, interactive = true, pad }: TripMapProps) {
   return (
-    <View style={[StyleSheet.absoluteFill, style]}>
+    <View style={StyleSheet.absoluteFill}>
       <SketchMap points={points} pad={pad} selected={selected} onSelect={interactive ? onSelect : undefined} />
     </View>
   );

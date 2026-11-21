@@ -14,8 +14,10 @@ const TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const M: typeof Mapbox | null = TOKEN && NativeModules.RNMBXModule ? require('@rnmapbox/maps') : null;
 M?.setAccessToken(TOKEN!).catch(() => {});
+// Android ขอสิทธิ์ตำแหน่งครั้งเดียวต่อการเปิดแอป: ผู้ใช้ปฏิเสธแล้วไม่ถามซ้ำทุกครั้งที่เปิดหน้าที่มีแผนที่
+let androidAsk: Promise<boolean> | null = null;
 
-export function TripMap({ points, selected, onSelect, interactive = true, showUser = false, pad, style }: TripMapProps) {
+export function TripMap({ points, selected, onSelect, interactive = true, showUser = false, pad }: TripMapProps) {
   const { colors, isDark, pick } = useSettings();
   const [box, setBox] = useState({ w: 0, h: 0 });
   const [failed, setFailed] = useState(false);
@@ -28,13 +30,15 @@ export function TripMap({ points, selected, onSelect, interactive = true, showUs
   useEffect(() => {
     if (!M || !showUser) return;
     const lm = M.locationManager;
-    const on = (l: Mapbox.Location) => setHere([l.coords.longitude, l.coords.latitude]);
+    // วาดใหม่เมื่อตำแหน่งขยับจริงเท่านั้น (ทิศของเครื่องเปลี่ยนก็ส่งมา)
+    const on = (l: Mapbox.Location) => setHere((h) => (h && Math.abs(h[0] - l.coords.longitude) < 1e-5 && Math.abs(h[1] - l.coords.latitude) < 1e-5 ? h : [l.coords.longitude, l.coords.latitude]));
     let live = true;
-    const listen = () => { if (live) { lm.start(25); lm.addListener(on); } };
-    if (Platform.OS === 'android') M.requestAndroidLocationPermissions().then((ok) => { if (ok && live) { setGranted(true); listen(); } }, () => {});
+    // ฟังตำแหน่งเฉพาะแผนที่ที่มีปุ่มไปที่ตำแหน่งของฉัน; จุดฟ้าบนแผนที่ Mapbox แสดงเองโดยไม่ต้องฟัง
+    const listen = () => { if (live && interactive) { lm.start(25); lm.addListener(on); } };
+    if (Platform.OS === 'android') (androidAsk ??= M.requestAndroidLocationPermissions().catch(() => false)).then((ok) => { if (ok && live) { setGranted(true); listen(); } });
     else listen();
     return () => { live = false; lm.removeListener(on); };
-  }, [showUser]);
+  }, [showUser, interactive]);
 
   const lons = points.map((p) => p.lon), lats = points.map((p) => p.lat);
   const [w, e, s, n] = [Math.min(...lons), Math.max(...lons), Math.min(...lats), Math.max(...lats)];
@@ -48,7 +52,7 @@ export function TripMap({ points, selected, onSelect, interactive = true, showUs
   }, [pad.top, pad.bottom, pad.x, bw, bh, one, w, e, s, n]);
 
   if (!M || failed || !points.length) {
-    return <View style={[StyleSheet.absoluteFill, style]}><SketchMap points={points} pad={pad} selected={selected} onSelect={interactive ? onSelect : undefined} /></View>;
+    return <View style={StyleSheet.absoluteFill}><SketchMap points={points} pad={pad} selected={selected} onSelect={interactive ? onSelect : undefined} /></View>;
   }
 
   const day = `${w},${e},${s},${n}`;
@@ -60,16 +64,17 @@ export function TripMap({ points, selected, onSelect, interactive = true, showUs
   };
   // โลโก้และปุ่มเครดิตของ Mapbox ต้องมองเห็น (R12): มุมซ้ายล่าง ในขอบล่างที่เว้นไว้ เหนือแผ่นที่ทับแผนที่ (มุมขวาล่างเว้นให้ปุ่มของหน้า)
   const orn = Math.max(space.sm, pad.bottom * bh - 28);
-  const ordered = [...points].sort((a, b) => Number(a.key === selected) - Number(b.key === selected)); // หมุดที่เลือกอยู่บนสุด
 
   return (
-    <View style={[StyleSheet.absoluteFill, { pointerEvents: interactive ? 'auto' : 'none' }, style]}
+    <View style={[StyleSheet.absoluteFill, { pointerEvents: interactive ? 'auto' : 'none' }]}
       onLayout={(ev) => { const { width, height } = ev.nativeEvent.layout; setBox((b) => (b.w === width && b.h === height ? b : { w: width, h: height })); }}>
       {bw > 0 && (
         <M.MapView style={StyleSheet.absoluteFill} styleURL="mapbox://styles/mapbox/standard" onMapLoadingError={(e) => { if (mapLoadFailed(e)) setFailed(true); }}
           scrollEnabled={interactive} zoomEnabled={interactive} rotateEnabled={false} pitchEnabled={false} compassEnabled={false} scaleBarEnabled={false}
           // Android: แผนที่อยู่ในหน้าที่เลื่อนขึ้นลงได้ ให้ลากแผนที่ได้ทุกทิศ ไม่ให้หน้ารับการลากขึ้นลงไป
           requestDisallowInterceptTouchEvent={interactive}
+          // Android: แผนที่เล็ก (หัวหน้าแผน, วันนี้) ใช้ TextureView ให้มุมโค้งของกรอบตัดแผนที่ได้
+          surfaceView={interactive}
           logoPosition={{ bottom: orn, left: space.sm }} attributionEnabled={interactive} attributionPosition={{ bottom: orn, left: space.sm + 92 }}>
           <M.StyleImport id="basemap" existing config={{ lightPreset: isDark ? 'night' : 'day', showPointOfInterestLabels: false }} />
           <M.Camera ref={cam} defaultSettings={camera} {...camera} animationDuration={600} animationMode="easeTo" />
@@ -79,8 +84,8 @@ export function TripMap({ points, selected, onSelect, interactive = true, showUs
             </M.ShapeSource>
           )}
           {showUser && granted && <M.LocationPuck />}
-          {ordered.map((p) => (
-            <M.MarkerView key={p.key} coordinate={[p.lon, p.lat]} allowOverlap allowOverlapWithPuck>
+          {points.map((p) => (
+            <M.MarkerView key={p.key} coordinate={[p.lon, p.lat]} allowOverlap allowOverlapWithPuck isSelected={p.key === selected}>
               <MapPin n={p.n} name={p.label} selected={p.key === selected} approx={p.approx} onPress={interactive && onSelect ? () => onSelect(p.key) : undefined} />
             </M.MarkerView>
           ))}

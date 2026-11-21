@@ -17,7 +17,8 @@ const keyOf = (q: PhotoQuery) => `${q.name}|${q.near ?? ''}`.trim().toLowerCase(
 const STORE = 'aigo.photos.v2'; // v2 เก็บพิกัดด้วย ของ v1 จึงถามใหม่
 const MAX_KEPT = 600;
 
-type Known = { u: string | null; g?: [number, number] }; // u null = ค้นแล้วไม่มีรูป, g = พิกัดของบทความ
+// u null = ค้นแล้วไม่มีรูป, g = พิกัดของบทความ, x = เซิร์ฟเวอร์ยังดูพิกัดไม่ได้ (Wikipedia ไม่ตอบ) ถามใหม่ครั้งหน้า แต่ใช้รูปไปก่อน
+type Known = { u: string | null; g?: [number, number]; x?: true };
 const known = new Map<string, Known>();
 const asking = new Set<string>();
 const tries = new Map<string, number>(); // ถามไม่สำเร็จไปแล้วกี่ครั้ง
@@ -26,7 +27,7 @@ let version = 0;
 const changed = () => { version++; listeners.forEach((l) => l()); };
 
 let loaded: Promise<void> | null = null;
-const load = () => (loaded ??= AsyncStorage.getItem(STORE)
+const load = () => (loaded ??= (AsyncStorage.removeItem('aigo.photos.v1').catch(() => {}), AsyncStorage.getItem(STORE))
   .then((raw) => { if (raw) for (const [k, v] of Object.entries(JSON.parse(raw) as Record<string, Known>)) if (!known.has(k)) known.set(k, v); changed(); })
   .catch(() => {}));
 const save = () => {
@@ -36,16 +37,16 @@ const save = () => {
 
 async function fetchMissing(qs: PhotoQuery[]) {
   await load();
-  const todo = [...new Map(qs.filter((q) => q.name && !known.has(keyOf(q)) && !asking.has(keyOf(q))).map((q) => [keyOf(q), q])).values()];
+  const todo = [...new Map(qs.filter((q) => q.name && (!known.has(keyOf(q)) || known.get(keyOf(q))!.x) && !asking.has(keyOf(q))).map((q) => [keyOf(q), q])).values()];
   for (let i = 0; i < todo.length; i += 24) {
     const batch = todo.slice(i, i + 24);
     batch.forEach((q) => asking.add(keyOf(q)));
     try {
-      const { photos } = await postJson<{ photos: ({ url: string | null; lat?: number; lon?: number } | null)[] }>('place-photos', { places: batch });
+      const { photos } = await postJson<{ photos: ({ url: string | null; lat?: number; lon?: number; again?: boolean } | null)[] }>('place-photos', { places: batch });
       // ไม่ได้คำตอบ (null) ไม่จำ จะถามใหม่ครั้งหน้า; ได้คำตอบว่าไม่มีรูปจำไว้ว่าไม่มี
       batch.forEach((q, j) => {
         const r = photos[j];
-        if (r) known.set(keyOf(q), { u: r.url, ...(Number.isFinite(r.lat) && Number.isFinite(r.lon) && { g: [r.lat!, r.lon!] as [number, number] }) });
+        if (r) known.set(keyOf(q), { u: r.url, ...(Number.isFinite(r.lat) && Number.isFinite(r.lon) && { g: [r.lat!, r.lon!] as [number, number] }), ...(r.again && { x: true as const }) });
       });
       save();
       changed();

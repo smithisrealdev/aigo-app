@@ -9,7 +9,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "node --experimental-strip-types --no-warnings --test src/**/*.test.ts",
+    "test": "node --experimental-strip-types --no-warnings --test src/**/*.test.ts supabase/functions/_shared/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

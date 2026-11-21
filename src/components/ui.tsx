@@ -752,10 +752,6 @@ export function UndoRow({ text, photo, undone, onUndo, last }: { text: string; p
   );
 }
 
-/**
- * แผนที่วาดแบบแบนสำหรับหัวจอแผน: ตำแหน่งหมุดคำนวณจากพิกัดจริงแล้วย่อให้พอดีกรอบ เส้นทางจุดประเชื่อมตามลำดับ
- * shortcut: เป็นภาพร่างไม่ใช่แผนที่จริง (แผนที่จริงอยู่ที่ /map), เปลี่ยนเป็น react-native-maps เมื่อต่อข้อมูลจริง
- */
 /** หมุดเลขตามลำดับในแผน (R12): ที่เลือกใหญ่กว่าและเป็นสีหลัก ตำแหน่งที่ AI เดา (approx) เป็นหมุดโปร่งขอบประ ใช้ทั้งแผนที่วาดและ Mapbox */
 export function MapPin({ n, name, selected = false, approx = false, onPress }: { n: number; name: string; selected?: boolean; approx?: boolean; onPress?: () => void }) {
   const { colors } = useSettings();
@@ -775,9 +771,10 @@ export function SketchMap({ points, pad, selected, onSelect }: Pick<TripMapProps
   const { colors } = useSettings();
   const lats = points.map((p) => p.lat), lons = points.map((p) => p.lon);
   const [la0, la1, lo0, lo1] = [Math.min(...lats), Math.max(...lats), Math.min(...lons), Math.max(...lons)];
+  // ที่เดียว (หรือทุกที่อยู่แนวเดียวกัน) วางไว้กลางพื้นที่ที่เหลือ ไม่ชิดมุม
   const at = (p: { lat: number; lon: number }) => ({
-    x: pad.x + ((p.lon - lo0) / (lo1 - lo0 || 1)) * (1 - 2 * pad.x),
-    y: pad.top + ((la1 - p.lat) / (la1 - la0 || 1)) * (1 - pad.top - pad.bottom),
+    x: pad.x + (lo1 > lo0 ? (p.lon - lo0) / (lo1 - lo0) : 0.5) * (1 - 2 * pad.x),
+    y: pad.top + (la1 > la0 ? (la1 - p.lat) / (la1 - la0) : 0.5) * (1 - pad.top - pad.bottom),
   });
   const xy = points.map(at);
   const route = xy.map((q, i) => `${i ? 'L' : 'M'}${(q.x * 100).toFixed(2)} ${(q.y * 100).toFixed(2)}`).join(' ');

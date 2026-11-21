@@ -2,10 +2,12 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { allow, clientIp, tooMany } from "../_shared/rate-limit.ts";
+import { base, isExact, mentions, slug, titleFits, words } from "../_shared/place-match.ts";
 
 // Place photos from Wikipedia and Wikimedia Commons (free), cached for everyone in place_photos so each place is searched once.
 // POST { places: [{ name, near? }] } -> { photos: [{ url, title, lat?, lon? } | null] } in the same order; null = Wikimedia did not answer, ask again.
-// lat/lon = coordinates of the Wikipedia article about the place itself (the app checks map pins against them), never of a broader article.
+// lat/lon = coordinates of the Wikipedia article about the place itself (the app checks map pins against them), never of a broader article;
+// again = the coordinates could not be checked yet (Wikipedia did not answer), so the app asks once more later.
 // scripts/seed-photos.mjs fills the cache ahead of time for well-known places.
 // shortcut: Wikimedia only, so some restaurants and small hotels get no photo;
 // add a capped Google Places fallback if too many places come back empty.
@@ -27,39 +29,15 @@ const json = (body: unknown, status = 200) =>
 
 // Cache rows: "v5|n|<slug>" for Wikipedia photos and Commons photos found without a hint, shared by every trip ("Senso-ji", "Sensoji" and "Sensō-ji" are one row);
 // "v5|<name>|<near>" for Commons photos found with a hint and for misses, which depend on the near hint. Rows of earlier versions are never read again.
-// Letters NFD does not split into a base letter and a mark: "Tromsø" is "Tromso"
-const FOLD: Record<string, string> = { "ø": "o", "æ": "ae", "ß": "ss", "ł": "l", "đ": "d", "ð": "d", "þ": "th" };
-const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[øæßłđðþ]/g, (c) => FOLD[c]);
-const slug = (s: string) => fold(s).replace(/[^a-z0-9]+/g, "");
 const nearKey = (p: Place) => `v5|${p.name}|${p.near}`.toLowerCase();
 const nameKey = (s: string) => (slug(s) ? `v5|n|${slug(s)}` : null);
 const keysOf = (p: Place) => [nameKey(p.name), nearKey(p)].filter((k): k is string => !!k);
 
-// Words that may differ between a name and its article title ("Mt. Moiwa" / "Mount Moiwa", "New York" / "New York City")
-const LOOSE = new Set(["the", "of", "and", "de", "la", "le", "el", "mount", "mt", "st", "saint", "city"]);
-const words = (s: string) => fold(s).split(/[^a-z0-9]+/).filter((w) => w.length > 1 && !LOOSE.has(w));
 // Not a photo of the place: SVG or PNG drawings, and by file name flags, seals, logos, maps, satellite views and disasters
 const NOT_PHOTO = /[/_](flag|coat[_ ]of[_ ]arms|seal|emblem|logo|map|locator|location|earthquake|tsunami|wrecks?|disaster)[-_.0-9]|[/_(](satellit|sentinel[-_0-9]|landsat|modis[-_.)]|srtm[-_.)]|nasa[-_.)]|astronaut|iss[0-9])/i;
 const drawing = (url: string) => !/[.]jpe?g([?]|$)/i.test(url) || NOT_PHOTO.test(url);
 // Thumbnails only: an original file is smaller than a card, and Wikimedia rate-limits originals (they came back 429)
 const isPhoto = (url: string) => url.includes("/thumb/") && !drawing(url);
-const KIND = new Set(["temple", "shrine", "park", "market", "castle", "museum", "garden", "gardens", "palace", "station", "cathedral", "church", "bridge", "tower"]);
-/** "Christ the Redeemer (statue)" and "Museum of Islamic Art, Doha" are articles about "Christ the Redeemer" and "Museum of Islamic Art" */
-const base = (title: string) => title.split("(")[0].split(",")[0];
-/** The article is about this place only if every word of its title is in the name: "Nijo Market" must not get "Nijō Castle" */
-const titleFits = (title: string, name: string) => { const n = new Set(words(name)); const t = words(base(title)); return t.length > 0 && t.every((w) => n.has(w)); };
-/**
- * The article is about the place itself: as many words as the name, or two or more words that cover the name except for words that
- * only say what kind of place it is ("Senso-ji Temple" is the article "Sensō-ji"); a one-word title is often the city, so "Nagoya" is not "Nagoya Castle"
- */
-const isExact = (title: string, name: string) => {
-  if (!titleFits(title, name)) return false;
-  const n = words(name), t = new Set(words(base(title)));
-  return t.size >= new Set(n).size || (t.size >= 2 && n.every((w) => t.has(w) || KIND.has(w)));
-};
-/** A Commons file name mentions the place if it shares a word of 4+ letters with the name */
-const mentions = (title: string, name: string) => { const t = new Set(words(title)); return words(name).some((w) => w.length >= 4 && t.has(w)); };
-
 type Page = { index?: number; title?: string; thumbnail?: { source?: string }; imageinfo?: { thumburl?: string }[]; coordinates?: { lat: number; lon: number }[] };
 const geoOf = (pg?: Page): Geo => { const c = pg?.coordinates?.[0]; return c ? { lat: c.lat, lon: c.lon } : {}; };
 /** One MediaWiki search, best match first; null when the site could not answer (rate limit, network), so nothing gets cached */
@@ -189,23 +167,29 @@ serve(async (req) => {
     const batch = todo.slice(i, i + 4);
     const hits = await Promise.all(batch.map(search));
     const at = new Date().toISOString();
-    const rows = batch.flatMap((p, j) => {
+    // A place's own row (its name, or the near hint for photos that depend on it) carries its coordinates. A Wikipedia photo is also
+    // saved under its article's title, but only where no row exists yet: it never replaces a hand-picked photo or stored coordinates,
+    // and its coordinates are filled in when someone asks for that title. One key goes in once.
+    const own = new Map<string, { key: string; url: string | null; title: string | null; created_at: string; geo: Geo }>();
+    const extra = new Map<string, { key: string; url: string | null; title: string | null; created_at: string }>();
+    batch.forEach((p, j) => {
       const hit = hits[j];
-      if (!hit) return []; // Wikimedia did not answer: not cached, so the next request tries again
-      // a Wikipedia photo is saved under the name and under its article's title, a shared Commons photo under the name; the rest stay with the near hint
-      const rowKeys = hit.shared ? [nameKey(p.name), hit.title && !hit.title.startsWith("File:") && nameKey(hit.title)] : [nearKey(p)];
-      // the coordinates belong to the place asked for; the row under the article's own title is filled in when someone asks for it
-      const own = new Set([nameKey(p.name), nearKey(p)]);
-      return [...new Set(rowKeys.filter((k): k is string => !!k))].map((key) => {
-        found.set(key, own.has(key) ? hit : { ...hit, geo: null });
-        return { key, url: hit.url, title: hit.title, created_at: at, geo: own.has(key) ? hit.geo ?? {} : null };
-      });
+      if (!hit) return; // Wikimedia did not answer: not cached, so the next request tries again
+      const key = hit.shared ? nameKey(p.name) : nearKey(p);
+      if (key) { found.set(key, hit); own.set(key, { key, url: hit.url, title: hit.title, created_at: at, geo: hit.geo ?? {} }); }
+      const titleKey = hit.shared && hit.title && !hit.title.startsWith("File:") ? nameKey(hit.title) : null;
+      if (titleKey && titleKey !== key) {
+        if (!found.has(titleKey)) found.set(titleKey, { ...hit, geo: null });
+        extra.set(titleKey, { key: titleKey, url: hit.url, title: hit.title, created_at: at });
+      }
     });
-    if (rows.length) await sb.from("place_photos").upsert(rows);
+    for (const key of own.keys()) extra.delete(key);
+    if (own.size) await sb.from("place_photos").upsert([...own.values()]);
+    if (extra.size) await sb.from("place_photos").upsert([...extra.values()], { onConflict: "key", ignoreDuplicates: true });
   }
 
   return json({ photos: items.map((p) => {
     const h = p.name ? hitOf(p) : undefined;
-    return h ? { url: h.url, title: h.title, ...(typeof h.geo?.lat === "number" && { lat: h.geo.lat, lon: h.geo.lon }) } : null;
+    return h ? { url: h.url, title: h.title, ...(typeof h.geo?.lat === "number" && { lat: h.geo.lat, lon: h.geo.lon }), ...(h.geo == null && { again: true }) } : null;
   }) });
 });
