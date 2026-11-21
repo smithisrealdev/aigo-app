@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { dateRange, dayCount, genEvent, legOf, minutesOf, nextRound, peopleOf, plannedText, planText, requestFromSummary, toAppTrip, tripContext } from './itinerary.ts';
+import { dateRange, dayCount, genEvent, legOf, minutesOf, peopleOf, plannedText, planText, requestFromSummary, toAppTrip, tripContext, withPlanState } from './itinerary.ts';
 
 const REQ = { destination: 'Tokyo', startDate: '2026-12-28', endDate: '2027-01-01', language: 'th' };
 
@@ -88,13 +88,26 @@ test('แผนเป็นข้อความ: บริบทที่แน
   assert.equal(planText(trip, 'en'), 'Sapporo, Japan, 2 days (24–25 Jan)\nDay 1: 08:00 Nijo Market → 10:00 Odori Park\nPlanned with AiGo');
 });
 
-test('สร้างแผนต่อเมื่อสายหลุด แต่ไม่วนไม่จบ', () => {
-  let r = nextRound({ drops: 0, stalls: 0 }, false, true);
-  for (let i = 0; i < 4; i++) r = nextRound(r!, false, true);
-  assert.deepEqual(r, { drops: 5, stalls: 0 }, 'สายหลุดติดกัน 5 ครั้งยังขอต่อ');
-  assert.equal(nextRound(r!, false, true), null, 'ครั้งที่ 6 หยุด');
-  assert.deepEqual(nextRound(r!, true, true), { drops: 0, stalls: 0 }, 'ได้วันเพิ่มเริ่มนับใหม่');
-  const s = nextRound({ drops: 2, stalls: 0 }, false, false);
-  assert.deepEqual(s, { drops: 2, stalls: 1 }, 'ตอบจบแต่ไม่ได้วัน ลองอีกครั้ง');
-  assert.equal(nextRound(s!, false, false), null, 'ไม่ได้วันสองครั้งติด หยุด');
+test('เติมวันที่เซิร์ฟเวอร์วางเสร็จลงทริป', () => {
+  const plan = { job: 'j', token: 't', status: 'running' as const, request: REQ, people: 2, days: [] };
+  const base = { ...toAppTrip({ days: [] }, REQ), id: 'trip-1', bookings: [], plan };
+  const day = (n: string) => ({ title: n, places: [{ id: n, name: n }] });
+  const t1 = withPlanState(base, { status: 'running', totalDays: 5, from: 0, days: [day('a')] });
+  assert.equal(t1.id, 'trip-1', 'ทริปเดิม ไม่ใช่ทริปใหม่');
+  assert.deepEqual(t1.bookings, [], 'ของที่หาไว้ในแชตยังอยู่');
+  assert.deepEqual(t1.days.map((d) => d[0]?.id), ['a']);
+  assert.equal(t1.plan?.days.length, 1);
+  const t2 = withPlanState(t1, { status: 'running', totalDays: 5, from: 0, days: [day('a'), day('b')] });
+  assert.deepEqual(t2.days.map((d) => d[0]?.id), ['a', 'b'], 'วันที่มีแล้วไม่ซ้ำ');
+  assert.equal(withPlanState(t2, { status: 'running', totalDays: 5, from: 2, days: [] }), t2, 'ไม่มีอะไรใหม่ ได้ทริปเดิมกลับมา');
+  assert.equal(withPlanState(t2, { status: 'running', totalDays: 5, from: 3, days: [day('d')] }).days.length, 2, 'วันขาดช่วง ไม่เติมผิดวัน');
+  const t3 = withPlanState(t2, { status: 'done', totalDays: 5, title: 'Tokyo!', from: 2, days: [day('c'), day('d'), day('e')] });
+  assert.equal(t3.title.en, 'Tokyo!');
+  assert.deepEqual(t3.days.map((d) => d[0]?.id), ['a', 'b', 'c', 'd', 'e']);
+  assert.equal(t3.plan?.status, 'done');
+  assert.equal(t3.plan?.days.length, 0, 'เสร็จแล้วไม่เก็บสำเนาดิบ');
+  const t4 = withPlanState(t2, { status: 'failed', totalDays: 5, error: 'stalled', from: 2, days: [] });
+  assert.equal(t4.plan?.status, 'failed');
+  assert.equal(t4.plan?.error, 'stalled');
+  assert.deepEqual(t4.days.map((d) => d[0]?.id), ['a', 'b'], 'ไม่สำเร็จ วันที่ได้แล้วยังอยู่');
 });

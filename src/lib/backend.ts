@@ -2,20 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetch } from 'expo/fetch';
 
 import { sseDelta } from '@/lib/chat';
-import { AppState } from 'react-native';
-
-import { addDays, dayCount, genEvent, nextRound, plannedText, type GenDay, type GenItinerary, type GenRequest, type Rounds } from '@/lib/itinerary';
+import { addDays, genEvent, plannedText, type GenDay, type GenRequest, type PlanState } from '@/lib/itinerary';
 import { PUBLISHABLE_KEY, SUPABASE_URL, supabase } from '@/lib/supabase';
-
-/** รอให้แอปกลับมาอยู่บนจอ: iOS ตัดการเชื่อมต่อของแอปที่ถูกพับไว้ จึงขอต่อเมื่อผู้ใช้กลับมา (กดหยุดระหว่างรอก็จบทันที) */
-function foreground(signal?: AbortSignal) {
-  if (AppState.currentState !== 'background' || signal?.aborted) return Promise.resolve();
-  return new Promise<void>((resolve) => {
-    const sub = AppState.addEventListener('change', (s) => { if (s === 'active') done(); });
-    const done = () => { sub.remove(); signal?.removeEventListener('abort', done); resolve(); };
-    signal?.addEventListener('abort', done, { once: true });
-  });
-}
 
 let device: string | null = null;
 /** เลขประจำเครื่องสำหรับโหมดผู้เยี่ยมชม (edge function อ่านจาก header x-device-id) */
@@ -53,11 +41,12 @@ async function post(fn: string, body: unknown, connectMs: number, signal?: Abort
   }
 }
 
-/** เรียก edge function ที่ตอบเป็น JSON */
-export async function postJson<T>(fn: string, body: unknown): Promise<T> {
+/** เรียก edge function ที่ตอบเป็น JSON; asUser = ส่ง token ของบัญชีไปด้วยเมื่อเข้าสู่ระบบแล้ว (เหมือน post) */
+export async function postJson<T>(fn: string, body: unknown, asUser = false): Promise<T> {
+  const token = asUser ? (await supabase.auth.getSession()).data.session?.access_token : undefined;
   const res = await fetch(`${SUPABASE_URL}/functions/v1/${fn}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', apikey: PUBLISHABLE_KEY },
+    headers: { 'Content-Type': 'application/json', apikey: PUBLISHABLE_KEY, 'x-device-id': await deviceId(), ...(token && { Authorization: `Bearer ${token}` }) },
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`${fn} ${res.status}`);
@@ -94,51 +83,23 @@ export async function streamTripChat(messages: ChatMessage[], lang: string, onTe
   return full;
 }
 
+/** งานวางแผนบนเซิร์ฟเวอร์ (generate-itinerary) ใช้ token แทนการล็อกอิน */
+export type PlanRef = { job: string; token: string };
+
 /**
- * สร้างแผนด้วย generate-itinerary และส่งแต่ละวันให้ onDay ทันทีที่เสร็จ ผู้ใช้จึงเห็นแผนทีละวัน
- * Supabase ให้ฟังก์ชันทำงานได้ราว 150 วินาทีต่อครั้ง เซิร์ฟเวอร์จึงหยุดเองก่อนหมดเวลา ถ้าครั้งไหนได้ไม่ครบ
- * (หยุดก่อน ถูกตัด หรือ AI ตอบไม่ครบ) จะขอวันที่เหลือในครั้งใหม่ พร้อมรายการที่วางแล้วไม่ให้ซ้ำ
- * have = วันที่ได้มาแล้วจากครั้งก่อน (กดลองใหม่แล้วทำต่อจากเดิม), signal = ผู้ใช้กดหยุด วันที่ได้แล้วยังอยู่
+ * ส่งงานวางแผนให้เซิร์ฟเวอร์ ซึ่งทำต่อเองจนครบทุกวันแม้ปิดแอป (supabase/plan_jobs.sql)
+ * โควตาหมดได้ error "generate-itinerary 429"
  */
-export async function generateItinerary(req: GenRequest, messages: ChatMessage[], onDay: (index: number, day: GenDay) => void, have: GenDay[] = [], signal?: AbortSignal): Promise<GenItinerary> {
-  const total = dayCount(req.startDate, req.endDate);
-  const days = [...have];
-  let title: string | undefined;
-  let failure: string | null = null;
-  // วันมาตามลำดับ: complete ส่งวันที่ day_complete ส่งไปแล้วซ้ำอีก จึงรับเฉพาะวันถัดไป
-  const add = (i: number, d: GenDay) => { if (i === days.length && i < total) { days.push(d); onDay(i, d); } };
-  let rounds: Rounds | null = { drops: 0, stalls: 0 };
-  while (days.length < total) {
-    await foreground(signal);
-    if (signal?.aborted) throw new Error('stopped');
-    const fromDay = days.length + 1, before = days.length;
-    let dropped = false;
-    try {
-      // ส่งบทสนทนาล่าสุดไปด้วยให้ AI เห็นความต้องการทั้งหมด (สคีมารับได้ 100 ข้อความ)
-      const body = await post('generate-itinerary', {
-        ...req, conversationMessages: messages.slice(-40), ...(fromDay > 1 && { fromDay, planned: plannedText(days) }),
-      }, 30000, signal, true);
-      await eachLine(body, (line) => {
-        const e = genEvent(line);
-        if (e?.type === 'day_complete' && e.day) add(e.dayIndex ?? days.length, e.day);
-        else if (e?.type === 'complete') { title ??= e.itinerary.title; (e.itinerary.days ?? []).forEach((d, i) => add(fromDay - 1 + i, d)); }
-        else if (e?.type === 'error') failure = e.error ?? 'generation failed';
-      });
-    } catch (err) {
-      const message = (err as Error).message;
-      if (/^generate-itinerary 4\d\d$/.test(message)) throw err; // เซิร์ฟเวอร์ปฏิเสธ (เช่นโควตาหมด) ขอใหม่ก็ไม่ได้
-      // สายหลุดกลางทาง (iOS ตัดสายเมื่อพับแอป เน็ตสะดุด): วันที่ได้แล้วยังอยู่ รอให้กลับมาแล้วขอวันที่เหลือ
-      failure = message;
-      dropped = true;
-    }
-    if (signal?.aborted) throw new Error('stopped');
-    rounds = nextRound(rounds, days.length > before, dropped);
-    if (!rounds) break;
-    if (dropped) await new Promise((r) => setTimeout(r, 1500 * rounds!.drops));
-  }
-  if (days.length < total) throw new Error(failure ?? `generate-itinerary stopped at day ${days.length} of ${total}`);
-  return { title, destination: req.destination, startDate: req.startDate, endDate: req.endDate, days };
+export async function startPlan(req: GenRequest, messages: ChatMessage[]): Promise<PlanRef> {
+  // ส่งบทสนทนาล่าสุดไปด้วยให้ AI เห็นความต้องการทั้งหมด (สคีมารับได้ 100 ข้อความ)
+  const r = await postJson<{ jobId: string; token: string }>('generate-itinerary', { job: 'start', ...req, conversationMessages: messages.slice(-40) }, true);
+  return { job: r.jobId, token: r.token };
 }
+/** สถานะงาน และวันที่เสร็จแล้วตั้งแต่ลำดับ have (แอปมี have วันแล้ว) */
+export const planStatus = (ref: PlanRef, have: number) => postJson<PlanState>('generate-itinerary', { job: 'status', jobId: ref.job, token: ref.token, have });
+export const stopPlan = (ref: PlanRef) => postJson('generate-itinerary', { job: 'stop', jobId: ref.job, token: ref.token });
+/** ทำต่อจากวันที่มีแล้ว (งานที่หยุดหรือไม่สำเร็จ) */
+export const resumePlan = (ref: PlanRef) => postJson('generate-itinerary', { job: 'resume', jobId: ref.job, token: ref.token });
 
 /**
  * แก้แผนวันเดียวตามที่ผู้ใช้บอก (R13) ด้วย generate-itinerary แบบทำต่อ: ให้วันก่อนหน้าเป็นวันที่วางแล้ว จึงได้แผนวันเดียว

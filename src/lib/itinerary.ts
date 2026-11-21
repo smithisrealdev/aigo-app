@@ -19,7 +19,15 @@ export type AppTrip = {
   bookings?: ChatCard[];
   /** ทริปตัวอย่าง (โอซาก้า) ไม่ใช่ทริปที่ AiGo สร้างจริง */
   sample: boolean;
+  /** แผนที่เซิร์ฟเวอร์กำลังวาง (งานของ generate-itinerary) */
+  plan?: PlanInfo;
 };
+
+export type PlanStatus = 'running' | 'done' | 'failed' | 'stopped';
+/** งานวางแผนบนเซิร์ฟเวอร์: เก็บวันดิบไว้สร้างทริปใหม่เมื่อมีวันเพิ่ม จนกว่าจะเสร็จ; token ใช้ถามสถานะแทนการล็อกอิน */
+export type PlanInfo = { job: string; token: string; status: PlanStatus; request: GenRequest; people: number; days: GenDay[]; title?: string; error?: string };
+/** คำตอบสถานะงาน: days = วันตั้งแต่ลำดับ from (0 = วันแรก) */
+export type PlanState = { status: PlanStatus; totalDays: number; title?: string | null; error?: string | null; from: number; days: GenDay[] };
 
 type GenPlace = {
   id?: string; name?: string; description?: string; coordinates?: { lat?: number; lng?: number }; startTime?: string; duration?: string;
@@ -42,18 +50,6 @@ export function plannedText(days: GenDay[]): string {
 }
 
 /** "2 hours" → 120, "1.5 ชม." → 90, "45 minutes" → 45; อ่านไม่ออกถือว่า 60 นาที */
-export type Rounds = { drops: number; stalls: number };
-/**
- * ตัดสินหลังขอวันจาก generate-itinerary แต่ละรอบ: ได้วันเพิ่มเริ่มนับใหม่
- * สายหลุด (พับแอป เน็ตสะดุด) ขอต่อได้ 5 ครั้งติดกัน เพราะเซิร์ฟเวอร์ยังทำได้ปกติ
- * เซิร์ฟเวอร์ตอบจบแต่ไม่ได้วันเพิ่ม ลองอีกครั้งเดียว ไม่วนไม่จบ; null = หยุด
- */
-export function nextRound(r: Rounds, gotDay: boolean, dropped: boolean): Rounds | null {
-  if (gotDay) return { drops: 0, stalls: 0 };
-  if (dropped) return r.drops < 5 ? { ...r, drops: r.drops + 1 } : null;
-  return r.stalls < 1 ? { ...r, stalls: r.stalls + 1 } : null;
-}
-
 export function minutesOf(duration = ''): number {
   const n = parseFloat(duration.replace(',', '.'));
   if (!Number.isFinite(n)) return 60;
@@ -112,6 +108,27 @@ export function toAppTrip(gen: GenItinerary, req: GenRequest, people = 2): AppTr
     dates: { th: dateRange(start, end, 'th'), en: dateRange(start, end, 'en') },
     startDate: start, totalDays: total, people, days, legs, sample: false,
     dayTitles: (gen.days ?? []).map((d) => both(d?.title ?? '')),
+  };
+}
+
+/**
+ * เติมวันที่เซิร์ฟเวอร์วางเสร็จลงทริปเดิม (id ของที่หาไว้ในแชต และรูปปกยังอยู่) วันที่มีแล้วไม่ซ้ำ วันที่มาขาดช่วงรอรอบหน้า
+ * ไม่มีอะไรเปลี่ยนได้ทริปเดิมกลับมา (ไม่เขียนลงเครื่องซ้ำ) เสร็จแล้วทิ้งวันดิบที่เก็บไว้
+ */
+export function withPlanState(trip: AppTrip, s: PlanState): AppTrip {
+  const plan = trip.plan;
+  if (!plan) return trip;
+  const known = plan.days.length;
+  const fresh = s.from <= known ? s.days.slice(known - s.from) : [];
+  const title = s.title ?? plan.title;
+  const error = s.error ?? undefined;
+  if (!fresh.length && s.status === plan.status && title === plan.title && error === plan.error) return trip;
+  const days = [...plan.days, ...fresh];
+  return {
+    ...trip,
+    ...toAppTrip({ title, days }, plan.request, plan.people),
+    id: trip.id,
+    plan: { ...plan, status: s.status, title, error, days: s.status === 'done' ? [] : days },
   };
 }
 

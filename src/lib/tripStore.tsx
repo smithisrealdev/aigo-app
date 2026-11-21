@@ -1,11 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { AppState } from 'react-native';
 
 import { trip as sample } from '@/data/trip';
 import { useAuth } from '@/lib/auth';
-import type { ChatMessage } from '@/lib/backend';
+import { planStatus, type ChatMessage } from '@/lib/backend';
 import type { ChatCard } from '@/lib/chat';
-import type { AppTrip, GenRequest } from '@/lib/itinerary';
+import { withPlanState, type AppTrip, type GenRequest } from '@/lib/itinerary';
 import { supabase } from '@/lib/supabase';
 
 // ทริปของผู้ใช้ เก็บในเครื่องให้เปิดได้แม้ไม่มีเน็ต ทริปแรกในรายการคือทริปที่เปิดอยู่ ทริปเก่ายังอยู่ครบ (R33)
@@ -25,8 +26,8 @@ type Ctx = {
   /** ลบทริปที่เปิดอยู่ ทริปถัดไปขึ้นมาแทน */
   removeTrip: () => void;
   pending: Pending | null; setPending: (p: Pending | null) => void;
-  /** AiGo กำลังสร้างวันที่เหลือของทริปนี้ (ไม่เก็บลงเครื่อง: ปิดแอปกลางทาง วันที่ยังไม่มาเป็นวันว่าง) */
-  planning: boolean; setPlanning: (p: boolean) => void;
+  /** เซิร์ฟเวอร์กำลังวางแผนทริปที่เปิดอยู่ (วันที่ยังไม่มาเป็นวันว่าง) */
+  planning: boolean;
 };
 const TripContext = createContext<Ctx | null>(null);
 
@@ -34,7 +35,6 @@ export function TripProvider({ children }: { children: ReactNode }) {
   const [trips, setTrips] = useState<AppTrip[]>([]);
   const [ready, setReady] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
-  const [planning, setPlanning] = useState(false);
   const uid = useAuth().user?.id;
   useEffect(() => {
     AsyncStorage.multiGet([LIST, OLD])
@@ -48,10 +48,10 @@ export function TripProvider({ children }: { children: ReactNode }) {
       .catch(() => {}) // อ่านไม่ได้ก็ใช้ทริปตัวอย่าง (ไม่เขียนทับของเดิม)
       .finally(() => setReady(true));
   }, []);
-  // เขียนลงเครื่องเฉพาะตอนผู้ใช้เปลี่ยนรายการ; ใช้ค่าล่าสุดเสมอ เพราะหน้างานเรียก setTrip ต่อเนื่องระหว่างสร้างแผน
+  // เขียนลงเครื่องเฉพาะตอนรายการเปลี่ยน; ใช้ค่าล่าสุดเสมอ เพราะวันใหม่ของแผนมาต่อเนื่องระหว่างเซิร์ฟเวอร์วางแผน
   const update = (fn: (cur: AppTrip[]) => AppTrip[]) => setTrips((cur) => {
     const next = fn(cur);
-    AsyncStorage.setItem(LIST, JSON.stringify(next)).catch(() => {});
+    if (next !== cur) AsyncStorage.setItem(LIST, JSON.stringify(next)).catch(() => {});
     return next;
   });
   const setTrip = (t: AppTrip) => update((cur) => [t, ...cur.filter((x) => x.id !== t.id)]);
@@ -86,8 +86,33 @@ export function TripProvider({ children }: { children: ReactNode }) {
     }, 2000);
     return () => clearTimeout(timer);
   }, [ready, uid, trips]);
+  // แผนที่เซิร์ฟเวอร์ยังวางไม่เสร็จ: ถามทุก 3 วินาทีระหว่างแอปอยู่บนจอ (หน้าไหนก็ได้) แล้วเติมวันใหม่ลงทริป
+  // พับหรือปิดแอปไว้ เซิร์ฟเวอร์ก็ยังทำต่อ เปิดแอปครั้งหน้าก็ถามต่อจนเสร็จ
+  const running = trips.filter((t) => t.plan?.status === 'running');
+  const runningKey = running.map((t) => `${t.id}:${t.plan!.days.length}`).join();
+  useEffect(() => {
+    if (!ready || !runningKey) return;
+    let gone = false;
+    const tick = async () => {
+      if (AppState.currentState === 'background') return;
+      for (const t of running) {
+        const s = await planStatus(t.plan!, t.plan!.days.length).catch(() => null); // ออฟไลน์: รอบหน้าถามใหม่
+        if (gone || !s) continue;
+        update((cur) => {
+          let changed = false;
+          const next = cur.map((x) => { if (x.id !== t.id) return x; const y = withPlanState(x, s); changed ||= y !== x; return y; });
+          return changed ? next : cur;
+        });
+      }
+    };
+    tick();
+    const timer = setInterval(tick, 3000);
+    return () => { gone = true; clearInterval(timer); };
+  }, [ready, runningKey]); // eslint-disable-line react-hooks/exhaustive-deps -- key covers which plans and how many days
+
+  const planning = trips[0]?.plan?.status === 'running';
   return (
-    <TripContext.Provider value={{ ready, trip: trips[0] ?? sample, trips, setTrip, openTrip, removeTrip, pending, setPending, planning, setPlanning }}>
+    <TripContext.Provider value={{ ready, trip: trips[0] ?? sample, trips, setTrip, openTrip, removeTrip, pending, setPending, planning }}>
       {children}
     </TripContext.Provider>
   );

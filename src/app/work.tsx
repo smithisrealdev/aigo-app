@@ -8,15 +8,16 @@ import { AiSays, AskBar, Button, Card, FadeIn, PhotoStrip, PressScale, PriceTag,
 import { agentTasks, baht, offers, poses, trip as sampleTrip } from '@/data/trip';
 import { stateWord } from '@/lib/agent';
 import { askAigo } from '@/lib/ask';
-import { generateItinerary } from '@/lib/backend';
+import { resumePlan, startPlan, stopPlan } from '@/lib/backend';
 import type { CardKind } from '@/lib/chat';
-import { dateRange, dayCount, toAppTrip, type GenDay } from '@/lib/itinerary';
+import { dateRange, dayCount, toAppTrip, type PlanStatus } from '@/lib/itinerary';
 import { usePhotos } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { useTrip, type Pending } from '@/lib/tripStore';
 import { radius, space } from '@/theme/tokens';
 
 type Gen = { state: 'run' | 'done' | 'fail' | 'stopped'; quota?: boolean };
+const PLAN_GEN: Record<PlanStatus, Gen['state']> = { running: 'run', done: 'done', failed: 'fail', stopped: 'stopped' };
 const BOOKING_KINDS: CardKind[] = ['flight', 'hotel', 'food', 'ticket', 'service'];
 
 // หน้างานของ AiGo มีสองแบบ
@@ -25,45 +26,39 @@ const BOOKING_KINDS: CardKind[] = ['flight', 'hotel', 'food', 'ticket', 'service
 // - ไม่มี: ตัวอย่างทริปโอซาก้า งานเดินด้วยตัวจับเวลา (shortcut: เปลี่ยนเป็นสถานะจริงจากงานเบื้องหลังบน backend (RA5))
 export default function Work() {
   const { colors, t, pick, lang } = useSettings();
-  const { trip, setTrip, pending, setPending, setPlanning } = useTrip();
+  const { trip, setTrip, pending, setPending } = useTrip();
   const toast = useToast();
   const [job] = useState<Pending | null>(pending);
-  const [gen, setGen] = useState<Gen>({ state: 'run' });
+  // ทุกแผนได้ id ใหม่ ทริปเก่าที่ที่หมายและวันซ้ำกันจึงไม่ถูกแทนด้วยแผนที่ยังไม่เสร็จ
+  const [tripId] = useState(() => `trip-${Date.now()}`);
+  // ระหว่างส่งงานให้เซิร์ฟเวอร์หรือส่งไม่สำเร็จ ใช้สถานะนี้; พอมีงานแล้วสถานะมาจากงาน (ตัวเก็บทริปถามให้ทุก 3 วินาที แม้ออกจากหน้านี้)
+  const [send, setSend] = useState<Gen>({ state: 'run' });
+  const plan = job && trip.id === tripId ? trip.plan : undefined;
+  const gen: Gen = plan ? { state: PLAN_GEN[plan.status] } : send;
+  const ready = plan ? trip.days.length : 0;
   const [done, setDone] = useState(0);
-  // วันที่ได้แล้ว: เก็บเป็นทริปทันทีที่มาถึง (หน้าแผนเปิดดูได้เลย) และใช้ทำต่อเมื่อกดลองใหม่
-  const got = useRef<GenDay[]>([]);
-  const [ready, setReady] = useState(0);
   const near = job?.request.destination;
   const photo = usePhotos(job ? trip.days.slice(0, ready).flat().filter((p) => !p.photo).map((p) => ({ name: p.name.en, near })) : []);
-
-  const stopper = useRef<AbortController | null>(null);
-  // ทุกแผนได้ id ใหม่ (ตั้งตอนเริ่มงาน) ทริปเก่าที่ที่หมายและวันซ้ำกันจึงไม่ถูกแทนด้วยแผนที่ยังไม่เสร็จ
-  const tripId = useRef('');
   // เวลาเริ่มรอบนี้และจำนวนวันที่มีอยู่แล้ว สำหรับนาฬิกาและเวลาที่น่าจะเหลือ
   const [clock, setClock] = useState({ since: 0, base: 0 });
-  const run = useCallback((j: Pending) => {
-    setPlanning(true);
-    setClock({ since: Date.now(), base: got.current.length });
-    const ctrl = new AbortController();
-    stopper.current = ctrl;
-    return generateItinerary(j.request, j.messages, (i, d) => {
-      got.current[i] = d;
-      setTrip({ ...toAppTrip({ days: got.current }, j.request, j.people), id: tripId.current, bookings: j.cards });
-      setReady(got.current.length);
-    }, got.current, ctrl.signal)
-      .then((g) => { setTrip({ ...toAppTrip(g, j.request, j.people), id: tripId.current, bookings: j.cards }); setGen({ state: 'done' }); })
-      .catch((e: Error) => setGen(ctrl.signal.aborted ? { state: 'stopped' } : { state: 'fail', quota: / 429$/.test(e.message) }))
-      .finally(() => setPlanning(false));
-  }, [setTrip, setPlanning]);
+  const start = useCallback((j: Pending) => {
+    setSend({ state: 'run' });
+    setClock({ since: Date.now(), base: 0 });
+    startPlan(j.request, j.messages)
+      .then((ref) => setTrip({
+        ...toAppTrip({ days: [] }, j.request, j.people), id: tripId, bookings: j.cards,
+        plan: { job: ref.job, token: ref.token, status: 'running', request: j.request, people: j.people, days: [] },
+      }))
+      .catch((e: Error) => setSend({ state: 'fail', quota: / 429$/.test(e.message) }));
+  }, [setTrip, tripId]);
 
   const started = useRef(false);
   useEffect(() => {
     if (!job || started.current) return;
     started.current = true;
-    tripId.current = `trip-${Date.now()}`;
     setPending(null);
-    run(job);
-  }, [job, run, setPending]);
+    start(job);
+  }, [job, start, setPending]);
 
   // ตัวอย่าง: เดินทีละงานทุก 1.4 วินาที
   useEffect(() => {
@@ -75,7 +70,18 @@ export default function Work() {
   if (job) {
     const days = dayCount(job.request.startDate, job.request.endDate);
     const ok = gen.state === 'done';
-    const retry = () => { setGen({ state: 'run' }); run(job); };
+    // ลองใหม่: งานที่หยุดหรือไม่สำเร็จทำต่อจากวันที่มีแล้ว; ส่งงานไม่ผ่านตั้งแต่แรกก็ส่งใหม่
+    const retry = () => {
+      if (!plan) return start(job);
+      setClock({ since: Date.now(), base: trip.days.length });
+      setTrip({ ...trip, plan: { ...plan, status: 'running', error: undefined } });
+      resumePlan(plan).catch(() => toast(pick({ th: 'ต่ออินเทอร์เน็ตไม่ได้ ลองใหม่อีกครั้ง', en: 'No connection. Please try again.' })));
+    };
+    const stop = () => {
+      if (!plan) return;
+      setTrip({ ...trip, plan: { ...plan, status: 'stopped' } });
+      stopPlan(plan).catch(() => toast(pick({ th: 'ต่ออินเทอร์เน็ตไม่ได้ ลองใหม่อีกครั้ง', en: 'No connection. Please try again.' })));
+    };
     const cards = job.cards ?? [];
     const found = (...kinds: CardKind[]) => cards.filter((c) => kinds.includes(c.kind)).length;
     const tasks = [
@@ -93,7 +99,7 @@ export default function Work() {
           : askAigo(q, trip, lang))} />}>
         <FadeIn><AiSays>{ok
           ? pick({ th: `แผน ${days} วันเสร็จแล้ว ราคาและเวลาเปิดยังเป็นค่าประมาณ ฉันจะตรวจให้ก่อนเดินทาง`, en: `Your ${days}-day plan is ready. Prices and hours are estimates; I will check them before you go.` })
-          : pick({ th: 'ฉันวางแผนให้ทีละวัน ดูหน้าอื่นในแอประหว่างรอได้ ถ้าพับแอปไว้ ฉันจะทำต่อทันทีที่คุณกลับมา', en: 'I plan one day at a time. Look around the app while you wait; if you leave the app, I carry on as soon as you are back.' })}</AiSays></FadeIn>
+          : pick({ th: 'ปิดแอปได้เลย ฉันวางแผนต่อบนเซิร์ฟเวอร์ เปิดแอปเมื่อไหร่ก็เห็นแผน', en: 'You can close the app. I keep planning on the server; open the app any time to see the plan.' })}</AiSays></FadeIn>
         <FadeIn index={1}>
           <View accessibilityLiveRegion="polite">
             {tasks.map((task, i) => {
@@ -115,7 +121,7 @@ export default function Work() {
                           <PlanClock since={clock.since} done={ready - clock.base} left={days - ready} />
                         </View>
                         <ProgressBar value={ready / days} color={colors.success} />
-                        <Button kind="secondary" label={pick({ th: 'หยุดสร้างแผน', en: 'Stop planning' })} onPress={() => stopper.current?.abort()} style={{ alignSelf: 'flex-start', minHeight: 44 }} />
+                        <Button kind="secondary" label={pick({ th: 'หยุดสร้างแผน', en: 'Stop planning' })} onPress={stop} style={{ alignSelf: 'flex-start', minHeight: 44 }} />
                       </View>
                     )}
                   </View>
