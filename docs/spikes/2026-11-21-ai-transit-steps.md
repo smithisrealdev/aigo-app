@@ -35,3 +35,45 @@ A script matched every ride step against OSM stations, route relations, stop ord
 - Stop counts and exit numbers are where models slip: show them only when our data confirms them.
 - Only Osaka, Kyoto and Nara were tested, which models know well. Test more cities before relying on it.
 - Spike code is not in the repo; the throwaway `spike-transit` Edge Function now returns 410 and can be deleted from the dashboard.
+
+## Prompt used (OpenRouter, temperature 0.2, JSON response)
+
+The user message was `{"city", "from": {name, lat, lon}, "to": {name, lat, lon}}`.
+
+```text
+You plan public transport for tourists. Given a start and an end point in a city (name and coordinates), write the route a first-time visitor should take.
+
+Rules:
+- Use real line names and the official English station names shown on signs.
+- If walking takes 15 minutes or less, walk.
+- Prefer the simplest route (fewest transfers) when the time difference is small.
+- Never give departure times, platform numbers or fares.
+- If you are not sure of a detail (an exit number, a direction), use null. Do not guess.
+
+Reply with JSON only:
+{"steps":[{"type":"walk"|"ride","minutes":number,"mode":"subway"|"train"|"bus"|"tram"|null,"line":string|null,"operator":string|null,"toward":string|null,"from":string|null,"to":string|null,"stops":number|null,"exit":string|null,"note_th":string}],"total_minutes":number}
+- "from" and "to" are the station or stop names for rides (null for walks).
+- "stops" is how many stops you ride from boarding to getting off (Namba to Shinsaibashi on the Midosuji Line = 1).
+- "toward" is the direction shown on signs (usually the final station of the train).
+- "exit" is the exit to use at the station where you get off (ride steps only).
+- "note_th" is one short sentence in Thai for the traveler.
+```
+
+## Test points
+
+```js
+  hotel: { name: 'Hotel near Namba Station, Osaka', lat: 34.6657, lon: 135.5016 },
+  castle: { name: 'Osaka Castle', lat: 34.6873, lon: 135.5259 },
+  sky: { name: 'Umeda Sky Building', lat: 34.7053, lon: 135.4903 },
+  usj: { name: 'Universal Studios Japan', lat: 34.6654, lon: 135.4323 },
+  nara: { name: 'Nara Park (Todai-ji)', lat: 34.6851, lon: 135.8398 },
+  inari: { name: 'Fushimi Inari Taisha', lat: 34.9671, lon: 135.7727 },
+  kix: { name: 'Kansai International Airport Terminal 1', lat: 34.4342, lon: 135.2328 },
+  dotonbori: { name: 'Dotonbori (Glico sign)', lat: 34.6687, lon: 135.5013 },
+  tsutenkaku: { name: 'Tsutenkaku Tower, Shinsekai', lat: 34.6525, lon: 135.5063 },
+  harukas: { name: 'Abeno Harukas', lat: 34.6459, lon: 135.5135 },
+  kaiyukan: { name: 'Osaka Aquarium Kaiyukan', lat: 34.6545, lon: 135.4290 },
+  kyotoSta: { name: 'Kyoto Station', lat: 34.9858, lon: 135.7588 },
+  kiyomizu: { name: 'Kiyomizu-dera', lat: 34.9949, lon: 135.7850 },
+  bamboo: { name: 'Arashiyama Bamboo Grove', lat: 35.0170, lon: 135.6713 },
+```
