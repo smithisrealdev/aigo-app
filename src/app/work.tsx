@@ -4,17 +4,20 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import { TripCards } from '@/components/cards';
+import { Celebrate } from '@/components/celebrate';
+import { PlanOrb } from '@/components/planOrb';
+import { NumberFlow } from '@/components/reacticx/number-flow';
 import { AiSays, AskBar, Button, Card, FadeIn, PhotoStrip, PhotoStripSkeleton, PressScale, PriceTag, ProgressBar, Screen, Section, T, Ticket, TimelineItem, useToast } from '@/components/ui';
 import { agentTasks, baht, offers, poses, trip as sampleTrip } from '@/data/trip';
 import { stateWord } from '@/lib/agent';
 import { askAigo } from '@/lib/ask';
 import { planStatus, resumePlan, startPlan, stopPlan } from '@/lib/backend';
 import type { CardKind } from '@/lib/chat';
-import { dateRange, dayCount, toAppTrip, type PlanInfo, type PlanStatus } from '@/lib/itinerary';
+import { dateRange, dayCount, finishedNow, toAppTrip, type PlanInfo, type PlanStatus } from '@/lib/itinerary';
 import { usePhotos } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { useTrip, type Pending } from '@/lib/tripStore';
-import { radius, space } from '@/theme/tokens';
+import { fonts, radius, space, type } from '@/theme/tokens';
 
 type Gen = { state: 'run' | 'done' | 'fail' | 'stopped'; quota?: boolean };
 const PLAN_GEN: Record<PlanStatus, Gen['state']> = { running: 'run', done: 'done', failed: 'fail', stopped: 'stopped' };
@@ -36,6 +39,13 @@ export default function Work() {
   const plan = job && trip.id === tripId ? trip.plan : undefined;
   const gen: Gen = plan ? { state: PLAN_GEN[plan.status] } : send;
   const ready = plan ? trip.days.length : 0;
+  // ฉลองครั้งเดียว: แผนเสร็จขณะเปิดหน้านี้อยู่ (ไม่ใช่เปิดมาเจอแผนที่เสร็จแล้ว)
+  const [seen, setSeen] = useState(plan?.status);
+  const [party, setParty] = useState(false);
+  if (plan?.status !== seen) {
+    setSeen(plan?.status);
+    if (finishedNow(seen, plan?.status)) setParty(true);
+  }
   const [done, setDone] = useState(0);
   const near = job?.request.destination;
   const photo = usePhotos(job ? trip.days.slice(0, ready).flat().filter((p) => !p.photo).map((p) => ({ name: p.name.en, near })) : []);
@@ -94,6 +104,7 @@ export default function Work() {
       { id: 'service', label: pick({ th: 'ตั๋ว รถ รถไฟ และบริการที่ต้องใช้', en: 'Tickets, car, rail and essentials' }), n: found('ticket', 'service') },
     ];
     return (
+      <View style={{ flex: 1 }}>
       <Screen title={t('work.title')} subtitle={`${job.request.destination} · ${dateRange(job.request.startDate, job.request.endDate, lang)}`} onBack={() => router.back()}
         mascot={ok ? poses.happy : gen.state === 'fail' ? poses.rain : poses.think} follow
         footer={<AskBar placeholder={t('work.tell')} onSend={(q) => (gen.state === 'run'
@@ -102,6 +113,7 @@ export default function Work() {
         <FadeIn><AiSays>{ok
           ? pick({ th: `แผน ${days} วันเสร็จแล้ว ราคาและเวลาเปิดยังเป็นค่าประมาณ ฉันจะตรวจให้ก่อนเดินทาง`, en: `Your ${days}-day plan is ready. Prices and hours are estimates; I will check them before you go.` })
           : pick({ th: 'ปิดแอปได้เลย ฉันวางแผนต่อบนเซิร์ฟเวอร์ เปิดแอปเมื่อไหร่ก็เห็นแผน', en: 'You can close the app. I keep planning on the server; open the app any time to see the plan.' })}</AiSays></FadeIn>
+        {gen.state === 'run' && <FadeIn style={{ alignItems: 'center' }}><PlanOrb /></FadeIn>}
         <FadeIn index={1}>
           <View accessibilityLiveRegion="polite">
             {tasks.map((task, i) => {
@@ -119,7 +131,12 @@ export default function Work() {
                     {i === 0 && gen.state === 'run' && (
                       <View style={{ gap: space.sm }}>
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: space.sm }}>
-                          <T v="small" tone="muted">{pick({ th: `กำลังวางวันที่ ${ready + 1} จาก ${days}`, en: `Planning day ${ready + 1} of ${days}` })}</T>
+                          {/* เลขวันหมุนเปลี่ยน (NumberFlow ของ Reacticx); โปรแกรมอ่านหน้าจออ่านทั้งประโยค */}
+                          <View accessible accessibilityLabel={pick({ th: `กำลังวางวันที่ ${ready + 1} จาก ${days}`, en: `Planning day ${ready + 1} of ${days}` })} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <T v="small" tone="muted">{pick({ th: 'กำลังวางวันที่ ', en: 'Planning day ' })}</T>
+                            <NumberFlow value={ready + 1} fontSize={type.sm} fontFamily={fonts.bodyBold} color={colors.muted} />
+                            <T v="small" tone="muted">{pick({ th: ` จาก ${days}`, en: ` of ${days}` })}</T>
+                          </View>
                           <PlanClock since={clock.since} done={ready - clock.base} left={days - ready} />
                         </View>
                         <ProgressBar value={ready / days} color={colors.success} />
@@ -194,6 +211,8 @@ export default function Work() {
           </FadeIn>
         )}
       </Screen>
+      {party && <Celebrate label={pick({ th: 'แผนเสร็จแล้ว', en: 'Plan ready' })} />}
+      </View>
     );
   }
 
