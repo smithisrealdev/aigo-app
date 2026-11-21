@@ -20,8 +20,10 @@ serve(async (req) => {
   const id = data.user.id;
 
   const { error: unlink } = await admin.from("trip_templates").update({ created_by: null }).eq("created_by", id);
-  if (unlink) {
-    console.error("[delete-account] templates", unlink.message);
+  // the account's plan quota row in guest_sessions has no foreign key (see generate-itinerary accountKey)
+  const { error: quota } = unlink ? { error: null } : await admin.from("guest_sessions").delete().eq("device_id", `user:${id}`);
+  if (unlink || quota) {
+    console.error("[delete-account] templates or quota", (unlink ?? quota)!.message);
     return json({ error: "Could not delete the account" }, 500);
   }
   const { error: removed } = await admin.auth.admin.deleteUser(id);

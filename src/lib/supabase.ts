@@ -4,7 +4,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import { AppState, Platform } from 'react-native';
 
-import { PUBLISHABLE_KEY, SUPABASE_URL } from '@/lib/backend';
+// โปรเจกต์ Supabase ของแอป (docs/backend.md) publishable key ออกแบบมาให้ฝังในแอปได้
+export const SUPABASE_URL = 'https://vjblrglalptgdxabteqm.supabase.co';
+export const PUBLISHABLE_KEY = 'sb_publishable_ThF183z7kk5KPpjGxBggFQ_Op7La_La';
 
 // บัญชีผู้ใช้ผ่าน Supabase Auth: เก็บ session ในเครื่อง เปิดแอปใหม่ไม่ต้องเข้าระบบซ้ำ, PKCE สำหรับ Google ที่กลับเข้าแอปทางลิงก์
 export const supabase = createClient(SUPABASE_URL, PUBLISHABLE_KEY, {

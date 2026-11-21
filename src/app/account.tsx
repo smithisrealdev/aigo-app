@@ -78,7 +78,7 @@ export default function Account() {
       <Group index={2} title={pick({ th: 'การซื้อ', en: 'Purchases' })}>
         <Row onPress={() => router.push('/paywall')} label={pick({ th: 'การซื้อของฉัน', en: 'My purchases' })}>
           <T style={{ flex: 1 }}>{pick({ th: 'การซื้อของฉัน', en: 'My purchases' })}</T>
-          <T v="small" tone="muted">{pick({ th: 'ใช้ทริปฟรีแล้ว', en: 'Free trip used' })}</T>
+          <T v="small" tone="muted">{user ? pick({ th: 'ฟรีสัปดาห์ละ 1 ทริป นับตามบัญชี', en: '1 free trip a week, per account' }) : pick({ th: 'ฟรีสัปดาห์ละ 1 ทริปต่อเครื่อง', en: '1 free trip a week on this phone' })}</T>
           <Icon name="next" color={colors.muted} />
         </Row>
         <Row last onPress={() => toast(pick({ th: 'กู้คืนการซื้อยังใช้ไม่ได้ในตัวอย่างนี้', en: 'Restore is not available in this preview' }))} label={pick({ th: 'กู้คืนการซื้อ', en: 'Restore purchases' })}>

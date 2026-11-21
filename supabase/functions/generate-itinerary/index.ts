@@ -4,9 +4,11 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from "../_shared/cors.ts";
 import { validateAuth } from "../_shared/auth.ts";
 import { generateItinerarySchema, validationErrorResponse, z } from "../_shared/validation.ts";
-import { checkQuotaMiddleware, incrementUserUsage } from "../_shared/quota.ts";
 import { extractDeviceId, checkGuestGenerationQuota, saveGuestTrip, incrementGuestGenerationUsage } from "../_shared/guest-quota.ts";
 import { allow, clientIp, tooMany } from "../_shared/rate-limit.ts";
+
+/** Quota row of a signed-in user in guest_sessions (plans are counted per account, not per phone) */
+const accountKey = (userId: string) => `user:${userId}`;
 
 // --- Itinerary skeleton cache helpers ---
 async function sha256(input: string): Promise<string> {
@@ -161,8 +163,9 @@ serve(async (req) => {
 
     // Check quota based on user type
     if (userId) {
-      // Authenticated user: check credit quota
-      const quotaResponse = isContinuation ? null : await checkQuotaMiddleware(userId, corsHeaders);
+      // Signed-in user: the same free plans as a guest, counted on the account (guest_sessions row "user:<id>"),
+      // so a new phone or a reinstall does not reset them
+      const quotaResponse = isContinuation ? null : await checkGuestGenerationQuota(accountKey(userId), corsHeaders);
       if (quotaResponse) {
         return quotaResponse;
       }
@@ -249,7 +252,7 @@ serve(async (req) => {
         tripStyle
       );
       if (userId) {
-        await incrementUserUsage(userId, 'generate_itinerary', 0, undefined, { totalDays });
+        await incrementGuestGenerationUsage(accountKey(userId));
       } else if (deviceId) {
         // Save guest trip for later migration when they sign up
         await saveGuestTrip(deviceId, hydratedItinerary);
@@ -700,7 +703,7 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
         if (stoppedEarly) {
           console.log(`[generate-itinerary] Stopped after day ${fromDay - 1 + lastEmittedDay} of ${totalDays} at ${Date.now() - startedAt} ms (worker age ${Date.now() - WORKER_STARTED_AT} ms) to stay inside the time limit`);
           // Continuations never count the trip, so its first call counts it now
-          if (!isContinuation && userId) await incrementUserUsage(userId, 'generate_itinerary', 0, undefined, { totalDays });
+          if (!isContinuation && userId) await incrementGuestGenerationUsage(accountKey(userId));
           else if (!isContinuation && deviceId) await incrementGuestGenerationUsage(deviceId);
           return; // no 'complete' event: the app sees the missing days and continues
         }
@@ -817,11 +820,11 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
           });
         }
 
-        // Deduct credits for authenticated users, save trip for guests (a continuation's trip was counted by its first call)
+        // Count the plan on the account or the device, and save a guest's trip (a continuation's trip was counted by its first call)
         if (isContinuation) {
           // nothing to count
         } else if (userId) {
-          await incrementUserUsage(userId, 'generate_itinerary', 0, undefined, { totalDays });
+          await incrementGuestGenerationUsage(accountKey(userId));
         } else if (deviceId) {
           await saveGuestTrip(deviceId, hydratedItinerary);
           await incrementGuestGenerationUsage(deviceId);

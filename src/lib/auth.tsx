@@ -4,9 +4,8 @@ import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
-import { PUBLISHABLE_KEY, SUPABASE_URL } from '@/lib/backend';
 import type { L } from '@/lib/i18n';
-import { supabase } from '@/lib/supabase';
+import { PUBLISHABLE_KEY, SUPABASE_URL, supabase } from '@/lib/supabase';
 
 // เข้าสู่ระบบ (R19): อีเมลพร้อมรหัส 6 หลัก, Google, Apple ออกจากระบบ (R36) แล้วทริปยังอยู่ในเครื่อง
 // Google และ Apple ใช้ได้เมื่อเปิดใน Supabase Auth แล้ว (docs/backend.md) ก่อนหน้านั้นปุ่มบอกตรงๆ ว่ายังไม่เปิด
