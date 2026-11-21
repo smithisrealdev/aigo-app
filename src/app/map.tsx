@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TripMap } from '@/components/tripMap';
 import { Button, Chip, IconButton, lift, StopCard, T } from '@/components/ui';
+import { useTravelLeg } from '@/lib/globe';
 import { mapsLink, navLink } from '@/lib/links';
 import { dayPoints, navTarget } from '@/lib/mapPoints';
 import { usePhotos, usePlaceGeo } from '@/lib/photos';
@@ -29,6 +30,7 @@ export default function MapScreen() {
   const n = p ? places.indexOf(p) + 1 : 0;
   const near = trip.destination.en;
   const photo = usePhotos(places.filter((x) => !x.photo).map((x) => ({ name: x.name.en, near })));
+  const leg = useTravelLeg(trip, day);
   // ทริปตัวอย่างมีพิกัดที่ตรวจแล้ว ทริปที่ AiGo วางตรวจกับพิกัดของบทความ Wikipedia (ได้มาพร้อมรูป) ที่เหลือเป็นตำแหน่งที่ AI เดา
   const geo = usePlaceGeo(trip.sample ? [] : places.map((x) => ({ name: x.name.en, near })));
   const { points, missing } = dayPoints(places, (x) => pick(x.name), trip.sample ? (x) => x : (x) => geo({ name: x.name.en, near }));
@@ -64,7 +66,7 @@ export default function MapScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TripMap points={points} selected={p?.id} onSelect={setSel} showUser pad={{ top: (insets.top + 64) / H, bottom: (covered + 28) / H, x: 0.12 }} />
+      <TripMap points={points} selected={p?.id} onSelect={setSel} showUser intro pois travel={leg} pad={{ top: (insets.top + 64) / H, bottom: (covered + 28) / H, x: 0.12 }} />
       <View style={{ position: 'absolute', left: space.lg, top: insets.top + space.sm }}>
         <IconButton icon="back" label={t('common.back')} onPress={() => router.back()} variant="glass" />
       </View>

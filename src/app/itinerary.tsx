@@ -10,6 +10,7 @@ import { poses } from '@/data/trip';
 import { askAigo } from '@/lib/ask';
 import { replanDay } from '@/lib/backend';
 import { shortDate } from '@/lib/chat';
+import { useTravelLeg } from '@/lib/globe';
 import { addDays, toAppTrip, type AppTrip } from '@/lib/itinerary';
 import { dayPoints } from '@/lib/mapPoints';
 import { usePhotos, usePlaceGeo } from '@/lib/photos';
@@ -67,9 +68,10 @@ export default function Itinerary() {
   const mapAt = places.length ? day : 0;
   const geo = usePlaceGeo(trip.sample ? [] : (trip.days[mapAt] ?? []).map((p) => ({ name: p.name.en, near })));
   const { points } = dayPoints(trip.days[mapAt] ?? [], (p) => pick(p.name), trip.sample ? (p) => p : (p) => geo({ name: p.name.en, near }));
+  const travel = useTravelLeg(trip, mapAt);
   const top = (
     <View style={{ height: MAP_H }}>
-      <TripMap points={points} interactive={false} pad={{ top: 0.3, bottom: 0.17, x: 0.12 }} />
+      <TripMap points={points} interactive={false} intro travel={travel} pad={{ top: 0.3, bottom: 0.17, x: 0.12 }} />
       <View style={{ position: 'absolute', right: space.lg, bottom: radius.xl + space.md }}>
         <PressScale onPress={() => router.push({ pathname: '/map', params: { day: String(mapAt) } })} label={pick({ th: `เปิดแผนที่ของ${t('it.day', { n: mapAt + 1 })}`, en: `Open the map of ${t('it.day', { n: mapAt + 1 })}` })}>
           <Glass r={radius.pill} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: space.md, minHeight: 44 }}>

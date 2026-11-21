@@ -7,6 +7,7 @@ import { AiSays, AskBar, Badge, Button, FadeIn, lift, PhotoCard, PressScale, Rou
 import { photos, poses } from '@/data/trip';
 import { askAigo } from '@/lib/ask';
 import { shortDate } from '@/lib/chat';
+import { useTravelLeg } from '@/lib/globe';
 import { addDays, type Place } from '@/lib/itinerary';
 import { navLink } from '@/lib/links';
 import { dayPoints, navTarget } from '@/lib/mapPoints';
@@ -41,6 +42,7 @@ function TripToday() {
   const photo = usePhotos(places.filter((p) => !p.photo).map((p) => ({ name: p.name.en, near })));
   const geo = usePlaceGeo(trip.sample ? [] : places.map((p) => ({ name: p.name.en, near })));
   const { points } = dayPoints(places, (p) => pick(p.name), trip.sample ? (p) => p : (p) => geo({ name: p.name.en, near }));
+  const travel = useTravelLeg(trip, day);
   // นำทางไปที่หมุด (พิกัดที่ตรวจแล้วถ้ามี); ที่ไม่ได้ปักหมุด (ไม่มีพิกัดหรือพิกัดไกลผิดเมือง) นำทางด้วยชื่อแทน
   const navigate = (p: Place) => Linking.openURL(navLink(navTarget({ id: p.id, name: p.name.en }, points, near), Platform.OS));
   const note = idx < 0
@@ -68,7 +70,7 @@ function TripToday() {
           {/* แผนที่เล็กของวัน: ที่ถัดไปเป็นหมุดที่เลือก มีตำแหน่งของเรา แตะเพื่อเปิดแผนที่เต็ม */}
           <PressScale onPress={() => router.push({ pathname: '/map', params: { day: String(day) } })} label={pick({ th: 'เปิดแผนที่ของวันนี้', en: "Open today's map" })}>
             <View style={[{ height: 220, borderRadius: radius.xl, overflow: 'hidden' }, lift(isDark, 0.8)]}>
-              <TripMap points={points} selected={next?.id} interactive={false} showUser pad={{ top: 0.18, bottom: 0.2, x: 0.12 }} />
+              <TripMap points={points} selected={next?.id} interactive={false} showUser travel={travel} pad={{ top: 0.18, bottom: 0.2, x: 0.12 }} />
             </View>
           </PressScale>
         </FadeIn>
