@@ -6,7 +6,7 @@ import { trip as sample } from '@/data/trip';
 import { useAuth } from '@/lib/auth';
 import { planStatus, type ChatMessage } from '@/lib/backend';
 import type { ChatCard } from '@/lib/chat';
-import { withPlanState, type AppTrip, type GenRequest } from '@/lib/itinerary';
+import { planGone, withPlanState, type AppTrip, type GenRequest, type PlanState } from '@/lib/itinerary';
 import { supabase } from '@/lib/supabase';
 
 // ทริปของผู้ใช้ เก็บในเครื่องให้เปิดได้แม้ไม่มีเน็ต ทริปแรกในรายการคือทริปที่เปิดอยู่ ทริปเก่ายังอยู่ครบ (R33)
@@ -25,6 +25,8 @@ type Ctx = {
   openTrip: (id: string) => void;
   /** ลบทริปที่เปิดอยู่ ทริปถัดไปขึ้นมาแทน */
   removeTrip: () => void;
+  /** ใส่คำตอบสถานะงานจากเซิร์ฟเวอร์ลงทริป id นั้น: สถานะของแผนมาจากเซิร์ฟเวอร์เสมอ ไม่ตั้งเองในเครื่องก่อน */
+  applyPlan: (id: string, s: PlanState) => void;
   pending: Pending | null; setPending: (p: Pending | null) => void;
   /** เซิร์ฟเวอร์กำลังวางแผนทริปที่เปิดอยู่ (วันที่ยังไม่มาเป็นวันว่าง) */
   planning: boolean;
@@ -55,6 +57,11 @@ export function TripProvider({ children }: { children: ReactNode }) {
     return next;
   });
   const setTrip = (t: AppTrip) => update((cur) => [t, ...cur.filter((x) => x.id !== t.id)]);
+  const applyPlan = (id: string, s: PlanState) => update((cur) => {
+    let changed = false;
+    const next = cur.map((x) => { if (x.id !== id) return x; const y = withPlanState(x, s); changed ||= y !== x; return y; });
+    return changed ? next : cur;
+  });
   const openTrip = (id: string) => update((cur) => { const t = cur.find((x) => x.id === id); return t ? [t, ...cur.filter((x) => x.id !== id)] : cur; });
   const removeTrip = () => {
     const id = trips[0]?.id;
@@ -96,13 +103,10 @@ export function TripProvider({ children }: { children: ReactNode }) {
     const tick = async () => {
       if (AppState.currentState === 'background') return;
       for (const t of running) {
-        const s = await planStatus(t.plan!, t.plan!.days.length).catch(() => null); // ออฟไลน์: รอบหน้าถามใหม่
+        // ออฟไลน์: รอบหน้าถามใหม่; 403 = งานไม่อยู่แล้ว (เช่นลบบัญชีแล้ว) จบแผน ไม่ถามต่อไปตลอด
+        const s = await planStatus(t.plan!, t.plan!.days.length).catch((e: Error) => (/ 403$/.test(e.message) ? planGone(t) : null));
         if (gone || !s) continue;
-        update((cur) => {
-          let changed = false;
-          const next = cur.map((x) => { if (x.id !== t.id) return x; const y = withPlanState(x, s); changed ||= y !== x; return y; });
-          return changed ? next : cur;
-        });
+        applyPlan(t.id, s);
       }
     };
     tick();
@@ -112,7 +116,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
 
   const planning = trips[0]?.plan?.status === 'running';
   return (
-    <TripContext.Provider value={{ ready, trip: trips[0] ?? sample, trips, setTrip, openTrip, removeTrip, pending, setPending, planning }}>
+    <TripContext.Provider value={{ ready, trip: trips[0] ?? sample, trips, setTrip, openTrip, removeTrip, applyPlan, pending, setPending, planning }}>
       {children}
     </TripContext.Provider>
   );

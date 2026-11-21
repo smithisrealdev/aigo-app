@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { dateRange, dayCount, genEvent, legOf, minutesOf, peopleOf, plannedText, planText, requestFromSummary, toAppTrip, tripContext, withPlanState } from './itinerary.ts';
+import { dateRange, dayCount, genEvent, legOf, minutesOf, peopleOf, plannedText, planText, requestFromSummary, toAppTrip, planGone, tripContext, withPlanState } from './itinerary.ts';
 
 const REQ = { destination: 'Tokyo', startDate: '2026-12-28', endDate: '2027-01-01', language: 'th' };
 
@@ -110,4 +110,14 @@ test('เติมวันที่เซิร์ฟเวอร์วาง�
   assert.equal(t4.plan?.status, 'failed');
   assert.equal(t4.plan?.error, 'stalled');
   assert.deepEqual(t4.days.map((d) => d[0]?.id), ['a', 'b'], 'ไม่สำเร็จ วันที่ได้แล้วยังอยู่');
+});
+
+test('งานบนเซิร์ฟเวอร์หายไป (ลบบัญชีแล้ว): แผนจบแบบไม่สำเร็จ วันที่ได้แล้วยังอยู่ และเลิกถาม', () => {
+  const plan = { job: 'j', token: 't', status: 'running' as const, request: REQ, people: 2, days: [] };
+  const base = { ...toAppTrip({ days: [] }, REQ), id: 'trip-1', plan };
+  const t1 = withPlanState(base, { status: 'running', totalDays: 3, from: 0, days: [{ title: 'a', places: [{ id: 'a', name: 'a' }] }] });
+  const gone = withPlanState(t1, planGone(t1));
+  assert.equal(gone.plan?.status, 'failed', 'ไม่ใช่ running ตัวถามทุก 3 วินาทีจึงหยุด');
+  assert.equal(gone.plan?.error, 'gone');
+  assert.deepEqual(gone.days.map((d) => d[0]?.id), ['a']);
 });

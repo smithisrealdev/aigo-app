@@ -22,7 +22,8 @@ alter table public.plan_jobs enable row level security;
 create index if not exists plan_jobs_running on public.plan_jobs (lease_until) where status = 'running';
 
 -- Take the job for one run: only while running and nobody holds it. A job with 4 empty runs in a row,
--- or older than 2 hours, ends as failed instead (no endless runs paying for AI). Null = not yours to run.
+-- or 2 hours after it started (created_at; resume restarts it), ends as failed instead (no endless runs paying for AI).
+-- Null = not yours to run.
 create or replace function public.plan_job_claim(p_id uuid, p_token text)
 returns public.plan_jobs language plpgsql set search_path = '' as $$
 declare j public.plan_jobs;

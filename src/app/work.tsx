@@ -8,9 +8,9 @@ import { AiSays, AskBar, Button, Card, FadeIn, PhotoStrip, PressScale, PriceTag,
 import { agentTasks, baht, offers, poses, trip as sampleTrip } from '@/data/trip';
 import { stateWord } from '@/lib/agent';
 import { askAigo } from '@/lib/ask';
-import { resumePlan, startPlan, stopPlan } from '@/lib/backend';
+import { planStatus, resumePlan, startPlan, stopPlan } from '@/lib/backend';
 import type { CardKind } from '@/lib/chat';
-import { dateRange, dayCount, toAppTrip, type PlanStatus } from '@/lib/itinerary';
+import { dateRange, dayCount, toAppTrip, type PlanInfo, type PlanStatus } from '@/lib/itinerary';
 import { usePhotos } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { useTrip, type Pending } from '@/lib/tripStore';
@@ -26,7 +26,7 @@ const BOOKING_KINDS: CardKind[] = ['flight', 'hotel', 'food', 'ticket', 'service
 // - ไม่มี: ตัวอย่างทริปโอซาก้า งานเดินด้วยตัวจับเวลา (shortcut: เปลี่ยนเป็นสถานะจริงจากงานเบื้องหลังบน backend (RA5))
 export default function Work() {
   const { colors, t, pick, lang } = useSettings();
-  const { trip, setTrip, pending, setPending } = useTrip();
+  const { trip, setTrip, applyPlan, pending, setPending } = useTrip();
   const toast = useToast();
   const [job] = useState<Pending | null>(pending);
   // ทุกแผนได้ id ใหม่ ทริปเก่าที่ที่หมายและวันซ้ำกันจึงไม่ถูกแทนด้วยแผนที่ยังไม่เสร็จ
@@ -70,17 +70,19 @@ export default function Work() {
   if (job) {
     const days = dayCount(job.request.startDate, job.request.endDate);
     const ok = gen.state === 'done';
+    // สถานะของแผนมาจากเซิร์ฟเวอร์: สั่งหยุดหรือทำต่อสำเร็จแล้วจึงถามสถานะมาใส่ ไม่ตั้งเองก่อน
+    // (ตั้งเองก่อน ตัวถามสถานะอาจอ่านค่าเก่ามาทับ แผนจึงเด้งกลับเป็น "หยุดแล้ว" ทั้งที่เซิร์ฟเวอร์ทำต่ออยู่)
+    const offline = () => toast(pick({ th: 'ต่ออินเทอร์เน็ตไม่ได้ ลองใหม่อีกครั้ง', en: 'No connection. Please try again.' }));
+    const settle = (p: PlanInfo) => planStatus(p, p.days.length).then((s) => applyPlan(trip.id, s));
     // ลองใหม่: งานที่หยุดหรือไม่สำเร็จทำต่อจากวันที่มีแล้ว; ส่งงานไม่ผ่านตั้งแต่แรกก็ส่งใหม่
     const retry = () => {
       if (!plan) return start(job);
       setClock({ since: Date.now(), base: trip.days.length });
-      setTrip({ ...trip, plan: { ...plan, status: 'running', error: undefined } });
-      resumePlan(plan).catch(() => toast(pick({ th: 'ต่ออินเทอร์เน็ตไม่ได้ ลองใหม่อีกครั้ง', en: 'No connection. Please try again.' })));
+      resumePlan(plan).then(() => settle(plan)).catch(offline);
     };
     const stop = () => {
       if (!plan) return;
-      setTrip({ ...trip, plan: { ...plan, status: 'stopped' } });
-      stopPlan(plan).catch(() => toast(pick({ th: 'ต่ออินเทอร์เน็ตไม่ได้ ลองใหม่อีกครั้ง', en: 'No connection. Please try again.' })));
+      stopPlan(plan).then(() => settle(plan)).catch(offline);
     };
     const cards = job.cards ?? [];
     const found = (...kinds: CardKind[]) => cards.filter((c) => kinds.includes(c.kind)).length;

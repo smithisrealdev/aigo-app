@@ -134,7 +134,8 @@ async function jobControl(body: any): Promise<Response> {
   }
   if (body.job === 'resume') {
     if (job.status === 'done') return json({ status: 'done' });
-    await db.from('plan_jobs').update({ status: 'running', attempts: 0, lease_until: null, error: null, updated_at: now }).eq('id', job.id).in('status', ['failed', 'stopped']);
+    // created_at restarts too: plan_job_claim ends a job 2 h after it, and the stopped card promises the rest any time
+    await db.from('plan_jobs').update({ status: 'running', attempts: 0, lease_until: null, error: null, created_at: now, updated_at: now }).eq('id', job.id).in('status', ['failed', 'stopped']);
     kick(job.id, job.token);
     return json({ status: 'running' });
   }
@@ -174,6 +175,8 @@ serve(async (req) => {
     }
 
     if (['status', 'stop', 'resume'].includes(body?.job)) return await jobControl(body);
+    // A plan always starts at day 1: a fromDay in a start body would make it a continuation, which skips the free-trip check
+    if (body?.job === 'start') body = { ...body, fromDay: undefined, planned: undefined };
 
     // A job run: take the job's lease, then make its missing days from the stored request
     let job: { id: string; token: string; owner: string; request: any; days: any[] } | null = null;
@@ -290,8 +293,9 @@ serve(async (req) => {
 
     let skeletonItinerary: any = null;
     // A continuation makes only some days, so it never reads or writes the whole-trip cache. A plan shaped by a chat
-    // never does either: the key does not see the chat, so a hit would hand out someone else's plan
-    const useCache = !isContinuation && !validatedData.conversationMessages?.length;
+    // never does either: the key does not see the chat, so a hit would hand out someone else's plan. Nor does a job run:
+    // it makes the trip in parts and saves each day (a hit answers with the whole trip as one stream, which saves nothing)
+    const useCache = !job && !isContinuation && !validatedData.conversationMessages?.length;
     if (useCache) try {
       // FIX #6: Check cache TTL — only use cache entries younger than 7 days
       const { data: cached, error } = await supabase
