@@ -1,0 +1,44 @@
+// หมุดบนแผนที่ของหนึ่งวัน (สเปก R12 และ docs/superpowers/specs/2026-11-21-in-app-map-design.md)
+// ใช้ทั้งแผนที่ Mapbox (src/components/tripMap.native.tsx) และแผนที่วาดบนเว็บ (src/components/tripMap.tsx)
+import type { StyleProp, ViewStyle } from 'react-native';
+
+export type MapPoint = { key: string; lat: number; lon: number; n: number; label: string; approx: boolean };
+
+export type TripMapProps = {
+  points: MapPoint[];
+  /** key ของหมุดที่เลือก: ใหญ่กว่าและสีต่าง */
+  selected?: string;
+  onSelect?: (key: string) => void;
+  /** false = ภาพแผนที่เฉยๆ (หัวหน้าแผน) เลื่อนหรือซูมไม่ได้ */
+  interactive?: boolean;
+  /** แสดงตำแหน่งของเรา (ขอสิทธิ์เฉพาะตอนเปิดแอป) */
+  showUser?: boolean;
+  /** ระยะเว้นขอบเป็นสัดส่วนของกรอบ ให้หมุดไม่ไปอยู่ใต้ปุ่มหรือแผ่นข้อมูล (โลโก้และเครดิตแผนที่อยู่เหนือขอบล่างนี้) */
+  pad: { top: number; bottom: number; x: number };
+  style?: StyleProp<ViewStyle>;
+};
+
+const FAR_KM = 50;
+const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+const km = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) => {
+  const r = Math.PI / 180;
+  const h = Math.sin(((b.lat - a.lat) * r) / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(((b.lon - a.lon) * r) / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(h));
+};
+
+/**
+ * หมุดของหนึ่งวัน: เลขตามลำดับในแผน (ที่ที่ไม่ได้ปักยังนับเลข) ที่ที่ไม่มีพิกัด หรือห่างจากกลางกลุ่มของวันเกิน 50 กม.
+ * ไม่ปัก (missing) เพราะพิกัดจาก AI เดาเอง ผิดแบบนี้บนแผนที่จริงจะเห็นชัด; verified = พิกัดตรวจแล้ว (ทริปตัวอย่าง)
+ * ที่เหลือเป็น "ตำแหน่งโดยประมาณ"
+ */
+export function dayPoints<P extends { id: string; lat: number; lon: number }>(places: P[], label: (p: P) => string, verified: boolean): { points: MapPoint[]; missing: string[] } {
+  const located = places.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon) && (p.lat || p.lon));
+  const centre = { lat: median(located.map((p) => p.lat)), lon: median(located.map((p) => p.lon)) };
+  const points: MapPoint[] = [];
+  const missing: string[] = [];
+  places.forEach((p, i) => {
+    if (!located.includes(p) || km(p, centre) > FAR_KM) missing.push(p.id);
+    else points.push({ key: p.id, lat: p.lat, lon: p.lon, n: i + 1, label: label(p), approx: !verified });
+  });
+  return { points, missing };
+}
