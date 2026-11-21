@@ -62,7 +62,9 @@ export default function Itinerary() {
   // ทริปที่ AiGo สร้างไม่มีรูปมาด้วย ค้นรูปจากชื่อสถานที่ (ชื่อภาษาอังกฤษ) ในเมืองของทริป
   const near = trip.destination.en;
   const tonight = trip.stays?.[day] ?? null;
-  const photo = usePhotos([...places.filter((p) => !p.photo).map((p) => ({ name: p.name.en, near })), ...(tonight ? [{ name: tonight.name, near }] : [])]);
+  // รูปที่พักค้นในย่านของที่พักเอง (ทริปหลายเมือง ที่พักอยู่คนละเมืองกับชื่อทริป)
+  const stayPhoto = tonight && { name: tonight.name, near: tonight.area ?? near };
+  const photo = usePhotos([...places.filter((p) => !p.photo).map((p) => ({ name: p.name.en, near })), ...(stayPhoto ? [stayPhoto] : [])]);
   // จบวัน: ทริปที่มีที่พักบอกว่าคืนนี้พักที่ไหน วันสุดท้ายจบทริป; ทริปเก่า (ไม่มีที่พัก) แบบเดิม
   const lastDay = day === trip.totalDays - 1;
   const end = trip.stays?.some(Boolean) && lastDay
@@ -70,7 +72,7 @@ export default function Itinerary() {
     : tonight
       ? {
           icon: 'bed' as const, title: pick({ th: `คืนนี้พักที่ ${tonight.name}`, en: `Tonight: ${tonight.name}` }),
-          sub: [tonight.area, tonight.price && pick(tonight.price)].filter(Boolean).join(' · ') || undefined, photo: photo({ name: tonight.name, near }),
+          sub: [tonight.area, tonight.price && pick(tonight.price)].filter(Boolean).join(' · ') || undefined, photo: stayPhoto ? photo(stayPhoto) : undefined,
           action: { label: pick({ th: 'ดูราคาที่พัก', en: 'See prices' }), onPress: () => Linking.openURL(stayLink(tonight, trip, day)) },
         }
       : { title: pick({ th: 'จบวัน · กลับที่พัก', en: 'End of day · back to the hotel' }), sub: trip.hotel && pick(trip.hotel) };
