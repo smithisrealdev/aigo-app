@@ -3,12 +3,13 @@
 import type * as Mapbox from '@rnmapbox/maps';
 import { Image } from 'expo-image';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { NativeModules, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, NativeModules, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { Icon } from '@/components/icon';
 import { IconButton, MapPin, SketchMap } from '@/components/ui';
-import { arc, GLOBE_SPACE, globePoints, globeZoom, mapLoadFailed, planeAt, type GlobeTrip, type TripGlobeProps, type TripMapProps } from '@/lib/mapPoints';
+import { arc, arrivalView, GLOBE_SPACE, globePoints, globeZoom, mapLoadFailed, planeAt, type GlobeTrip, type TripGlobeProps, type TripMapProps } from '@/lib/mapPoints';
+import { liveSetting } from '@/lib/liveSetting';
 import { useSettings } from '@/lib/settings';
 import { fonts, radius, space } from '@/theme/tokens';
 
@@ -24,17 +25,23 @@ const MAP_LOOK = {
   light: { lightPreset: 'day', colorLand: '#F6EFE6', colorWater: '#D4ECFF', colorGreenspaces: '#D2F3E4', colorRoads: '#FFFFFF', colorMotorways: '#FFE9A8', colorBuildings: '#EDE4D8' },
   dark: { lightPreset: 'night', colorLand: '#1F1B17', colorWater: '#22344A', colorGreenspaces: '#1F3A30', colorRoads: '#3D362E', colorMotorways: '#3D3420', colorBuildings: '#2A241F' },
 } as const;
+// "ลดการเคลื่อนไหว" ของเครื่องตอนนี้: useReducedMotion ของ Reanimated เป็นค่าตอนเปิดแอป เปิดในตั้งค่าทีหลังจึงไม่มีผล
+const reduceNow = liveSetting(() => AccessibilityInfo.isReduceMotionEnabled(), (f) => AccessibilityInfo.addEventListener('reduceMotionChanged', f));
 // ลองจิจูดของเส้นที่ข้ามเส้นแบ่งวันเกิน 180 ได้ (ให้เส้นต่อเนื่อง) จุดเดี่ยวส่งให้ Mapbox ในช่วง ±180
 const wrap = (lon: number) => ((lon + 540) % 360) - 180;
 
 export function TripMap({ points, selected, onSelect, interactive = true, showUser = false, pad, intro = false, pois = false, travel }: TripMapProps) {
   const { colors, isDark, pick } = useSettings();
-  // บินจากลูกโลก: 'globe' รอแผนที่โหลด, 'intro' บินลง 2.5 วินาที, 'normal' เปลี่ยนวันแล้วเลื่อนธรรมดา; เล่นครั้งเดียวต่อการเปิดหน้า
-  const reduce = useReducedMotion();
-  const [stage, setStage] = useState<'globe' | 'intro' | 'normal'>(intro && !reduce ? 'globe' : 'normal');
+  // บินจากลูกโลกครั้งเดียวต่อการเปิดหน้า: 'globe' รอแผนที่โหลด แล้วบินลงหาเป้าตอนนั้น (flyTo) เป้าใหม่ทีหลัง (เปลี่ยนวัน แผ่นเลื่อน) เลื่อนธรรมดา
+  // กล้องจึงไม่ถูกส่งซ้ำทับนิ้วที่ลากระหว่างบิน; "ลดการเคลื่อนไหว" ไม่บิน และกล้องกระโดดไปเลย
+  const startup = useReducedMotion();
+  const reduce = reduceNow() ?? startup;
+  const [stage, setStage] = useState<'globe' | 'normal'>(() => (intro && !reduce ? 'globe' : 'normal'));
+  const [flyTo, setFlyTo] = useState<Mapbox.CameraStop | null>(null);
   useEffect(() => {
-    if (stage !== 'intro') return;
-    const t = setTimeout(() => setStage('normal'), 2600);
+    if (stage !== 'globe') return;
+    // แผนที่ไม่บอกว่าโหลดเสร็จ (เน็ตช้า): ไม่ค้างที่ลูกโลก
+    const t = setTimeout(() => setStage('normal'), 2500);
     return () => clearTimeout(t);
   }, [stage]);
   const [box, setBox] = useState({ w: 0, h: 0 });
@@ -68,13 +75,14 @@ export function TripMap({ points, selected, onSelect, interactive = true, showUs
   const [fa, fo, ta, tb] = travel ? [travel.from.lat, travel.from.lon, travel.to.lat, travel.to.lon] : [0, 0, 0, 0];
   const line = useMemo(() => (has ? arc({ lat: fa, lon: fo }, { lat: ta, lon: tb }) : null), [has, fa, fo, ta, tb]);
   const plane = useMemo(() => line && planeAt(line), [line]);
+  const arrive = arrivalView(points, travel);
   // ค่าคงที่ตราบที่วันและขนาดไม่เปลี่ยน กล้องจึงไม่ดีดกลับตอนผู้ใช้เลื่อนแผนที่แล้วหน้าจอวาดใหม่
   const camera = useMemo<Mapbox.CameraStop>(() => {
     const padding = { paddingTop: pad.top * bh, paddingBottom: pad.bottom * bh, paddingLeft: pad.x * bw, paddingRight: pad.x * bw };
-    // วันเดินทางจบที่ฝั่งปลายทางระดับเห็นทั้งภูมิภาค ให้เห็นเส้นบินพุ่งเข้ามาหาที่แรก
-    if (has) return { centerCoordinate: [tb, ta], zoomLevel: 7, padding };
+    // วันบินจบที่ฝั่งปลายทางระดับเห็นทั้งภูมิภาค ให้เห็นเส้นบินพุ่งเข้ามาหาที่แรก
+    if (arrive) return { centerCoordinate: [tb, ta], zoomLevel: 7, padding };
     return one ? { centerCoordinate: [(w + e) / 2, (s + n) / 2], zoomLevel: 15, padding } : { bounds: { ne: [e, n], sw: [w, s] }, padding };
-  }, [pad.top, pad.bottom, pad.x, bw, bh, one, w, e, s, n, has, ta, tb]);
+  }, [pad.top, pad.bottom, pad.x, bw, bh, one, w, e, s, n, arrive, ta, tb]);
   // จุดเริ่มของการบินลง: ลูกโลกทั้งใบหันกลางของวัน (วันเดินทางหันกลางเส้นบิน)
   const [sx, sy] = line ? line[line.length >> 1] : [(w + e) / 2, (s + n) / 2];
   const start = useMemo<Mapbox.CameraStop>(() => ({
@@ -91,7 +99,7 @@ export function TripMap({ points, selected, onSelect, interactive = true, showUs
   const atMe = !!here && meFor === day;
   const toggleMe = () => {
     if (!here) return;
-    cam.current?.setCamera(atMe ? { ...camera, animationDuration: 600 } : { centerCoordinate: here, zoomLevel: 15, animationDuration: 600 });
+    cam.current?.setCamera(atMe ? { ...camera, animationDuration: reduce ? 0 : 600 } : { centerCoordinate: here, zoomLevel: 15, animationDuration: reduce ? 0 : 600 });
     setMeFor(atMe ? '' : day);
   };
   // โลโก้และปุ่มเครดิตของ Mapbox ต้องมองเห็น (R12): มุมซ้ายล่าง ในขอบล่างที่เว้นไว้ เหนือแผ่นที่ทับแผนที่ (มุมขวาล่างเว้นให้ปุ่มของหน้า)
@@ -103,7 +111,7 @@ export function TripMap({ points, selected, onSelect, interactive = true, showUs
       {bw > 0 && (
         // ลูกโลก: ซูมออกจนสุดเห็นโลกทั้งใบ ระดับเมืองหน้าตาเหมือนแผนที่แบน
         <M.MapView style={StyleSheet.absoluteFill} styleURL="mapbox://styles/mapbox/standard" projection="globe" onMapLoadingError={(e) => { if (mapLoadFailed(e)) setFailed(true); }}
-          onDidFinishLoadingMap={() => setStage((x) => (x === 'globe' ? 'intro' : x))}
+          onDidFinishLoadingMap={() => { if (stage === 'globe') { setFlyTo(camera); setStage('normal'); } }}
           scrollEnabled={interactive} zoomEnabled={interactive} rotateEnabled={false} pitchEnabled={false} compassEnabled={false} scaleBarEnabled={false}
           // Android: แผนที่อยู่ในหน้าที่เลื่อนขึ้นลงได้ ให้ลากแผนที่ได้ทุกทิศ ไม่ให้หน้ารับการลากขึ้นลงไป
           requestDisallowInterceptTouchEvent={interactive}
@@ -111,7 +119,7 @@ export function TripMap({ points, selected, onSelect, interactive = true, showUs
           surfaceView={interactive}
           logoPosition={{ bottom: orn, left: space.sm }} attributionEnabled={interactive} attributionPosition={{ bottom: orn, left: space.sm + 92 }}>
           <M.StyleImport id="basemap" existing config={{ ...MAP_LOOK[isDark ? 'dark' : 'light'], showPointOfInterestLabels: pois }} />
-          <M.Camera ref={cam} defaultSettings={view} {...view} animationDuration={stage === 'intro' ? 2500 : 600} animationMode={stage === 'intro' ? 'flyTo' : 'easeTo'} />
+          <M.Camera ref={cam} defaultSettings={view} {...view} animationDuration={reduce ? 0 : view === flyTo ? 2500 : 600} animationMode={view === flyTo ? 'flyTo' : 'easeTo'} />
           {points.length > 1 && (
             <M.ShapeSource id="aigo-route" shape={{ type: 'LineString', coordinates: points.map((p) => [p.lon, p.lat]) }}>
               <M.LineLayer id="aigo-route-line" slot="middle" style={{ lineColor: colors.primary, lineWidth: 4, lineDasharray: [0.2, 2], lineCap: 'round', lineJoin: 'round', lineEmissiveStrength: 1 }} />

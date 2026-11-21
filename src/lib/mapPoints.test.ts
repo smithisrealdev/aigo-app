@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { arc, dayPoints, globeZoom, mapLoadFailed, navTarget, planeAt, travelLeg, tripSpots } from './mapPoints.ts';
+import { arc, arrivalView, dayPoints, globeZoom, mapLoadFailed, navTarget, planeAt, travelLeg, tripSpots } from './mapPoints.ts';
 
 const place = (id: string, lat: number, lon: number) => ({ id, lat, lon, name: { th: id, en: id } });
 const label = (p: { name: { en: string } }) => p.name.en;
@@ -116,4 +116,12 @@ test('รูปเครื่องบินอยู่ก่อนถึง�
 test('ลูกโลกทั้งใบพอดีพื้นที่ที่ไม่ถูกบัง และไม่ซูมต่ำกว่า 0', () => {
   assert.ok(close(globeZoom(390, 844, { top: 0.1, bottom: 0.4, x: 0.1 }, 0), 0.785, 0.01));
   assert.equal(globeZoom(358, 240, { top: 0.08, bottom: 0.14, x: 0.06 }, 35), 0);
+});
+
+test('วันบินที่มีแค่จุดออกเดินทางจบภาพที่ปลายทาง; วันที่มีที่เที่ยวก่อนออกเดินทางยังเห็นที่ของวันนั้น', () => {
+  const leg = travelLeg([[bkk], [vag]], 0, label, none)!;
+  const day = (ps: ReturnType<typeof place>[]) => dayPoints(ps, label, none).points;
+  assert.equal(arrivalView(day([bkk]), leg), true);
+  assert.equal(arrivalView(day([place('a', 13.74, 100.5), place('b', 13.75, 100.49), bkk]), leg), false);
+  assert.equal(arrivalView(day([bkk]), undefined), false);
 });

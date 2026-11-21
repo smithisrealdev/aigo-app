@@ -114,6 +114,9 @@ export function travelLeg<P extends { id: string; lat: number; lon: number }>(da
   return from && to && km(from, to) > TRAVEL_KM ? { from, to } : undefined;
 }
 
+/** วันเดินทางที่มีแค่จุดออกเดินทาง (วันบิน): กล้องจบที่ฝั่งปลายทางแบบภาพบินเข้า; วันที่มีที่อื่นด้วย กล้องอยู่ที่ที่ของวันเหมือนวันอื่น ให้ที่ของวันไม่หลุดจอ */
+export const arrivalView = (points: MapPoint[], leg?: TravelLeg) => !!leg && points.length === 1;
+
 const rad = Math.PI / 180;
 /** เส้นตามผิวโลก (วงกลมใหญ่) จาก a ไป b เป็น [lon, lat] n+1 จุด ลองจิจูดต่อเนื่อง (ข้ามเส้นแบ่งวันแล้วเกิน 180 ได้) ให้ Mapbox ไม่ลากเส้นวนรอบโลก */
 export function arc(a: { lat: number; lon: number }, b: { lat: number; lon: number }, n = 64): [number, number][] {
