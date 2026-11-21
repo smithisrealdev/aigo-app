@@ -94,7 +94,7 @@ export default function Chat() {
           </FadeIn>
         )}
         {reply && reply.quickReplies.some((q) => !(reply.ready && q.go)) && (
-          <FadeIn style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, paddingLeft: 50 }}>
+          <FadeIn style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
             {/* หลัง [READY_TO_GENERATE] ปุ่มสร้างแผนอยู่ในตั๋วสรุปแล้ว จึงไม่แสดงชิปสร้างแผนซ้ำ (ป้ายของ AI บางทีเป็นภาษาอังกฤษ) */}
             {reply.quickReplies.filter((q) => !(reply.ready && q.go)).map((q) => <Chip key={q.label} label={q.label} onPress={() => say(q.message)} />)}
           </FadeIn>

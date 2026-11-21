@@ -419,11 +419,14 @@ export function AskBar({ placeholder, onSend }: { placeholder: string; onSend: (
 }
 
 /** ไล่จากโปร่งเป็นสีพื้น ใต้ช่องลอยด้านล่าง ให้เนื้อหาจางหายใต้ปุ่มแทนที่จะถูกตัดตรงๆ */
-function BottomFade({ color }: { color: string }) {
+/** สีพื้นค่อยๆ จางออก: side = ขอบที่ทึบ (ล่าง = ใต้ช่องพิมพ์, บน = ใต้แถบปุ่มย้อนกลับ) */
+function Fade({ color, side }: { color: string; side: 'top' | 'bottom' }) {
   const id = 'f' + useId().replace(/[^a-zA-Z0-9]/g, '');
+  // ล่าง: ทึบตั้งแต่ครึ่งทางให้ช่องพิมพ์อ่านง่าย; บน: จางแบบเส้นตรงตลอดความสูง ต่อจากแถบด้านบนเนียนๆ
+  const [y1, y2, solid] = side === 'bottom' ? ['0', '1', '0.45'] : ['1', '0', '1'];
   return (
     <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" viewBox="0 0 1 1" preserveAspectRatio="none" pointerEvents="none">
-      <Defs><LinearGradient id={id} x1="0" y1="0" x2="0" y2="1"><Stop offset="0" stopColor={color} stopOpacity="0" /><Stop offset="0.45" stopColor={color} stopOpacity="1" /></LinearGradient></Defs>
+      <Defs><LinearGradient id={id} x1="0" y1={y1} x2="0" y2={y2}><Stop offset="0" stopColor={color} stopOpacity="0" /><Stop offset={solid} stopColor={color} stopOpacity="1" /></LinearGradient></Defs>
       <Rect width="1" height="1" fill={`url(#${id})`} />
     </Svg>
   );
@@ -463,6 +466,8 @@ export function Screen({ title, subtitle, onBack, left, right, footer, hero, her
 }) {
   const sv = useRef<ComponentRef<typeof ScrollView>>(null);
   const atEnd = useRef(true);
+  // เนื้อหาเลื่อนขึ้นไปอยู่ใต้แถบปุ่มย้อนกลับแล้ว: ขอบบนค่อยๆ จาง ไม่ขาดเป็นเส้นตรง (ตอนยังไม่เลื่อนไม่จาง หัวข้อจะได้คมชัด)
+  const [scrolled, setScrolled] = useState(false);
   const { colors, t } = useSettings();
   const insets = useSafeAreaInsets();
   const tabSpace = tabbed ? 88 : 0;
@@ -502,18 +507,27 @@ export function Screen({ title, subtitle, onBack, left, right, footer, hero, her
     <View style={{ flex: 1 }}>
       {!overlay && bar}
       {scroll ? (
-        <ScrollView ref={sv} style={{ flex: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
-          onLayout={follow ? () => { if (atEnd.current) sv.current?.scrollToEnd({ animated: false }); } : undefined}
-          scrollEventThrottle={follow ? 100 : undefined}
-          onScroll={follow ? (e) => { const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent; atEnd.current = contentSize.height - contentOffset.y - layoutMeasurement.height < 160; } : undefined}
-          onContentSizeChange={follow ? () => { if (atEnd.current) sv.current?.scrollToEnd({ animated: true }); } : undefined}>
-          {body}
-        </ScrollView>
+        <View style={{ flex: 1 }}>
+          <ScrollView ref={sv} style={{ flex: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
+            onLayout={follow ? () => { if (atEnd.current) sv.current?.scrollToEnd({ animated: false }); } : undefined}
+            scrollEventThrottle={32}
+            onScroll={(e) => {
+              const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+              setScrolled(contentOffset.y > 2);
+              if (follow) atEnd.current = contentSize.height - contentOffset.y - layoutMeasurement.height < 160;
+            }}
+            onContentSizeChange={follow ? () => { if (atEnd.current) sv.current?.scrollToEnd({ animated: true }); } : undefined}>
+            {body}
+          </ScrollView>
+          {!overlay && scrolled && (
+            <View testID="top-fade" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: space.xl }} pointerEvents="none"><Fade color={colors.bg} side="top" /></View>
+          )}
+        </View>
       ) : <View style={{ flex: 1 }}>{body}</View>}
       {overlay && <View style={{ position: 'absolute', top: 0, left: 0, right: 0 }} pointerEvents="box-none">{bar}</View>}
       {footer && (
         <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: space.xl }} pointerEvents="box-none">
-          <BottomFade color={colors.bg} />
+          <Fade color={colors.bg} side="bottom" />
           <View style={[wide, { paddingHorizontal: space.lg, paddingBottom: Math.max(insets.bottom, space.md) + tabSpace }]}>{footer}</View>
         </View>
       )}
@@ -522,9 +536,8 @@ export function Screen({ title, subtitle, onBack, left, right, footer, hero, her
   );
 }
 
-/** AiGo กำลังคิด: จุดสามจุดเด้งตามกัน (ลดการเคลื่อนไหวแล้วเหลือจุดนิ่ง) */
 /**
- * AiGo กำลังคิด: รูป AiGo กับจุดเต้น อยู่ตรงที่ข้อความถัดไปของ AiGo จะขึ้น
+ * AiGo กำลังคิด: รูป AiGo กับจุดเต้น (ลดการเคลื่อนไหวแล้วเหลือจุดนิ่ง) อยู่ตรงที่ข้อความถัดไปของ AiGo จะขึ้น
  * under = อยู่ใต้ข้อความของ AiGo อยู่แล้ว: ไม่มีรูปซ้ำ เยื้องให้จุดตรงกับกล่องข้อความด้านบน
  */
 export function Thinking({ label, under = false }: { label: string; under?: boolean }) {
