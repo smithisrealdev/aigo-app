@@ -22,3 +22,4 @@ npm test            # ทดสอบกฎ "AiGo ทำเอง หรือ�
 ทริปโอซาก้าใน `src/data/trip.ts` เหลือไว้เป็นตัวอย่างในแท็บทริปก่อนมีทริปจริงเท่านั้น จุดที่เป็นทางลัดมีคอมเมนต์ `shortcut:` ในโค้ด
 
 ทดสอบบนมือถือด้วย Expo Go: [docs/phone-test.md](docs/phone-test.md)
+build เป็นแอปจริงลง iPhone จาก Mac: [docs/iphone-build.md](docs/iphone-build.md)
