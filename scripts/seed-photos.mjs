@@ -1,6 +1,7 @@
 // Fills the place photo cache ahead of time so the first user of a famous place sees its photo at once:
 //   node scripts/seed-photos.mjs [file or folder]      (default: every .txt in scripts/photo-seeds/)
-// A list file has "# City, Country" headers and one place per line, written as the chat writes them (common English names).
+// A list file has one place per line, written as the chat writes them (common English names); "# heading" lines are for people and not sent.
+// Places are asked without a near hint, so the photo found holds for every trip that mentions the place.
 // Safe to run again: places already in the cache answer from the database without asking Wikimedia.
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -15,12 +16,9 @@ const files = statSync(target).isDirectory() ? readdirSync(target).filter((f) =>
 const seen = new Set();
 const places = [];
 for (const file of files) {
-  let near = '';
   for (const raw of readFileSync(file, 'utf8').split('\n')) {
     const line = raw.trim();
-    if (!line) continue;
-    if (line.startsWith('#')) near = line.slice(1).trim();
-    else if (!seen.has(line.toLowerCase())) { seen.add(line.toLowerCase()); places.push({ name: line, near }); }
+    if (line && !line.startsWith('#') && !seen.has(line.toLowerCase())) { seen.add(line.toLowerCase()); places.push({ name: line }); }
   }
 }
 
@@ -39,8 +37,11 @@ for (let pass = 1; pass <= 3 && todo.length; pass++) {
   for (let i = 0; i < todo.length; i += 24) {
     const batch = todo.slice(i, i + 24);
     try {
+      const before = unanswered.length;
       (await ask(batch)).forEach((p, j) => (p ? result.set(batch[j], p) : unanswered.push(batch[j])));
       answeredBatches++;
+      // Wikimedia answers "slow down" with errors: when many names of a batch got no answer, wait before the next one
+      if (unanswered.length - before > batch.length / 4) await sleep(10000);
     } catch (e) {
       console.log(`\nbatch failed (${e.cause?.code ?? e.message}), asking again later`);
       // Node's fetch ignores HTTPS_PROXY: behind a proxy run with NODE_USE_ENV_PROXY=1

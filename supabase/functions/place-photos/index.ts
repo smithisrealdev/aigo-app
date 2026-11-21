@@ -16,14 +16,14 @@ const NON_LATIN = /[฀-๿぀-ヿ㐀-鿿가-힯]/;
 
 type Place = { name: string; near: string };
 type Hit = { url: string | null; title: string | null };
-/** shared: the photo is a Wikipedia article's lead image, the same whatever the near hint says */
+/** shared: the photo does not depend on the near hint (an article's lead image, or a Commons photo found without a hint) */
 type Found = Hit & { shared?: boolean };
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-// Cache rows: "v5|n|<slug>" for Wikipedia photos, shared by every trip ("Senso-ji", "Sensoji" and "Sensō-ji" are one row);
-// "v5|<name>|<near>" for Commons photos and misses, which depend on the near hint. Rows of earlier versions are never read again.
+// Cache rows: "v5|n|<slug>" for Wikipedia photos and Commons photos found without a hint, shared by every trip ("Senso-ji", "Sensoji" and "Sensō-ji" are one row);
+// "v5|<name>|<near>" for Commons photos found with a hint and for misses, which depend on the near hint. Rows of earlier versions are never read again.
 const slug = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
 const nearKey = (p: Place) => `v5|${p.name}|${p.near}`.toLowerCase();
 const nameKey = (s: string) => (slug(s) ? `v5|n|${slug(s)}` : null);
@@ -32,9 +32,14 @@ const keysOf = (p: Place) => [nameKey(p.name), nearKey(p)].filter((k): k is stri
 // Words that may differ between a name and its article title ("Mt. Moiwa" / "Mount Moiwa")
 const LOOSE = new Set(["the", "of", "and", "de", "la", "le", "el", "mount", "mt", "st", "saint"]);
 const words = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 1 && !LOOSE.has(w));
+// Only JPEG photos count: articles and Commons also hold flags, seals, logos, maps and satellite views, which are SVG or PNG drawings
+const NOT_PHOTO = /[/_](flag|coat[_ ]of[_ ]arms|seal|emblem|logo|map|locator|location|satellite)[-_.0-9]/i;
+const isPhoto = (url: string) => /[.]jpe?g([?]|$)/i.test(url) && !NOT_PHOTO.test(url);
 const KIND = new Set(["temple", "shrine", "park", "market", "castle", "museum", "garden", "gardens", "palace", "station", "cathedral", "church", "bridge", "tower"]);
+/** "Christ the Redeemer (statue)" and "Museum of Islamic Art, Doha" are articles about "Christ the Redeemer" and "Museum of Islamic Art" */
+const base = (title: string) => title.split("(")[0].split(",")[0];
 /** The article is about this place only if every word of its title is in the name: "Nijo Market" must not get "Nijō Castle" */
-const titleFits = (title: string, name: string) => { const n = new Set(words(name)); const t = words(title); return t.length > 0 && t.every((w) => n.has(w)); };
+const titleFits = (title: string, name: string) => { const n = new Set(words(name)); const t = words(base(title)); return t.length > 0 && t.every((w) => n.has(w)); };
 /** A Commons file name mentions the place if it shares a word of 4+ letters with the name */
 const mentions = (title: string, name: string) => { const t = new Set(words(title)); return words(name).some((w) => w.length >= 4 && t.has(w)); };
 
@@ -44,9 +49,9 @@ async function results(host: string, params: Record<string, string>): Promise<Pa
   const url = `https://${host}/w/api.php?` + new URLSearchParams({ action: "query", format: "json", generator: "search", gsrlimit: "1", ...params });
   try {
     const res = await fetch(url, { headers: { "User-Agent": UA } });
-    if (!res.ok) return null;
+    if (!res.ok) { console.warn("wikimedia", host, res.status); return null; }
     const data = await res.json();
-    if (data.error) return null;
+    if (data.error) { console.warn("wikimedia", host, data.error.code); return null; }
     return (Object.values(data.query?.pages ?? {}) as Page[]).sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
   } catch {
     return null;
@@ -65,20 +70,20 @@ async function search(p: Place): Promise<Found | null> {
   const pages = await results("en.wikipedia.org", { gsrsearch: p.name, gsrnamespace: "0", gsrlimit: "3", prop: "pageimages", piprop: "thumbnail", pithumbsize: "640" });
   if (pages === null) return null;
   const name = words(p.name), size = new Set(name).size;
-  const fits = pages.filter((pg) => pg.thumbnail?.source && pg.title && titleFits(pg.title, p.name));
+  const fits = pages.filter((pg) => pg.thumbnail?.source && isPhoto(pg.thumbnail.source) && pg.title && titleFits(pg.title, p.name));
   // exact = as many words as the name, or two or more words that cover the name except for words that only say what kind of place it is
   // ("Senso-ji Temple" is the article "Sensō-ji"); a one-word title is often the city, so "Nagoya" is not "Nagoya Castle"
-  const exact = fits.find((pg) => { const t = new Set(words(pg.title!)); return t.size >= size || (t.size >= 2 && name.every((w) => t.has(w) || KIND.has(w))); });
+  const exact = fits.find((pg) => { const t = new Set(words(base(pg.title!))); return t.size >= size || (t.size >= 2 && name.every((w) => t.has(w) || KIND.has(w))); });
   if (exact) return { url: exact.thumbnail!.source!, title: exact.title!, shared: true };
   const near = p.near && !NON_LATIN.test(p.near) ? ` ${p.near}` : "";
-  const files = await results("commons.wikimedia.org", { gsrsearch: `${p.name}${near} filetype:bitmap`, gsrnamespace: "6", gsrlimit: "5", prop: "imageinfo", iiprop: "url", iiurlwidth: "640" });
+  const files = await results("commons.wikimedia.org", { gsrsearch: `${p.name}${near} filetype:bitmap`, gsrnamespace: "6", gsrlimit: "10", prop: "imageinfo", iiprop: "url", iiurlwidth: "640" });
   if (files === null) return null;
   const known = new Set([...name, ...words(near), "file", "jpg", "jpeg", "png", "webp", "tif", "tiff"]);
-  const other = (title: string) => words(title).filter((w) => !known.has(w) && !/^\d+$/.test(w)).length;
-  const file = files.filter((f) => f.imageinfo?.[0]?.thumburl && f.title && mentions(f.title, p.name))
+  const other = (title: string) => words(title).filter((w) => !known.has(w) && !/^[0-9]+$/.test(w)).length;
+  const file = files.filter((f) => f.imageinfo?.[0]?.thumburl && isPhoto(f.imageinfo[0].thumburl) && f.title && mentions(f.title, p.name))
     .sort((a, b) => other(a.title!) - other(b.title!))[0];
-  if (file) return { url: file.imageinfo![0].thumburl!, title: file.title! };
-  const broad = fits.find((pg) => { const t = new Set(words(pg.title!)); return t.has(name[0]) && t.size * 2 >= size; });
+  if (file) return { url: file.imageinfo![0].thumburl!, title: file.title!, shared: !p.near };
+  const broad = fits.find((pg) => { const t = new Set(words(base(pg.title!))); return t.has(name[0]) && t.size * 2 >= size; });
   if (broad) return { url: broad.thumbnail!.source!, title: broad.title!, shared: true };
   return { url: null, title: null };
 }
@@ -94,10 +99,13 @@ serve(async (req) => {
     return json({ error: "Invalid JSON" }, 400);
   }
   if (!Array.isArray(places) || places.length > MAX_PLACES) return json({ error: `places must be a list of at most ${MAX_PLACES}` }, 400);
-  const items: Place[] = places.map((p) => ({
-    name: String((p as { name?: unknown })?.name ?? "").trim().slice(0, 120),
-    near: String((p as { near?: unknown })?.near ?? "").trim().slice(0, 80),
-  }));
+  const items: Place[] = places.map((p) => {
+    const name = String((p as { name?: unknown })?.name ?? "").trim().slice(0, 120);
+    const near = String((p as { near?: unknown })?.near ?? "").trim().slice(0, 80);
+    // "Naples, Italy" is the place Naples near Italy, so the city's own article is found
+    const comma = name.indexOf(",");
+    return !near && comma > 0 ? { name: name.slice(0, comma).trim(), near: name.slice(comma + 1).trim().slice(0, 80) } : { name, near };
+  });
 
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const found = new Map<string, Found>();
@@ -105,8 +113,8 @@ serve(async (req) => {
   if (keys.length) {
     const { data } = await sb.from("place_photos").select("key, url, title, created_at").in("key", keys);
     for (const r of data ?? []) {
-      // photos are kept 90 days; places without one are searched again after a week
-      if (Date.now() - Date.parse(r.created_at) < (r.url ? 90 : 7) * DAY) found.set(r.key, { url: r.url, title: r.title });
+      // photos are kept 90 days; places without one are searched again after a week, and so are flags, maps and other non-photos cached by an earlier version
+      if (Date.now() - Date.parse(r.created_at) < (r.url ? 90 : 7) * DAY && !(r.url && !isPhoto(r.url))) found.set(r.key, { url: r.url, title: r.title });
     }
   }
   const hitOf = (p: Place) => { const k = nameKey(p.name); return (k && found.get(k)) || found.get(nearKey(p)); };
@@ -120,8 +128,8 @@ serve(async (req) => {
     const rows = batch.flatMap((p, j) => {
       const hit = hits[j];
       if (!hit) return []; // Wikimedia did not answer: not cached, so the next request tries again
-      // a Wikipedia photo is saved under the name and under its article's title; Commons photos and misses stay with the near hint
-      const rowKeys = hit.shared ? [nameKey(p.name), hit.title && nameKey(hit.title)] : [nearKey(p)];
+      // a Wikipedia photo is saved under the name and under its article's title, a shared Commons photo under the name; the rest stay with the near hint
+      const rowKeys = hit.shared ? [nameKey(p.name), hit.title && !hit.title.startsWith("File:") && nameKey(hit.title)] : [nearKey(p)];
       return [...new Set(rowKeys.filter((k): k is string => !!k))].map((key) => {
         found.set(key, hit);
         return { key, url: hit.url, title: hit.title, created_at: at };
