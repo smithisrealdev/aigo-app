@@ -3,14 +3,14 @@
 import type * as Mapbox from '@rnmapbox/maps';
 import { Image } from 'expo-image';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, NativeModules, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { NativeModules, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { Icon } from '@/components/icon';
 import { IconButton, MapPin, SketchMap } from '@/components/ui';
 import { arc, arrivalView, GLOBE_SPACE, globePoints, globeZoom, mapLoadFailed, planeAt, type GlobeTrip, type TripGlobeProps, type TripMapProps } from '@/lib/mapPoints';
-import { liveSetting } from '@/lib/liveSetting';
 import { useSettings } from '@/lib/settings';
+import { reduceMotionNow } from '@/theme/motion';
 import { fonts, radius, space } from '@/theme/tokens';
 
 const TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
@@ -25,8 +25,6 @@ const MAP_LOOK = {
   light: { lightPreset: 'day', colorLand: '#F6EFE6', colorWater: '#D4ECFF', colorGreenspaces: '#D2F3E4', colorRoads: '#FFFFFF', colorMotorways: '#FFE9A8', colorBuildings: '#EDE4D8' },
   dark: { lightPreset: 'night', colorLand: '#1F1B17', colorWater: '#22344A', colorGreenspaces: '#1F3A30', colorRoads: '#3D362E', colorMotorways: '#3D3420', colorBuildings: '#2A241F' },
 } as const;
-// "ลดการเคลื่อนไหว" ของเครื่องตอนนี้: useReducedMotion ของ Reanimated เป็นค่าตอนเปิดแอป เปิดในตั้งค่าทีหลังจึงไม่มีผล
-const reduceNow = liveSetting(() => AccessibilityInfo.isReduceMotionEnabled(), (f) => AccessibilityInfo.addEventListener('reduceMotionChanged', f));
 // ลองจิจูดของเส้นที่ข้ามเส้นแบ่งวันเกิน 180 ได้ (ให้เส้นต่อเนื่อง) จุดเดี่ยวส่งให้ Mapbox ในช่วง ±180
 const wrap = (lon: number) => ((lon + 540) % 360) - 180;
 
@@ -35,7 +33,7 @@ export function TripMap({ points, selected, onSelect, interactive = true, showUs
   // บินจากลูกโลกครั้งเดียวต่อการเปิดหน้า: 'globe' รอแผนที่โหลด แล้วบินลงหาเป้าตอนนั้น (flyTo) เป้าใหม่ทีหลัง (เปลี่ยนวัน แผ่นเลื่อน) เลื่อนธรรมดา
   // กล้องจึงไม่ถูกส่งซ้ำทับนิ้วที่ลากระหว่างบิน; "ลดการเคลื่อนไหว" ไม่บิน และกล้องกระโดดไปเลย
   const startup = useReducedMotion();
-  const reduce = reduceNow() ?? startup;
+  const reduce = reduceMotionNow() ?? startup;
   const [stage, setStage] = useState<'globe' | 'normal'>(() => (intro && !reduce ? 'globe' : 'normal'));
   const [flyTo, setFlyTo] = useState<Mapbox.CameraStop | null>(null);
   useEffect(() => {

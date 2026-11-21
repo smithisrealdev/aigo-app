@@ -4,13 +4,14 @@ import * as Haptics from 'expo-haptics';
 import { usePathname } from 'expo-router';
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ComponentRef, type ReactNode } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextProps, type TextStyle, type ViewStyle } from 'react-native';
-import Animated, { Easing, FadeInUp, LinearTransition, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withSequence, withSpring, withTiming, ZoomIn } from 'react-native-reanimated';
+import Animated, { Easing, FadeIn as FadeInOpacity, FadeOut, FadeOutDown, FadeInUp, LinearTransition, ReduceMotion, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withSpring, withTiming, ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 import { Icon, type IconName } from '@/components/icon';
 import type { TripMapProps } from '@/lib/mapPoints';
 import { useSettings } from '@/lib/settings';
+import { scale, spring, useReduceMotion } from '@/theme/motion';
 import { fonts, radius, space, touch, type, wide, type Palette } from '@/theme/tokens';
 
 // ชุดคอมโพเนนต์ AiGo แนว Headspace: การ์ดพื้นอ่อนมุมมน ภาพประกอบล้นขอบการ์ด ไทม์ไลน์เส้นประ หัวจอโค้ง ตัว AiGo โผล่ขอบการ์ด
@@ -19,7 +20,6 @@ import { fonts, radius, space, touch, type, wide, type Palette } from '@/theme/t
 
 export const motion = { fast: 150, base: 220, toast: 4000 } as const;
 const native = Platform.OS !== 'web';
-const SPRING = { damping: 16, stiffness: 220, mass: 0.9 };
 const PEEK = require('@/assets/character/aigo-peek.svg');
 const APressable = Animated.createAnimatedComponent(Pressable);
 
@@ -35,18 +35,30 @@ export const tap = (kind: 'light' | 'success' = 'light') => {
 };
 
 /** ค่อยๆ ลอยขึ้นมาทีละชิ้นตามลำดับ (index) แบบสปริง เมื่อรายการเปลี่ยน ที่เหลือเลื่อนเข้าที่แบบสปริง */
+// ลดการเคลื่อนไหว: จางเข้าอย่างเดียว; Reanimated ข้ามทุกแอนิเมชันเมื่อเปิดไว้ตั้งแต่เปิดแอป จึงสั่งให้จางเสมอ
+const fadeOnly = (delay = 0) => FadeInOpacity.delay(delay).duration(200).reduceMotion(ReduceMotion.Never);
+
 export function FadeIn({ children, index = 0, style }: { children: ReactNode; index?: number; style?: StyleProp<ViewStyle> }) {
-  return <Animated.View entering={FadeInUp.delay(Math.min(index, 8) * 60).springify().damping(18).stiffness(170)} layout={LinearTransition.springify().damping(20)} style={style}>{children}</Animated.View>;
+  // ลดการเคลื่อนไหว: จางเข้าอย่างเดียว ไม่ขยับ และไม่เลื่อนจัดตำแหน่ง
+  const reduce = useReduceMotion();
+  const delay = Math.min(index, 8) * 60;
+  return (
+    <Animated.View style={style}
+      entering={reduce ? fadeOnly(delay) : FadeInUp.delay(delay).springify().stiffness(spring.entrance.stiffness).damping(spring.entrance.damping)}
+      layout={reduce ? undefined : LinearTransition.springify().stiffness(spring.reflow.stiffness).damping(spring.reflow.damping)}>
+      {children}
+    </Animated.View>
+  );
 }
 
 /** กดแล้วยุบเล็กน้อยแบบสปริง ปล่อยแล้วเด้งกลับ */
-function usePress(to = 0.97) {
+function usePress(to: number = scale.press) {
   const s = useSharedValue(1);
   const style = useAnimatedStyle(() => ({ transform: [{ scale: s.value }] }));
-  return { style, onPressIn: () => { s.set(withSpring(to, SPRING)); }, onPressOut: () => { s.set(withSpring(1, SPRING)); } };
+  return { style, onPressIn: () => { s.set(withSpring(to, spring.press)); }, onPressOut: () => { s.set(withSpring(1, spring.press)); } };
 }
 
-export function PressScale({ onPress, children, style, label, to = 0.97 }: { onPress?: () => void; children: ReactNode; style?: StyleProp<ViewStyle>; label?: string; to?: number }) {
+export function PressScale({ onPress, children, style, label, to = scale.choice }: { onPress?: () => void; children: ReactNode; style?: StyleProp<ViewStyle>; label?: string; to?: number }) {
   const p = usePress(to);
   return <APressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} onPressIn={p.onPressIn} onPressOut={p.onPressOut} style={[style, p.style]}>{children}</APressable>;
 }
@@ -66,14 +78,25 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setTimeout(() => setItems((xs) => xs.filter((x) => x.id !== id)), motion.toast);
   }, [path]);
   const insets = useSafeAreaInsets();
+  const reduce = useReduceMotion();
   return (
     <ToastCtx.Provider value={show}>
       {children}
       <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: insets.bottom + 120, alignItems: 'center', gap: space.sm, paddingHorizontal: space.lg }}>
-        {items.filter((x) => x.path === path).map((x) => <FadeIn key={x.id}><ToastView text={x.text} /></FadeIn>)}
+        {items.filter((x) => x.path === path).map((x) => (
+          <Animated.View key={x.id} entering={reduce ? fadeOnly() : native ? toastIn : FadeInUp.springify().stiffness(spring.toast.stiffness).damping(spring.toast.damping)} exiting={reduce ? FadeOut.duration(200).reduceMotion(ReduceMotion.Never) : FadeOutDown.duration(200)}><ToastView text={x.text} /></Animated.View>
+        ))}
       </View>
     </ToastCtx.Provider>
   );
+}
+// toast ขึ้นจากขอบล่าง จากขนาด 0.96 บนสปริงของ toast (Animate UI); เว็บไม่รับแอนิเมชันเขียนเอง จึงใช้ FadeInUp บนสปริงเดียวกัน
+function toastIn() {
+  'worklet';
+  return {
+    initialValues: { opacity: 0, transform: [{ translateY: 16 }, { scale: scale.toast }] },
+    animations: { opacity: withTiming(1, { duration: 200 }), transform: [{ translateY: withSpring(0, spring.toast) }, { scale: withSpring(1, spring.toast) }] },
+  };
 }
 function ToastView({ text }: { text: string }) {
   const { colors } = useSettings();
@@ -109,7 +132,7 @@ export function T({ v = 'body', tone = 'ink', style, children, ...rest }: { v?: 
 type ButtonKind = 'primary' | 'dark' | 'secondary' | 'white' | 'ghost';
 export function Button({ label, onPress, kind = 'primary', icon, big, style, busy, busyLabel, done, doneLabel }: { label: string; onPress: () => void; kind?: ButtonKind; icon?: IconName; big?: boolean; style?: StyleProp<ViewStyle>; busy?: boolean; busyLabel?: string; done?: boolean; doneLabel?: string }) {
   const { colors } = useSettings();
-  const p = usePress(0.96);
+  const p = usePress(scale.press);
   const bg = { primary: colors.primary, dark: colors.ink, secondary: colors.surfaceSoft, white: '#FFFFFF', ghost: 'transparent' }[kind];
   const fg = { primary: colors.onPrimary, dark: colors.bg, secondary: colors.ink, white: '#2A2622', ghost: colors.ink }[kind];
   const text = busy ? busyLabel ?? label : done ? doneLabel ?? label : label;
@@ -138,7 +161,7 @@ export function Glass({ style, r = radius.lg, children }: { style?: StyleProp<Vi
 type IconVariant = 'soft' | 'glass' | 'dark' | 'primary' | 'plain';
 export function IconButton({ icon, label, onPress, variant = 'soft', size = 44 }: { icon: IconName; label: string; onPress: () => void; variant?: IconVariant; size?: number }) {
   const { colors, isDark } = useSettings();
-  const p = usePress(0.9);
+  const p = usePress(scale.press);
   const bg = { soft: colors.surface, glass: 'transparent', dark: colors.ink, primary: colors.primary, plain: 'transparent' }[variant];
   const fg = { soft: colors.ink, glass: colors.ink, dark: colors.bg, primary: colors.onPrimary, plain: colors.ink }[variant];
   return (
@@ -152,7 +175,7 @@ export function IconButton({ icon, label, onPress, variant = 'soft', size = 44 }
 
 export function Chip({ label, selected = false, onPress, a11y }: { label: string; selected?: boolean; onPress: () => void; a11y?: string }) {
   const { colors } = useSettings();
-  const p = usePress(0.94);
+  const p = usePress(scale.press);
   return (
     <APressable accessibilityRole="button" accessibilityState={{ selected }} accessibilityLabel={a11y ?? label} onPress={onPress} onPressIn={p.onPressIn} onPressOut={p.onPressOut}
       style={[{ minHeight: touch.min, paddingHorizontal: space.lg, borderRadius: radius.pill, justifyContent: 'center', backgroundColor: selected ? colors.ink : colors.surfaceSoft }, p.style]}>
@@ -202,8 +225,9 @@ export function Badge({ label, icon, tone = 'white' }: { label: string; icon?: I
 
 /** ตราประทับวงกลม ขอบประ เอียงเล็กน้อย ประทับลงมาแบบสปริงตอนปรากฏ */
 export function Stamp({ label, color, rotate = -10, size = 72 }: { label: string; color: string; rotate?: number; size?: number }) {
+  const reduce = useReduceMotion();
   return (
-    <Animated.View entering={ZoomIn.springify().damping(11)} accessible accessibilityLabel={label}
+    <Animated.View entering={reduce ? fadeOnly() : ZoomIn.springify().damping(11)} accessible accessibilityLabel={label}
       style={{ width: size, height: size, borderRadius: size / 2, borderWidth: 3, borderColor: color, alignItems: 'center', justifyContent: 'center', padding: 8, transform: [{ rotate: `${rotate}deg` }] }}>
       <View style={{ position: 'absolute', top: 4, left: 4, right: 4, bottom: 4, borderRadius: size, borderWidth: 1.5, borderColor: color, borderStyle: 'dashed' }} />
       <Text numberOfLines={2} style={{ fontFamily: fonts.display, fontSize: size * 0.17, lineHeight: size * 0.22, color, textAlign: 'center' }}>{label}</Text>
@@ -283,10 +307,10 @@ export function PhotoCard({ source, height = 220, title, subtitle, badge, onPres
 
 /** ตัว AiGo ลอยขึ้นลงช้าๆ (ลดการเคลื่อนไหวแล้วอยู่นิ่ง) */
 export function Mascot({ pose, size = 72, bob = true }: { pose: ImageSource; size?: number; bob?: boolean }) {
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   const v = useSharedValue(0);
   useEffect(() => {
-    if (reduce || !bob) return;
+    if (reduce || !bob) { v.set(0); return; }
     v.set(withRepeat(withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }), -1, true));
   }, [reduce, bob, v]);
   const st = useAnimatedStyle(() => ({ transform: [{ translateY: -6 * v.value }, { rotate: `${-3 + 6 * v.value}deg` }] }));
@@ -296,8 +320,9 @@ export function Mascot({ pose, size = 72, bob = true }: { pose: ImageSource; siz
 /** AiGo โผล่หัวเกาะขอบบนของการ์ด วางไว้ในการ์ดที่ไม่ตัดขอบ (overflow visible) และเว้นที่ด้านบนให้ด้วย */
 export function Peek({ size = 104, right = space.xl }: { size?: number; right?: number }) {
   const h = (size * 136) / 240;
+  const reduce = useReduceMotion();
   return (
-    <Animated.View entering={FadeInUp.delay(250).springify().damping(12)} pointerEvents="none" style={{ position: 'absolute', top: -h * 0.94, right }}>
+    <Animated.View entering={reduce ? fadeOnly(250) : FadeInUp.delay(250).springify().damping(12)} pointerEvents="none" style={{ position: 'absolute', top: -h * 0.94, right }}>
       <Image source={PEEK} style={{ width: size, height: h }} contentFit="contain" accessible={false} />
     </Animated.View>
   );
@@ -354,17 +379,18 @@ export function PriceTag({ source, at, logo }: { source?: string; at?: string; l
 /** วงสถานะแบบ Headspace: เสร็จ = วงเขียวติ๊ก (เด้งขึ้น), กำลังทำ = จุดส้ม, รอ = วงว่าง */
 export function StatusDot({ state }: { state: 'done' | 'now' | 'wait' }) {
   const { colors } = useSettings();
-  if (state === 'done') return <Animated.View entering={ZoomIn.springify().damping(10)} style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: colors.success, alignItems: 'center', justifyContent: 'center' }}><Icon name="check" color={colors.bg} size={15} /></Animated.View>;
+  const reduce = useReduceMotion();
+  if (state === 'done') return <Animated.View entering={reduce ? fadeOnly() : ZoomIn.springify().stiffness(spring.checkPop.stiffness).damping(spring.checkPop.damping)} style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: colors.success, alignItems: 'center', justifyContent: 'center' }}><Icon name="check" color={colors.bg} size={15} /></Animated.View>;
   if (state === 'now') return <NowDot color={colors.primary} />;
   return <View style={{ width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: colors.line, backgroundColor: colors.bg }} />;
 }
 
 /** จุด "กำลังทำ" มีวงกระเพื่อมออกเป็นจังหวะ ให้เห็นว่างานยังเดินอยู่ (ลดการเคลื่อนไหวแล้วนิ่ง) */
 function NowDot({ color }: { color: string }) {
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   const p = useSharedValue(0);
   useEffect(() => {
-    if (!reduce) p.set(withRepeat(withTiming(1, { duration: 1400, easing: Easing.out(Easing.quad) }), -1, false));
+    p.set(reduce ? 0 : withRepeat(withTiming(1, { duration: 1400, easing: Easing.out(Easing.quad) }), -1, false));
   }, [reduce, p]);
   const ring = useAnimatedStyle(() => ({ opacity: 0.45 * (1 - p.value), transform: [{ scale: 1 + p.value * 0.9 }] }));
   return (
@@ -393,7 +419,7 @@ export function TimelineItem({ state = 'wait', last, children }: { state?: 'done
 export function ProgressBar({ value, color, track }: { value: number; color?: string; track?: string }) {
   const { colors } = useSettings();
   const w = useSharedValue(value);
-  useEffect(() => { w.set(withTiming(value, { duration: 600, easing: Easing.out(Easing.cubic) })); }, [value, w]);
+  useEffect(() => { w.set(withSpring(value, spring.progress)); }, [value, w]);
   const st = useAnimatedStyle(() => ({ transform: [{ scaleX: Math.max(0.02, w.value) }] }));
   return (
     <View accessible accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(value * 100) }} style={{ height: 12, borderRadius: 6, backgroundColor: track ?? colors.surfaceSoft, overflow: 'hidden' }}>
@@ -555,10 +581,10 @@ export function Thinking({ label, under = false }: { label: string; under?: bool
   );
 }
 function Dot({ i, color }: { i: number; color: string }) {
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   const v = useSharedValue(0);
   useEffect(() => {
-    if (reduce) return;
+    if (reduce) { v.set(0); return; }
     v.set(withDelay(i * 140, withRepeat(withSequence(withTiming(1, { duration: 280 }), withTiming(0, { duration: 280 }), withTiming(0, { duration: 260 })), -1)));
   }, [i, reduce, v]);
   const st = useAnimatedStyle(() => ({ transform: [{ translateY: -5 * v.value }] }));
@@ -570,7 +596,7 @@ export function Row({ children, onPress, label, last }: { children: ReactNode; o
   const { colors } = useSettings();
   const style: ViewStyle = { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm, borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.line };
   if (!onPress) return <View style={style}>{children}</View>;
-  return <PressScale onPress={onPress} label={label} to={0.98} style={style}>{children}</PressScale>;
+  return <PressScale onPress={onPress} label={label} to={scale.choice} style={style}>{children}</PressScale>;
 }
 
 export function Thumb({ source, size = 56, label }: { source: ImageSource; size?: number; label?: string }) {
@@ -631,7 +657,7 @@ export function Segmented({ options, value, onChange }: { options: string[]; val
   const first = useRef(true);
   useEffect(() => {
     if (!w) return;
-    x.set(first.current ? value * w : withSpring(value * w, SPRING));
+    x.set(first.current ? value * w : withSpring(value * w, spring.selection));
     first.current = false;
   }, [value, w, x]);
   const pill = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
@@ -672,7 +698,7 @@ export function StopCard({ n, photo, name, time, meta, status, statusTone = 'suc
       {time && <Text style={{ fontFamily: fonts.display, fontSize: type.xl, color: colors.ink, fontVariant: ['tabular-nums'] }}>{time}</Text>}
     </View>
   );
-  return onPress ? <PressScale onPress={onPress} label={label ?? name} to={0.98}>{inner}</PressScale> : inner;
+  return onPress ? <PressScale onPress={onPress} label={label ?? name} to={scale.choice}>{inner}</PressScale> : inner;
 }
 
 export type Leg = { mode: 'train' | 'walk' | 'car'; text: string };

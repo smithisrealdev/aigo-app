@@ -8,6 +8,7 @@ import { Icon, type IconName } from '@/components/icon';
 import { Glass, lift, tap } from '@/components/ui';
 import { useSettings } from '@/lib/settings';
 import { fonts, radius, space } from '@/theme/tokens';
+import { spring } from '@/theme/motion';
 
 const TABS: { name: string; key: 'tab.aigo' | 'tab.trips'; icon: IconName }[] = [
   { name: 'index', key: 'tab.aigo', icon: 'spark' },
@@ -20,7 +21,7 @@ function FloatingTabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
   const { colors, isDark, t } = useSettings();
   const insets = useSafeAreaInsets();
   const x = useSharedValue(state.index * SEG);
-  useEffect(() => { x.set(withSpring(state.index * SEG, { damping: 18, stiffness: 220 })); }, [state.index, x]);
+  useEffect(() => { x.set(withSpring(state.index * SEG, spring.selection)); }, [state.index, x]);
   const pill = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
   return (
     <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: Math.max(insets.bottom, space.md) + space.xs, alignItems: 'center' }}>
