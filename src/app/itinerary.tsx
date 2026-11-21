@@ -99,7 +99,7 @@ export default function Itinerary() {
       {edit?.day === day && !edit.fail && (
         <FadeIn style={{ gap: space.md }}>
           <AiSays>{pick({ th: `ฉันกำลังแก้${t('it.day', { n: day + 1 })} ตามที่บอก: "${edit.wish}"`, en: `I am changing ${t('it.day', { n: day + 1 })} as you asked: "${edit.wish}"` })}</AiSays>
-          <Thinking label={pick({ th: 'AiGo กำลังวางแผนใหม่', en: 'AiGo is replanning' })} />
+          <Thinking under label={pick({ th: 'AiGo กำลังวางแผนใหม่', en: 'AiGo is replanning' })} />
         </FadeIn>
       )}
       {edit?.day === day && edit.fail && (

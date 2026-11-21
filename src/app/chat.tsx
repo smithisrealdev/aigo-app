@@ -86,7 +86,7 @@ export default function Chat() {
         {draft === '' && <FadeIn><Thinking label={t('chat.thinking')} /></FadeIn>}
         {!!draft && <AiSays>{parseReply(draft, true).text || '…'}</AiSays>}
         {failed && (
-          <FadeIn style={{ flexDirection: 'row', alignItems: 'center', gap: space.md, paddingLeft: 50 }}>
+          <FadeIn style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
             <T v="smallBold" tone="warn" style={{ flex: 1 }}>{failed.busy
               ? pick({ th: 'ส่งข้อความถี่เกินไป รอสักครู่แล้วกดส่งใหม่', en: 'Too many messages. Wait a moment, then retry' })
               : pick({ th: 'ต่อ AiGo ไม่ได้ ตรวจอินเทอร์เน็ตแล้วกดส่งใหม่ ข้อความยังอยู่', en: 'Cannot reach AiGo. Check your internet and retry. Your message is kept' })}</T>

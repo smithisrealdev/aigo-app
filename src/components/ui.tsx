@@ -304,13 +304,20 @@ export function Peek({ size = 104, right = space.xl }: { size?: number; right?: 
 }
 
 /** คำพูดของ AiGo: รูปหน้าโมจิในวงกลมฟ้า กับฟองคำพูดขาว */
+/** รูป AiGo หน้าข้อความของ AiGo กว้าง 42 + ช่องไฟ space.sm = 50 (แถวที่อยู่ใต้ข้อความของ AiGo เยื้อง 50 ให้ตรงกับกล่องข้อความ) */
+function AiAvatar() {
+  return (
+    <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#2F6BFF', overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-end' }}>
+      <Image source={PEEK} style={{ width: 58, height: 33, marginBottom: -2 }} contentFit="contain" accessible={false} />
+    </View>
+  );
+}
+
 export function AiSays({ children }: { children: ReactNode }) {
   const { colors, isDark } = useSettings();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space.sm }}>
-      <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#2F6BFF', overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-end' }}>
-        <Image source={PEEK} style={{ width: 58, height: 33, marginBottom: -2 }} contentFit="contain" accessible={false} />
-      </View>
+      <AiAvatar />
       <View style={[{ flex: 1, paddingVertical: space.md, paddingHorizontal: space.lg, borderRadius: radius.lg, borderBottomLeftRadius: 6, backgroundColor: colors.surface }, lift(isDark, 0.6), isDark && { borderWidth: 1, borderColor: colors.line }]}>
         <T v="smallBold" tone="accent">AiGo</T>
         <T>{children}</T>
@@ -516,12 +523,19 @@ export function Screen({ title, subtitle, onBack, left, right, footer, hero, her
 }
 
 /** AiGo กำลังคิด: จุดสามจุดเด้งตามกัน (ลดการเคลื่อนไหวแล้วเหลือจุดนิ่ง) */
-export function Thinking({ label }: { label: string }) {
+/**
+ * AiGo กำลังคิด: รูป AiGo กับจุดเต้น อยู่ตรงที่ข้อความถัดไปของ AiGo จะขึ้น
+ * under = อยู่ใต้ข้อความของ AiGo อยู่แล้ว: ไม่มีรูปซ้ำ เยื้องให้จุดตรงกับกล่องข้อความด้านบน
+ */
+export function Thinking({ label, under = false }: { label: string; under?: boolean }) {
   const { colors } = useSettings();
   return (
-    <View accessible accessibilityRole="progressbar" accessibilityLabel={label} style={{ flexDirection: 'row', alignItems: 'center', gap: space.md, paddingLeft: 50 }}>
-      <View style={{ flexDirection: 'row', gap: 5, paddingHorizontal: space.md, paddingVertical: space.md, borderRadius: radius.pill, backgroundColor: colors.surface }}>
-        {[0, 1, 2].map((i) => <Dot key={i} i={i} color={colors.primary} />)}
+    <View accessible accessibilityRole="progressbar" accessibilityLabel={label} style={{ flexDirection: 'row', alignItems: 'center', gap: space.md, paddingLeft: under ? 50 : 0 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+        {!under && <AiAvatar />}
+        <View style={{ flexDirection: 'row', gap: 5, paddingHorizontal: space.md, paddingVertical: space.md, borderRadius: radius.pill, backgroundColor: colors.surface }}>
+          {[0, 1, 2].map((i) => <Dot key={i} i={i} color={colors.primary} />)}
+        </View>
       </View>
       <T v="smallBold" tone="muted">{label}</T>
     </View>
