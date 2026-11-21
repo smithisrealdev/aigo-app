@@ -1,4 +1,6 @@
 import type { ChatCard } from './chat.ts';
+import type { L } from './i18n.ts';
+import { addDays, stayNights, type Stay } from './itinerary.ts';
 
 // ลิงก์ดูราคาจริงหรือจองของการ์ดแต่ละแบบ ใช้รหัสพาร์ตเนอร์ชุดเดียวกับเว็บ (ai-travel-buddy-13/src/config/affiliates.ts)
 // เที่ยวบิน: ค้นใน Aviasales พร้อม marker, ตั๋วและบัตรรถไฟ: ค้นใน Klook ผ่านลิงก์ affiliate, ที่พัก: ค้นใน Booking.com ตามวันที่,
@@ -47,6 +49,12 @@ export function hotelLink(c: ChatCard, t: LinkTrip): string {
     ['group_adults', String(Math.max(1, t.people ?? 2))], ['no_rooms', '1'],
   ];
   return `https://www.booking.com/searchresults.html?${q.filter(([, v]) => v).map(([k, v]) => `${k}=${form(v!)}`).join('&')}`;
+}
+
+/** ที่พักของคืนนั้นในแผน: ค้นด้วยชื่อกับย่าน วันเข้าออกตามช่วงคืนที่พักที่เดิมติดกัน */
+export function stayLink(stay: Stay, trip: { startDate: string; destination: L; people: number; stays?: (Stay | null)[] }, day: number): string {
+  const run = stayNights(trip.stays, day) ?? { first: day, last: day };
+  return hotelLink({ kind: 'hotel', name: stay.name }, { destination: stay.area ?? trip.destination.en, startDate: addDays(trip.startDate, run.first), endDate: addDays(trip.startDate, run.last + 1), people: trip.people });
 }
 
 /** ลิงก์ของการ์ดหนึ่งใบ */

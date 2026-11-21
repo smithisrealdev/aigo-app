@@ -11,12 +11,19 @@ export type Place = {
   id: string; time: string; name: L; photo?: ImageSource; minutes: number; checked: boolean;
   tip: L; entry: { text: L; source?: string; at?: string }; spend?: { baht: number; source?: string };
   lat: number; lon: number;
+  /** ร้านหรือคาเฟ่ และมื้อที่กินที่นี่ (ป้ายมื้อมีแค่กลางวันกับเย็น) */
+  food?: boolean; meal?: Meal;
 };
+export type Meal = 'lunch' | 'dinner';
+/** ที่พักของคืนนั้น (AI เลือกตามงบ ราคาเป็นค่าประมาณ ไม่มีราคาก็ไม่แสดง) */
+export type Stay = { name: string; area?: string; lat: number; lon: number; price?: L };
 export type AppTrip = {
   id: string; title: L; dates: L; destination: L; startDate: string; totalDays: number; people: number; budget?: number;
   checkedAt?: string; days: Place[][]; dayTitles?: L[]; legs: Record<string, Leg>; cover?: ImageSource; hotel?: L;
   /** เที่ยวบิน ที่พัก ร้าน ตั๋ว และบริการที่ AI หาไว้ในแชต (ราคาประมาณ กดดูราคาจริงที่เว็บจอง) */
   bookings?: ChatCard[];
+  /** ที่พักของแต่ละคืนตามลำดับวัน (null = วันที่ไม่มี เช่นวันกลับ); ทริปที่สร้างก่อนมีที่พักไม่มีช่องนี้ */
+  stays?: (Stay | null)[];
   /** ทริปตัวอย่าง (โอซาก้า) ไม่ใช่ทริปที่ AiGo สร้างจริง */
   sample: boolean;
   /** แผนที่เซิร์ฟเวอร์กำลังวาง (งานของ generate-itinerary) */
@@ -32,8 +39,10 @@ export type PlanState = { status: PlanStatus; totalDays: number; title?: string 
 type GenPlace = {
   id?: string; name?: string; description?: string; coordinates?: { lat?: number; lng?: number }; startTime?: string; duration?: string;
   cost?: { amount?: number; currency?: string }; tips?: string[]; whyVisit?: string[]; travelToNext?: { mode?: string; time?: number };
+  category?: string; meal?: string;
 };
-export type GenDay = { title?: string; places?: GenPlace[] };
+export type GenStay = { name?: string; area?: string; coordinates?: { lat?: number; lng?: number }; pricePerNight?: { amount?: number; currency?: string } };
+export type GenDay = { title?: string; places?: GenPlace[]; stay?: GenStay | null };
 export type GenItinerary = { id?: string; title?: string; destination?: string; startDate?: string; endDate?: string; days?: GenDay[] };
 export type GenRequest = { destination: string; startDate: string; endDate: string; budget?: string; travelers?: string; tripStyle?: string; language: string };
 
@@ -46,7 +55,7 @@ export const dayCount = (start: string, end: string) => Math.max(1, Math.round((
 
 /** วันที่วางแล้ว ส่งให้ generate-itinerary รอบถัดไปไม่วางที่ซ้ำ: "Day 1 (ชื่อวัน): ที่ A, ที่ B" ทีละบรรทัด */
 export function plannedText(days: GenDay[]): string {
-  return days.map((d, i) => `Day ${i + 1}${d.title ? ` (${d.title})` : ''}: ${(d.places ?? []).map((p) => p.name).filter(Boolean).join(', ')}`).join('\n').slice(0, 4000);
+  return days.map((d, i) => `Day ${i + 1}${d.title ? ` (${d.title})` : ''}: ${(d.places ?? []).map((p) => p.name).filter(Boolean).join(', ')}${d.stay?.name ? `; stay: ${d.stay.name}` : ''}`).join('\n').slice(0, 4000);
 }
 
 /** "2 hours" → 120, "1.5 ชม." → 90, "45 minutes" → 45; อ่านไม่ออกถือว่า 60 นาที */
@@ -57,6 +66,29 @@ export function minutesOf(duration = ''): number {
 }
 
 const SYMBOL: Record<string, string> = { JPY: '¥', THB: '฿', USD: '$', EUR: '€', GBP: '£', KRW: '₩', CNY: '¥', TWD: 'NT$', SGD: 'S$' };
+/** ราคาประมาณ "~¥1,000" (สกุลที่ไม่มีสัญลักษณ์ต่อท้ายด้วยรหัส "~320 CAD") */
+const money = (amount: number, cur: string) => `~${SYMBOL[cur] ?? ''}${amount.toLocaleString('en-US')}${SYMBOL[cur] ? '' : ` ${cur}`}`.trim();
+export const MEAL: Record<Meal, L> = { lunch: { th: 'มื้อกลางวัน', en: 'Lunch' }, dinner: { th: 'มื้อเย็น', en: 'Dinner' } };
+const FOOD = /restaurant|cafe|café|food|bakery/i;
+
+/** ที่พักจาก AI: ไม่มีชื่อไม่นับ; ไม่มีราคา (หรือ 0) ไม่แสดงราคา */
+export function stayOf(s?: GenStay | null): Stay | null {
+  const name = s?.name?.trim();
+  if (!name) return null;
+  const amount = s?.pricePerNight?.amount ?? 0, cur = (s?.pricePerNight?.currency ?? '').toUpperCase();
+  const p = amount > 0 ? money(amount, cur) : '';
+  return { name, area: s?.area?.trim() || undefined, lat: s?.coordinates?.lat ?? 0, lon: s?.coordinates?.lng ?? 0, price: p ? { th: `${p}/คืน`, en: `${p}/night` } : undefined };
+}
+
+/** คืนที่พักที่เดิมติดกันรอบวันนั้น (ใช้เป็นวันเข้าออกตอนดูราคา) */
+export function stayNights(stays: (Stay | null)[] | undefined, day: number): { first: number; last: number } | null {
+  const name = stays?.[day]?.name;
+  if (!stays || !name) return null;
+  let first = day, last = day;
+  while (first > 0 && stays[first - 1]?.name === name) first--;
+  while (last < stays.length - 1 && stays[last + 1]?.name === name) last++;
+  return { first, last };
+}
 const MODE_TEXT: Record<string, L> = {
   walk: { th: 'เดิน', en: 'Walk' }, car: { th: 'รถ', en: 'Car' }, taxi: { th: 'แท็กซี่', en: 'Taxi' }, train: { th: 'รถไฟ', en: 'Train' },
   subway: { th: 'รถไฟใต้ดิน', en: 'Subway' }, metro: { th: 'รถไฟใต้ดิน', en: 'Metro' }, bus: { th: 'รถบัส', en: 'Bus' }, ferry: { th: 'เรือ', en: 'Ferry' },
@@ -85,13 +117,16 @@ export function dateRange(start: string, end: string, lang: 'th' | 'en') {
 export function toAppTrip(gen: GenItinerary, req: GenRequest, people = 2): AppTrip {
   const days = (gen.days ?? []).map((d, di) => (d?.places ?? []).map((p, pi): Place => {
     const amount = p.cost?.amount ?? 0, cur = (p.cost?.currency ?? '').toUpperCase();
-    const price = amount > 0 ? `~${SYMBOL[cur] ?? ''}${amount.toLocaleString('en-US')}${SYMBOL[cur] ? '' : ` ${cur}`}`.trim() : '';
+    const price = amount > 0 ? money(amount, cur) : '';
+    const meal = p.meal === 'lunch' || p.meal === 'dinner' ? p.meal : undefined;
+    const food = !!meal || FOOD.test(p.category ?? '');
     return {
       id: p.id ?? `d${di}p${pi}`, time: p.startTime ?? '', name: both(p.name ?? '?'), minutes: minutesOf(p.duration), checked: false,
       tip: both(p.tips?.[0] ?? p.whyVisit?.[0] ?? p.description ?? ''),
       // ห้ามแต่งราคา (R15c): AI ไม่ให้ราคามา = ยังไม่มีราคา ไม่ใช่ฟรี
       entry: { text: amount > 0 ? both(price) : p.cost?.amount === 0 ? { th: 'ฟรี', en: 'Free' } : NO_PRICE },
       lat: p.coordinates?.lat ?? 0, lon: p.coordinates?.lng ?? 0,
+      ...(food && { food }), ...(meal && { meal }),
     };
   }));
   const legs: Record<string, Leg> = {};
@@ -102,12 +137,15 @@ export function toAppTrip(gen: GenItinerary, req: GenRequest, people = 2): AppTr
   const start = gen.startDate ?? req.startDate, end = gen.endDate ?? req.endDate;
   const dest = gen.destination ?? req.destination;
   const total = Math.max(dayCount(start, end), days.length);
+  // คืนวันสุดท้ายของทริปไม่ได้นอนที่นี่ แม้ AI ใส่ที่พักมา; ไม่มีที่พักเลยก็ไม่มีช่องนี้ (หน้าแผนแสดงแบบเดิม)
+  const stays = (gen.days ?? []).map((d, di) => (di === total - 1 ? null : stayOf(d?.stay)));
   return {
     id: gen.id ?? `trip-${start}`, destination: both(dest),
     title: gen.title ? both(gen.title) : { th: `${dest} ${total} วัน`, en: `${dest}, ${total} days` },
     dates: { th: dateRange(start, end, 'th'), en: dateRange(start, end, 'en') },
     startDate: start, totalDays: total, people, days, legs, sample: false,
     dayTitles: (gen.days ?? []).map((d) => both(d?.title ?? '')),
+    ...(stays.some(Boolean) && { stays }),
   };
 }
 
@@ -139,7 +177,12 @@ export const planGone = (trip: AppTrip): PlanState => ({ status: 'failed', error
 
 /** ที่แวะของแต่ละวันเป็นบรรทัด ข้ามวันที่ยังว่าง */
 const dayLines = (trip: AppTrip, th: boolean, sep: string, time: boolean) => trip.days
-  .map((d, i) => (d.length ? `${th ? 'วันที่' : 'Day'} ${i + 1}: ${d.map((p) => (time && p.time ? `${p.time} ` : '') + p.name.en).join(sep)}` : ''))
+  .map((d, i) => {
+    if (!d.length) return '';
+    const stops = d.map((p) => (time && p.time ? `${p.time} ` : '') + p.name.en + (p.meal ? ` (${th ? MEAL[p.meal].th : MEAL[p.meal].en.toLowerCase()})` : '')).join(sep);
+    const stay = trip.stays?.[i];
+    return `${th ? 'วันที่' : 'Day'} ${i + 1}: ${stops}${stay ? ` · ${th ? 'พัก' : 'stay'} ${stay.name}` : ''}`;
+  })
   .filter(Boolean);
 
 /** แผนของทริปเป็นข้อความสั้น แนบไปกับคำถามจากหน้าแผน สถานที่ วันนี้ และหน้างาน ให้ trip-chat ตอบเรื่องทริปนี้ */

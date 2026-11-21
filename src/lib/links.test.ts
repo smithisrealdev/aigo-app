@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import type { ChatCard } from './chat.ts';
-import { cardLink, flightLink, hotelLink, klookLink, navLink } from './links.ts';
+import { cardLink, flightLink, hotelLink, klookLink, navLink, stayLink } from './links.ts';
 
 const TRIP = { destination: 'Osaka, Japan', startDate: '2026-12-26', endDate: '2026-12-30', people: 2 };
 const card = (c: Partial<ChatCard> & Pick<ChatCard, 'kind' | 'name'>): ChatCard => c;
@@ -27,4 +27,12 @@ test('นำทาง: iOS ใช้ Apple Maps ที่อื่นใช้�
   assert.equal(navLink({ name: 'Nijo Market', lat: 43.0577, lon: 141.3577 }, 'ios'), 'https://maps.apple.com/?daddr=43.0577,141.3577');
   assert.equal(navLink({ name: 'Nijo Market', lat: 43.0577, lon: 141.3577 }, 'android'), 'https://www.google.com/maps/dir/?api=1&destination=43.0577,141.3577');
   assert.equal(navLink({ name: 'Nijo Market', lat: 0, lon: 0 }, 'web'), 'https://www.google.com/maps/dir/?api=1&destination=Nijo%20Market');
+});
+
+test('ที่พักของคืนนั้น: Booking.com ด้วยชื่อกับย่าน เข้าคืนแรกของช่วงที่พักที่เดิม ออกวันถัดจากคืนสุดท้าย', () => {
+  const S = (name: string, area: string) => ({ name, area, lat: 0, lon: 0 });
+  const trip = { startDate: '2026-12-26', destination: { th: 'โอซาก้า', en: 'Osaka' }, people: 2, stays: [S('Cross Hotel Osaka', 'Namba, Osaka'), S('Cross Hotel Osaka', 'Namba, Osaka'), S('Hotel Granvia Kyoto', 'Kyoto Station'), null] };
+  assert.equal(stayLink(trip.stays[1]!, trip, 1), 'https://www.booking.com/searchresults.html?ss=Cross+Hotel+Osaka%2C+Namba%2C+Osaka&checkin=2026-12-26&checkout=2026-12-28&group_adults=2&no_rooms=1');
+  assert.match(stayLink(trip.stays[2]!, trip, 2), /ss=Hotel\+Granvia\+Kyoto%2C\+Kyoto\+Station&checkin=2026-12-28&checkout=2026-12-29&group_adults=2/);
+  assert.match(stayLink({ name: 'Hotel X', lat: 0, lon: 0 }, { ...trip, stays: undefined }, 0), /ss=Hotel\+X%2C\+Osaka&checkin=2026-12-26&checkout=2026-12-27/, 'ไม่มีย่านใช้เมืองของทริป');
 });

@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { dateRange, dayCount, finishedNow, genEvent, legOf, minutesOf, peopleOf, plannedText, planText, requestFromSummary, toAppTrip, planGone, tripContext, withPlanState } from './itinerary.ts';
+import { dateRange, dayCount, finishedNow, genEvent, legOf, minutesOf, peopleOf, plannedText, planText, requestFromSummary, stayNights, toAppTrip, planGone, tripContext, withPlanState, type AppTrip } from './itinerary.ts';
 
 const REQ = { destination: 'Tokyo', startDate: '2026-12-28', endDate: '2027-01-01', language: 'th' };
 
@@ -128,4 +128,74 @@ test('แผนเพิ่งเสร็จ: เฉพาะตอนเปล
   assert.equal(finishedNow(undefined, 'done'), false, 'เปิดหน้ามาก็เห็นว่าเสร็จแล้ว');
   assert.equal(finishedNow('stopped', 'done'), false);
   assert.equal(finishedNow('running', 'failed'), false, 'ล้มเหลวไม่ใช่เสร็จ');
+});
+
+// มื้ออาหารและที่พักในแผน (docs/superpowers/specs/2026-11-21-meals-and-stays-design.md)
+const OSAKA = { destination: 'Osaka', startDate: '2026-12-26', endDate: '2026-12-28', language: 'th' };
+const STAY = (name: string, amount = 18000) => ({ name, area: 'Namba, Osaka', coordinates: { lat: 34.66, lng: 135.5 }, pricePerNight: { amount, currency: 'JPY' } });
+const MEAL_DAYS = [
+  { places: [
+    { id: 'a', name: 'Osaka Castle', category: 'attraction', startTime: '09:00' },
+    { id: 'b', name: 'Kushikatsu Daruma', category: 'restaurant', meal: 'dinner', startTime: '18:30' },
+    { id: 'c', name: 'Hanshin Cafe', category: 'cafe' },
+    { id: 'd', name: 'Brunch Spot', category: 'restaurant', meal: 'brunch' },
+  ], stay: STAY('Cross Hotel Osaka') },
+  { places: [{ id: 'e', name: 'Kaiyukan' }], stay: { name: '', area: 'Bay Area' } },
+  { places: [{ id: 'f', name: 'Kuromon Market' }], stay: STAY('Cross Hotel Osaka') },
+];
+
+test('มื้ออาหาร: ร้านเป็นของกิน ป้ายมื้อมีแค่กลางวันกับเย็น ที่เที่ยวไม่มีป้าย', () => {
+  const [castle, daruma, cafe, brunch] = toAppTrip({ days: MEAL_DAYS }, OSAKA).days[0];
+  assert.equal(castle.food, undefined);
+  assert.equal(castle.meal, undefined);
+  assert.equal(daruma.food, true);
+  assert.equal(daruma.meal, 'dinner');
+  assert.equal(cafe.food, true, 'คาเฟ่ก็เป็นของกิน');
+  assert.equal(cafe.meal, undefined);
+  assert.equal(brunch.meal, undefined, 'มื้ออื่นไม่ขึ้นป้าย');
+});
+
+test('ที่พักรายคืน: ชื่อ ย่าน พิกัด ราคาต่อคืน; ไม่มีชื่อไม่นับ; วันสุดท้ายของทริปไม่มีที่พัก', () => {
+  const trip = toAppTrip({ days: MEAL_DAYS }, OSAKA);
+  assert.deepEqual(trip.stays?.[0], { name: 'Cross Hotel Osaka', area: 'Namba, Osaka', lat: 34.66, lon: 135.5, price: { th: '~¥18,000/คืน', en: '~¥18,000/night' } });
+  assert.equal(trip.stays?.[1], null);
+  assert.equal(trip.stays?.[2], null, 'คืนสุดท้ายไม่ได้นอนที่นี่ แม้ AI ใส่มา');
+});
+
+test('ที่พักไม่มีราคา ไม่แต่งราคาเอง (R15c)', () => {
+  const free = toAppTrip({ days: [{ places: [], stay: STAY('Hotel A', 0) }, { places: [] }] }, OSAKA);
+  assert.equal(free.stays?.[0]?.price, undefined);
+  const none = toAppTrip({ days: [{ places: [], stay: { name: 'Hotel B' } }, { places: [] }] }, OSAKA);
+  assert.deepEqual(none.stays?.[0], { name: 'Hotel B', area: undefined, lat: 0, lon: 0, price: undefined });
+});
+
+test('วันที่มาทีหลังจากงานบนเซิร์ฟเวอร์พาที่พักมาด้วย', () => {
+  const t0: AppTrip = { ...toAppTrip({ days: [MEAL_DAYS[0]] }, OSAKA), plan: { job: 'j', token: 't', status: 'running', request: OSAKA, people: 2, days: [MEAL_DAYS[0]] } };
+  const t1 = withPlanState(t0, { status: 'running', totalDays: 3, from: 1, days: [{ places: [{ id: 'g', name: 'Umeda Sky' }], stay: STAY('Hotel Granvia Osaka') }] });
+  assert.deepEqual(t1.stays?.map((x) => x?.name ?? null), ['Cross Hotel Osaka', 'Hotel Granvia Osaka']);
+});
+
+test('ข้อความของแผน: รอบถัดไปรู้ที่พัก แชร์และถาม AiGo บอกมื้อกับที่พัก', () => {
+  assert.equal(plannedText([{ title: 'Castle', places: [{ name: 'Osaka Castle' }, { name: 'Kushikatsu Daruma' }], stay: { name: 'Cross Hotel Osaka' } }, { places: [{ name: 'Kaiyukan' }] }]),
+    'Day 1 (Castle): Osaka Castle, Kushikatsu Daruma; stay: Cross Hotel Osaka\nDay 2: Kaiyukan');
+  const trip = toAppTrip({ title: 'Osaka eats', days: MEAL_DAYS }, OSAKA);
+  assert.match(planText(trip, 'th'), /วันที่ 1: 09:00 Osaka Castle → 18:30 Kushikatsu Daruma \(มื้อเย็น\) → Hanshin Cafe → Brunch Spot · พัก Cross Hotel Osaka\n/);
+  assert.match(planText(trip, 'en'), /Day 1: .*18:30 Kushikatsu Daruma \(dinner\).* · stay Cross Hotel Osaka\n/);
+  assert.match(tripContext(trip, 'th'), /วันที่ 1: Osaka Castle, Kushikatsu Daruma \(มื้อเย็น\), Hanshin Cafe, Brunch Spot · พัก Cross Hotel Osaka/);
+});
+
+test('ทริปเก่าที่ไม่มีมื้อและที่พัก ข้อความเหมือนเดิม', () => {
+  const old = toAppTrip({ days: [{ places: [{ id: 'a', name: 'Senso-ji', startTime: '09:00' }] }] }, REQ);
+  assert.equal(planText(old, 'th'), 'Tokyo 5 วัน (28 ธ.ค. – 1 ม.ค.)\nวันที่ 1: 09:00 Senso-ji\nวางแผนด้วย AiGo');
+  assert.equal(old.days[0][0].food, undefined);
+});
+
+test('ช่วงคืนที่พักที่เดิม: คืนติดกันชื่อเดียวกันเป็นช่วงเดียว ย้ายเมืองเริ่มช่วงใหม่', () => {
+  const S = (name: string) => ({ name, lat: 0, lon: 0 });
+  const stays = [S('A'), S('A'), S('B'), null];
+  assert.deepEqual(stayNights(stays, 0), { first: 0, last: 1 });
+  assert.deepEqual(stayNights(stays, 1), { first: 0, last: 1 });
+  assert.deepEqual(stayNights(stays, 2), { first: 2, last: 2 });
+  assert.equal(stayNights(stays, 3), null);
+  assert.equal(stayNights(undefined, 0), null);
 });
