@@ -18,6 +18,7 @@ const MAX_KEPT = 600;
 
 const known = new Map<string, string | null>(); // null = ค้นแล้วไม่มีรูป
 const asking = new Set<string>();
+const tries = new Map<string, number>(); // ถามไม่สำเร็จไปแล้วกี่ครั้ง
 const listeners = new Set<() => void>();
 let version = 0;
 const changed = () => { version++; listeners.forEach((l) => l()); };
@@ -44,7 +45,10 @@ async function fetchMissing(qs: PhotoQuery[]) {
       save();
       changed();
     } catch {
-      // ออฟไลน์หรือโดนจำกัดครั้ง: ปล่อยว่าง การ์ดใช้ช่องสีแทน
+      // ออฟไลน์ พับแอปไว้ (iOS ตัดสาย) หรือโดนจำกัดครั้ง: การ์ดใช้ช่องสีไปก่อน แล้วถามใหม่อีกไม่เกิน 3 ครั้ง
+      // (ตัวจับเวลาหยุดตอนพับแอป จึงถามใหม่หลังผู้ใช้กลับมา)
+      const again = batch.filter((q) => { const n = (tries.get(keyOf(q)) ?? 0) + 1; tries.set(keyOf(q), n); return n <= 3; });
+      if (again.length) setTimeout(() => fetchMissing(again), 5000);
     } finally {
       batch.forEach((q) => asking.delete(keyOf(q)));
     }

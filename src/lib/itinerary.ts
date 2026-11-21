@@ -42,6 +42,18 @@ export function plannedText(days: GenDay[]): string {
 }
 
 /** "2 hours" → 120, "1.5 ชม." → 90, "45 minutes" → 45; อ่านไม่ออกถือว่า 60 นาที */
+export type Rounds = { drops: number; stalls: number };
+/**
+ * ตัดสินหลังขอวันจาก generate-itinerary แต่ละรอบ: ได้วันเพิ่มเริ่มนับใหม่
+ * สายหลุด (พับแอป เน็ตสะดุด) ขอต่อได้ 5 ครั้งติดกัน เพราะเซิร์ฟเวอร์ยังทำได้ปกติ
+ * เซิร์ฟเวอร์ตอบจบแต่ไม่ได้วันเพิ่ม ลองอีกครั้งเดียว ไม่วนไม่จบ; null = หยุด
+ */
+export function nextRound(r: Rounds, gotDay: boolean, dropped: boolean): Rounds | null {
+  if (gotDay) return { drops: 0, stalls: 0 };
+  if (dropped) return r.drops < 5 ? { ...r, drops: r.drops + 1 } : null;
+  return r.stalls < 1 ? { ...r, stalls: r.stalls + 1 } : null;
+}
+
 export function minutesOf(duration = ''): number {
   const n = parseFloat(duration.replace(',', '.'));
   if (!Number.isFinite(n)) return 60;

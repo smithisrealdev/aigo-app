@@ -347,8 +347,24 @@ export function PriceTag({ source, at, logo }: { source?: string; at?: string; l
 export function StatusDot({ state }: { state: 'done' | 'now' | 'wait' }) {
   const { colors } = useSettings();
   if (state === 'done') return <Animated.View entering={ZoomIn.springify().damping(10)} style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: colors.success, alignItems: 'center', justifyContent: 'center' }}><Icon name="check" color={colors.bg} size={15} /></Animated.View>;
-  if (state === 'now') return <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}><View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#FFFFFF' }} /></View>;
+  if (state === 'now') return <NowDot color={colors.primary} />;
   return <View style={{ width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: colors.line, backgroundColor: colors.bg }} />;
+}
+
+/** จุด "กำลังทำ" มีวงกระเพื่อมออกเป็นจังหวะ ให้เห็นว่างานยังเดินอยู่ (ลดการเคลื่อนไหวแล้วนิ่ง) */
+function NowDot({ color }: { color: string }) {
+  const reduce = useReducedMotion();
+  const p = useSharedValue(0);
+  useEffect(() => {
+    if (!reduce) p.set(withRepeat(withTiming(1, { duration: 1400, easing: Easing.out(Easing.quad) }), -1, false));
+  }, [reduce, p]);
+  const ring = useAnimatedStyle(() => ({ opacity: 0.45 * (1 - p.value), transform: [{ scale: 1 + p.value * 0.9 }] }));
+  return (
+    <View style={{ width: 26, height: 26 }}>
+      <Animated.View style={[StyleSheet.absoluteFill, { borderRadius: 13, backgroundColor: color }, ring]} />
+      <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: color, alignItems: 'center', justifyContent: 'center' }}><View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#FFFFFF' }} /></View>
+    </View>
+  );
 }
 
 /** ช่องหนึ่งของไทม์ไลน์: วงสถานะทางซ้าย เส้นประเชื่อมลงไปช่องถัดไป เนื้อหาทางขวา */

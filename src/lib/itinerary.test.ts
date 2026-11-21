@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { dateRange, dayCount, genEvent, legOf, minutesOf, peopleOf, plannedText, planText, requestFromSummary, toAppTrip, tripContext } from './itinerary.ts';
+import { dateRange, dayCount, genEvent, legOf, minutesOf, nextRound, peopleOf, plannedText, planText, requestFromSummary, toAppTrip, tripContext } from './itinerary.ts';
 
 const REQ = { destination: 'Tokyo', startDate: '2026-12-28', endDate: '2027-01-01', language: 'th' };
 
@@ -86,4 +86,15 @@ test('แผนเป็นข้อความ: บริบทที่แน
   assert.equal(tripContext(trip, 'th', 0), 'ทริปของฉันที่ AiGo วางไว้: Sapporo, Japan, 24–25 ม.ค., 2 คน\nวันที่ 1: Nijo Market, Odori Park\nตอนนี้ฉันดูวันที่ 1');
   assert.equal(trip.days[0][0].entry.text.th, 'ยังไม่มีราคา', 'AI ไม่ให้ราคา = ยังไม่มีราคา ไม่ใช่ฟรี');
   assert.equal(planText(trip, 'en'), 'Sapporo, Japan, 2 days (24–25 Jan)\nDay 1: 08:00 Nijo Market → 10:00 Odori Park\nPlanned with AiGo');
+});
+
+test('สร้างแผนต่อเมื่อสายหลุด แต่ไม่วนไม่จบ', () => {
+  let r = nextRound({ drops: 0, stalls: 0 }, false, true);
+  for (let i = 0; i < 4; i++) r = nextRound(r!, false, true);
+  assert.deepEqual(r, { drops: 5, stalls: 0 }, 'สายหลุดติดกัน 5 ครั้งยังขอต่อ');
+  assert.equal(nextRound(r!, false, true), null, 'ครั้งที่ 6 หยุด');
+  assert.deepEqual(nextRound(r!, true, true), { drops: 0, stalls: 0 }, 'ได้วันเพิ่มเริ่มนับใหม่');
+  const s = nextRound({ drops: 2, stalls: 0 }, false, false);
+  assert.deepEqual(s, { drops: 2, stalls: 1 }, 'ตอบจบแต่ไม่ได้วัน ลองอีกครั้ง');
+  assert.equal(nextRound(s!, false, false), null, 'ไม่ได้วันสองครั้งติด หยุด');
 });

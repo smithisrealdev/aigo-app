@@ -2,8 +2,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetch } from 'expo/fetch';
 
 import { sseDelta } from '@/lib/chat';
-import { addDays, dayCount, genEvent, plannedText, type GenDay, type GenItinerary, type GenRequest } from '@/lib/itinerary';
+import { AppState } from 'react-native';
+
+import { addDays, dayCount, genEvent, nextRound, plannedText, type GenDay, type GenItinerary, type GenRequest, type Rounds } from '@/lib/itinerary';
 import { PUBLISHABLE_KEY, SUPABASE_URL, supabase } from '@/lib/supabase';
+
+/** รอให้แอปกลับมาอยู่บนจอ: iOS ตัดการเชื่อมต่อของแอปที่ถูกพับไว้ จึงขอต่อเมื่อผู้ใช้กลับมา (กดหยุดระหว่างรอก็จบทันที) */
+function foreground(signal?: AbortSignal) {
+  if (AppState.currentState !== 'background' || signal?.aborted) return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    const sub = AppState.addEventListener('change', (s) => { if (s === 'active') done(); });
+    const done = () => { sub.remove(); signal?.removeEventListener('abort', done); resolve(); };
+    signal?.addEventListener('abort', done, { once: true });
+  });
+}
 
 let device: string | null = null;
 /** เลขประจำเครื่องสำหรับโหมดผู้เยี่ยมชม (edge function อ่านจาก header x-device-id) */
@@ -95,15 +107,17 @@ export async function generateItinerary(req: GenRequest, messages: ChatMessage[]
   let failure: string | null = null;
   // วันมาตามลำดับ: complete ส่งวันที่ day_complete ส่งไปแล้วซ้ำอีก จึงรับเฉพาะวันถัดไป
   const add = (i: number, d: GenDay) => { if (i === days.length && i < total) { days.push(d); onDay(i, d); } };
-  let stalls = 0;
+  let rounds: Rounds | null = { drops: 0, stalls: 0 };
   while (days.length < total) {
+    await foreground(signal);
     if (signal?.aborted) throw new Error('stopped');
     const fromDay = days.length + 1, before = days.length;
-    // ส่งบทสนทนาล่าสุดไปด้วยให้ AI เห็นความต้องการทั้งหมด (สคีมารับได้ 100 ข้อความ)
-    const body = await post('generate-itinerary', {
-      ...req, conversationMessages: messages.slice(-40), ...(fromDay > 1 && { fromDay, planned: plannedText(days) }),
-    }, 30000, signal, true);
+    let dropped = false;
     try {
+      // ส่งบทสนทนาล่าสุดไปด้วยให้ AI เห็นความต้องการทั้งหมด (สคีมารับได้ 100 ข้อความ)
+      const body = await post('generate-itinerary', {
+        ...req, conversationMessages: messages.slice(-40), ...(fromDay > 1 && { fromDay, planned: plannedText(days) }),
+      }, 30000, signal, true);
       await eachLine(body, (line) => {
         const e = genEvent(line);
         if (e?.type === 'day_complete' && e.day) add(e.dayIndex ?? days.length, e.day);
@@ -111,12 +125,16 @@ export async function generateItinerary(req: GenRequest, messages: ChatMessage[]
         else if (e?.type === 'error') failure = e.error ?? 'generation failed';
       });
     } catch (err) {
-      failure = (err as Error).message; // การเชื่อมต่อขาดกลางทาง: วันที่ได้แล้วยังอยู่ ขอต่อรอบหน้า
+      const message = (err as Error).message;
+      if (/^generate-itinerary 4\d\d$/.test(message)) throw err; // เซิร์ฟเวอร์ปฏิเสธ (เช่นโควตาหมด) ขอใหม่ก็ไม่ได้
+      // สายหลุดกลางทาง (iOS ตัดสายเมื่อพับแอป เน็ตสะดุด): วันที่ได้แล้วยังอยู่ รอให้กลับมาแล้วขอวันที่เหลือ
+      failure = message;
+      dropped = true;
     }
     if (signal?.aborted) throw new Error('stopped');
-    // ไม่ได้วันเพิ่มเลย: ลองอีกครั้งเดียว (งานอาจไปตกเครื่องของ Supabase ที่ใกล้หมดเวลา) ถ้ายังไม่ได้ก็หยุด ไม่วนไม่จบ
-    if (days.length > before) stalls = 0;
-    else if (++stalls > 1) break;
+    rounds = nextRound(rounds, days.length > before, dropped);
+    if (!rounds) break;
+    if (dropped) await new Promise((r) => setTimeout(r, 1500 * rounds!.drops));
   }
   if (days.length < total) throw new Error(failure ?? `generate-itinerary stopped at day ${days.length} of ${total}`);
   return { title, destination: req.destination, startDate: req.startDate, endDate: req.endDate, days };

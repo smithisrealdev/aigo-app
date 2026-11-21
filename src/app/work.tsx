@@ -39,8 +39,11 @@ export default function Work() {
   const stopper = useRef<AbortController | null>(null);
   // ทุกแผนได้ id ใหม่ (ตั้งตอนเริ่มงาน) ทริปเก่าที่ที่หมายและวันซ้ำกันจึงไม่ถูกแทนด้วยแผนที่ยังไม่เสร็จ
   const tripId = useRef('');
+  // เวลาเริ่มรอบนี้และจำนวนวันที่มีอยู่แล้ว สำหรับนาฬิกาและเวลาที่น่าจะเหลือ
+  const [clock, setClock] = useState({ since: 0, base: 0 });
   const run = useCallback((j: Pending) => {
     setPlanning(true);
+    setClock({ since: Date.now(), base: got.current.length });
     const ctrl = new AbortController();
     stopper.current = ctrl;
     return generateItinerary(j.request, j.messages, (i, d) => {
@@ -90,7 +93,7 @@ export default function Work() {
           : askAigo(q, trip, lang))} />}>
         <FadeIn><AiSays>{ok
           ? pick({ th: `แผน ${days} วันเสร็จแล้ว ราคาและเวลาเปิดยังเป็นค่าประมาณ ฉันจะตรวจให้ก่อนเดินทาง`, en: `Your ${days}-day plan is ready. Prices and hours are estimates; I will check them before you go.` })
-          : t('work.intro')}</AiSays></FadeIn>
+          : pick({ th: 'ฉันวางแผนให้ทีละวัน ดูหน้าอื่นในแอประหว่างรอได้ ถ้าพับแอปไว้ ฉันจะทำต่อทันทีที่คุณกลับมา', en: 'I plan one day at a time. Look around the app while you wait; if you leave the app, I carry on as soon as you are back.' })}</AiSays></FadeIn>
         <FadeIn index={1}>
           <View accessibilityLiveRegion="polite">
             {tasks.map((task, i) => {
@@ -107,7 +110,10 @@ export default function Work() {
                     </View>
                     {i === 0 && gen.state === 'run' && (
                       <View style={{ gap: space.sm }}>
-                        <T v="small" tone="muted">{pick({ th: `เสร็จ ${ready} จาก ${days} วัน`, en: `${ready} of ${days} days done` })}</T>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: space.sm }}>
+                          <T v="small" tone="muted">{pick({ th: `กำลังวางวันที่ ${ready + 1} จาก ${days}`, en: `Planning day ${ready + 1} of ${days}` })}</T>
+                          <PlanClock since={clock.since} done={ready - clock.base} left={days - ready} />
+                        </View>
                         <ProgressBar value={ready / days} color={colors.success} />
                         <Button kind="secondary" label={pick({ th: 'หยุดสร้างแผน', en: 'Stop planning' })} onPress={() => stopper.current?.abort()} style={{ alignSelf: 'flex-start', minHeight: 44 }} />
                       </View>
@@ -240,5 +246,26 @@ export default function Work() {
         </FadeIn>
       )}
     </Screen>
+  );
+}
+
+/**
+ * นาฬิกาเดินทุกวินาทีระหว่างวางแผน ให้เห็นว่ายังทำงานอยู่ (AI ใช้ราววันละนาที ระหว่างนั้นไม่มีอะไรขยับ)
+ * และเวลาที่น่าจะเหลือจากความเร็วของวันที่เสร็จในรอบนี้; ซ่อนจากโปรแกรมอ่านหน้าจอ ไม่ให้อ่านออกเสียงทุกวินาที
+ */
+function PlanClock({ since, done, left }: { since: number; done: number; left: number }) {
+  const { pick } = useSettings();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const s = Math.max(0, Math.round((now - since) / 1000));
+  const mins = done > 0 ? Math.max(1, Math.round(((s / done) * left) / 60)) : 0;
+  return (
+    <View importantForAccessibility="no-hide-descendants" accessibilityElementsHidden style={{ flexDirection: 'row', columnGap: space.sm }}>
+      <T v="small" tone="muted" style={{ fontVariant: ['tabular-nums'] }}>{`${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`}</T>
+      {mins > 0 && <T v="small" tone="muted">{pick({ th: `อีกราว ${mins} นาที`, en: `about ${mins} min left` })}</T>}
+    </View>
   );
 }
