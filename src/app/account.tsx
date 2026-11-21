@@ -1,12 +1,12 @@
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { Pressable, Switch, View } from 'react-native';
+import { Alert, Platform, Pressable, Switch, View } from 'react-native';
 
 import { Icon } from '@/components/icon';
 
 import { ArtCard, Button, Card, Chip, FadeIn, Row, Screen, T, useToast } from '@/components/ui';
 import { art } from '@/data/trip';
-import { useAuth } from '@/lib/auth';
+import { problem, useAuth } from '@/lib/auth';
 import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
 import { space } from '@/theme/tokens';
@@ -23,7 +23,8 @@ function Group({ title, children, index }: { title: string; children: ReactNode;
 
 export default function Account() {
   const { colors, pick, lang, theme, autoEdit, set } = useSettings();
-  const { user, signOut } = useAuth();
+  const { user, signOut, deleteAccount } = useAuth();
+  const [deleting, setDeleting] = useState(false);
   const toast = useToast();
   const { trip, trips, removeTrip } = useTrip();
   const [confirmClear, setConfirmClear] = useState(false);
@@ -96,11 +97,24 @@ export default function Account() {
       </Group>
       {/* ออกจากระบบ (R36): ทริปยังอยู่ในเครื่องนี้ และยังอยู่ในบัญชีให้เข้ากลับมาเปิดได้ */}
       {user && <Button kind="secondary" label={pick({ th: 'ออกจากระบบ', en: 'Sign out' })} onPress={async () => { await signOut(); toast(pick({ th: 'ออกจากระบบแล้ว ทริปยังอยู่ในเครื่องนี้', en: 'Signed out. Your trips are still on this phone.' })); }} />}
-      {/* shortcut: ลบบัญชียังไม่มีฟังก์ชันบน backend (R35), ปุ่มบอกตรงๆ; แยกห่างจากปุ่มอื่นและใช้สีเตือน */}
+      {/* ลบบัญชี (R35): ถามยืนยันด้วยชื่อบัญชีก่อน ปุ่มยกเลิกเป็นค่าเริ่มต้น แยกห่างจากปุ่มอื่นและใช้สีเตือน */}
       {user && (
-        <Pressable accessibilityRole="button" onPress={() => toast(pick({ th: 'การลบบัญชียังใช้ไม่ได้ในตัวอย่างนี้', en: 'Account deletion is not available in this preview' }))}
-          style={({ pressed }) => ({ minHeight: 44, marginTop: space.xl, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
-          <T v="bodyBold" tone="warn">{pick({ th: 'ลบบัญชีและข้อมูลทั้งหมด', en: 'Delete account and all data' })}</T>
+        <Pressable accessibilityRole="button" disabled={deleting} onPress={() => {
+          const title = pick({ th: `ลบบัญชี ${user.email ?? ''}?`, en: `Delete account ${user.email ?? ''}?` });
+          const body = pick({ th: 'บัญชีและทริปที่เก็บไว้ในบัญชีจะถูกลบถาวร กู้คืนไม่ได้ ทริปในเครื่องนี้ยังอยู่ ลบเองได้ที่หน้านี้', en: 'Your account and the trips kept in it are deleted for good and cannot be restored. Trips on this phone stay; you can delete them on this screen.' });
+          const run = async () => {
+            setDeleting(true);
+            try { await deleteAccount(); toast(pick({ th: 'ลบบัญชีแล้ว', en: 'Account deleted' })); } catch (e) { toast(pick(problem(e).text)); } finally { setDeleting(false); }
+          };
+          // เว็บไม่มี Alert ของระบบ ใช้กล่องยืนยันของเบราว์เซอร์แทน
+          if (Platform.OS === 'web') { if ((globalThis as { confirm?: (m: string) => boolean }).confirm?.(`${title}\n\n${body}`)) run(); return; }
+          Alert.alert(title, body, [
+            { text: pick({ th: 'ยกเลิก', en: 'Cancel' }), style: 'cancel' },
+            { text: pick({ th: 'ลบบัญชี', en: 'Delete account' }), style: 'destructive', onPress: run },
+          ], { cancelable: true });
+        }}
+          style={({ pressed }) => ({ minHeight: 44, marginTop: space.xl, alignItems: 'center', justifyContent: 'center', opacity: pressed || deleting ? 0.6 : 1 })}>
+          <T v="bodyBold" tone="warn">{deleting ? pick({ th: 'กำลังลบบัญชี...', en: 'Deleting account...' }) : pick({ th: 'ลบบัญชี', en: 'Delete account' })}</T>
         </Pressable>
       )}
     </Screen>

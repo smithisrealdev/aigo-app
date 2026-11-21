@@ -79,6 +79,8 @@ type Ctx = {
   /** false = ผู้ใช้ปิดหน้าต่างเอง */
   signInWith: (provider: Provider) => Promise<boolean>;
   signOut: () => Promise<void>;
+  /** ลบบัญชีและข้อมูลในบัญชีถาวร (R35) แล้วออกจากเครื่องนี้ ทริปในเครื่องยังอยู่ */
+  deleteAccount: () => Promise<void>;
 };
 const AuthContext = createContext<Ctx | null>(null);
 
@@ -110,6 +112,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signOut: async () => {
       const { error } = await supabase.auth.signOut();
       if (error) await supabase.auth.signOut({ scope: 'local' }); // ออฟไลน์: ออกจากเครื่องนี้ก่อน
+    },
+    deleteAccount: async () => {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      if (!token) throw new AuthProblem({ th: 'เข้าสู่ระบบใหม่ก่อน แล้วค่อยลบบัญชี', en: 'Sign in again first, then delete the account' });
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-account`, { method: 'POST', headers: { apikey: PUBLISHABLE_KEY, Authorization: `Bearer ${token}` } })
+        .catch((e: unknown) => { throw problem(e); });
+      if (res.status === 401) throw new AuthProblem({ th: 'เข้าสู่ระบบใหม่อีกครั้ง แล้วลองลบอีกที', en: 'Sign in again, then try deleting once more' });
+      if (!res.ok) throw new AuthProblem({ th: 'ลบบัญชีไม่สำเร็จ บัญชียังอยู่ ลองใหม่อีกครั้ง', en: 'Could not delete the account. It is still there; please try again.' });
+      await supabase.auth.signOut({ scope: 'local' }); // บัญชีไม่อยู่แล้ว ออกจากเครื่องนี้อย่างเดียว
     },
   };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

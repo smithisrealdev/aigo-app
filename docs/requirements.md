@@ -159,7 +159,7 @@ Mockup: https://claude.ai/artifact/YDHqzheiiRT8wMjZe3AAb8 (ลิงก์ส่
 | จอง | `search-flights`, `search-hotels`, `search-activities`, `track-affiliate-click` | |
 | ซื้อในแอป (R32) | Stripe เท่านั้น | ตรวจใบเสร็จของสโตร์ แล้วเติมสิทธิ์ |
 | push (R30) | ไม่มี | เก็บ device token และส่งแจ้งเตือน |
-| ลบบัญชี (R35) | ไม่มี | ฟังก์ชันลบข้อมูลผู้ใช้ |
+| ลบบัญชี (R35) | `delete-account` ลบบัญชีและข้อมูลทุกตารางที่ผูกกับบัญชี ปุ่มอยู่ในหน้าบัญชี | |
 | เข้าสู่ระบบ (R19) | อีเมลพร้อมรหัส 6 หลัก, Google, Apple อยู่ในแอปแล้ว | เปิด Google และ Apple ใน Supabase Auth, ใส่รหัสในแม่แบบอีเมล, ต่อบริการส่งอีเมล (backend.md) |
 | ออฟไลน์ (R23) | ไม่มี (โค้ดเว็บมีแต่ไม่ได้ใช้) | เก็บทริปในเครื่อง |
 
