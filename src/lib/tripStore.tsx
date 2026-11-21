@@ -100,8 +100,13 @@ export function TripProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!ready || !runningKey) return;
     let gone = false;
+    let asking = false; // ถามทีละรอบ: เน็ตช้ารอบเก่ายังไม่ตอบ ไม่ซ้อนรอบใหม่
     const tick = async () => {
-      if (AppState.currentState === 'background') return;
+      if (AppState.currentState === 'background' || asking) return;
+      asking = true;
+      try { await ask(); } finally { asking = false; }
+    };
+    const ask = async () => {
       for (const t of running) {
         // ออฟไลน์: รอบหน้าถามใหม่; 403 = งานไม่อยู่แล้ว (เช่นลบบัญชีแล้ว) จบแผน ไม่ถามต่อไปตลอด
         const s = await planStatus(t.plan!, t.plan!.days.length).catch((e: Error) => (/ 403$/.test(e.message) ? planGone(t) : null));

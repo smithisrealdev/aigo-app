@@ -41,16 +41,26 @@ async function post(fn: string, body: unknown, connectMs: number, signal?: Abort
   }
 }
 
-/** เรียก edge function ที่ตอบเป็น JSON; asUser = ส่ง token ของบัญชีไปด้วยเมื่อเข้าสู่ระบบแล้ว (เหมือน post) */
+/**
+ * เรียก edge function ที่ตอบเป็น JSON; asUser = ส่ง token ของบัญชีไปด้วยเมื่อเข้าสู่ระบบแล้ว (เหมือน post)
+ * ไม่ได้คำตอบใน 20 วินาทีถือว่าไม่สำเร็จ (เน็ตค้าง): ปุ่มที่รออยู่จึงกลับมากดได้ และตัวถามสถานะไม่ค้าง
+ */
 export async function postJson<T>(fn: string, body: unknown, asUser = false): Promise<T> {
   const token = asUser ? (await supabase.auth.getSession()).data.session?.access_token : undefined;
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/${fn}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', apikey: PUBLISHABLE_KEY, 'x-device-id': await deviceId(), ...(token && { Authorization: `Bearer ${token}` }) },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`${fn} ${res.status}`);
-  return (await res.json()) as T;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 20000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/${fn}`, {
+      method: 'POST',
+      signal: ctrl.signal,
+      headers: { 'Content-Type': 'application/json', apikey: PUBLISHABLE_KEY, 'x-device-id': await deviceId(), ...(token && { Authorization: `Bearer ${token}` }) },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`${fn} ${res.status}`);
+    return (await res.json()) as T;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /** อ่านคำตอบแบบสตรีมทีละบรรทัด (SSE) */
@@ -88,11 +98,12 @@ export type PlanRef = { job: string; token: string };
 
 /**
  * ส่งงานวางแผนให้เซิร์ฟเวอร์ ซึ่งทำต่อเองจนครบทุกวันแม้ปิดแอป (supabase/plan_jobs.sql)
+ * key = id ของทริป: ส่งซ้ำเพราะคำตอบแรกหาย (เน็ตหลุด) ได้งานเดิมกลับมา ไม่ได้แผนซ้ำและไม่เสียโควตาอีกครั้ง
  * โควตาหมดได้ error "generate-itinerary 429"
  */
-export async function startPlan(req: GenRequest, messages: ChatMessage[]): Promise<PlanRef> {
+export async function startPlan(req: GenRequest, messages: ChatMessage[], key: string): Promise<PlanRef> {
   // ส่งบทสนทนาล่าสุดไปด้วยให้ AI เห็นความต้องการทั้งหมด (สคีมารับได้ 100 ข้อความ)
-  const r = await postJson<{ jobId: string; token: string }>('generate-itinerary', { job: 'start', ...req, conversationMessages: messages.slice(-40) }, true);
+  const r = await postJson<{ jobId: string; token: string }>('generate-itinerary', { job: 'start', key, ...req, conversationMessages: messages.slice(-40) }, true);
   return { job: r.jobId, token: r.token };
 }
 /** สถานะงาน และวันที่เสร็จแล้วตั้งแต่ลำดับ have (แอปมี have วันแล้ว) */

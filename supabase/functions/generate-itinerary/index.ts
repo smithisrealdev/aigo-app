@@ -206,6 +206,18 @@ serve(async (req) => {
       );
     }
 
+    // A retried start (its first reply was lost) gets the job the first start made, before the free-trip check: that job may
+    // already have counted the trip. The app sends its trip id as the key.
+    const startKey = body?.job === 'start' && typeof body?.key === 'string' && body.key ? body.key.slice(0, 64) : null;
+    const owner = userId ? accountKey(userId) : deviceId!;
+    const sameJob = async () => {
+      if (!startKey) return null;
+      const { data } = await db.from('plan_jobs').select('id, token, total_days').eq('owner', owner).eq('client_key', startKey).maybeSingle();
+      return data && json({ jobId: data.id, token: data.token, totalDays: data.total_days });
+    };
+    const again = await sameJob();
+    if (again) return again;
+
     // Validate request body
     let validatedData;
     try {
@@ -264,8 +276,9 @@ serve(async (req) => {
     if (body?.job === 'start') {
       const token = crypto.randomUUID().replaceAll('-', '');
       const { data: row, error } = await db.from('plan_jobs')
-        .insert({ token, owner: userId ? accountKey(userId) : deviceId, request: { ...validatedData, fromDay: undefined, planned: undefined }, total_days: totalDays })
+        .insert({ token, owner, client_key: startKey, request: { ...validatedData, fromDay: undefined, planned: undefined }, total_days: totalDays })
         .select('id').single();
+      if (error?.code === '23505') { const same = await sameJob(); if (same) return same; } // two starts with one key at once
       if (error || !row) { console.error('[generate-itinerary] job start failed', error); return json({ error: 'Could not start the plan' }, 500); }
       kick(row.id, token);
       return json({ jobId: row.id, token, totalDays });
@@ -539,15 +552,14 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
       const { data: n, error } = await db.rpc('plan_job_add_day', { p_id: job.id, p_index: index, p_day: day, p_title: title ?? null });
       if (error) console.error('[generate-itinerary] job day save failed', error);
       if (typeof n !== 'number') { jobHalt = true; return; }
-      jobSaved = n;
-      if (n === 1) await incrementGuestGenerationUsage(job.owner); // the job's one free-trip count
+      jobSaved = n; // saving day 1 also counted the job's one free trip (plan_job_add_day)
     };
     const releaseJob = (error?: string) => db.from('plan_jobs')
       .update({ lease_until: null, updated_at: new Date().toISOString(), ...(error && { error }) })
       .eq('id', job!.id).eq('status', 'running');
     const writeSSE = async (type: string, data: any) => {
       if (!job) return void (await writer.write(encoder.encode(sseEvent(type, data))));
-      if (type === 'day_complete') await saveJobDay(data.dayIndex, data.day);
+      if (type === 'day_complete') await saveJobDay(data.dayIndex, data.day, data.tripTitle);
       else if (type === 'complete') {
         for (const [i, d] of (data.itinerary?.days ?? []).entries()) await saveJobDay(fromDay - 1 + i, d, data.itinerary?.title);
         // the days usually went in while streaming, before the AI's title existed: keep the first title any part wrote
@@ -724,6 +736,12 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
         let finishReason = 'unknown';
         let sseLineBuffer = ''; // buffer for lines split across chunks
         let stoppedEarly = false;
+        // The trip title comes before "days" in the JSON: save it with day 1, so a short plan never ends without one
+        let tripTitle: string | undefined;
+        const titleOf = (json: string) => {
+          const m = json.slice(0, daysArrayStart).match(/"title"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+          try { return m ? JSON.parse(`"${m[1]}"`) as string : undefined; } catch { return undefined; }
+        };
 
         try {
           while (!stoppedEarly) {
@@ -758,7 +776,7 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
               while (lastEmittedDay < completeDays) {
                 const dayIndex = lastEmittedDay; // 0-based within this call
                 lastEmittedDay++;
-                if (lastEmittedDay === 1) firstDayAt = Date.now();
+                if (lastEmittedDay === 1) { firstDayAt = Date.now(); tripTitle = titleOf(accumulated); }
                 const dayNo = fromDay - 1 + lastEmittedDay; // day number in the whole trip
                 const hydratedDay = hydrateSingleDay(dayObjects[dayIndex], dayIndex);
                 if (hydratedDay) {
@@ -778,6 +796,7 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
                   await writeSSE('day_complete', {
                     dayIndex: dayNo - 1,
                     day: hydratedDay,
+                    tripTitle,
                     totalDays,
                     destination: destinationStr,
                     tripStyle,

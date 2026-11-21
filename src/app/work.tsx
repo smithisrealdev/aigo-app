@@ -41,10 +41,11 @@ export default function Work() {
   const photo = usePhotos(job ? trip.days.slice(0, ready).flat().filter((p) => !p.photo).map((p) => ({ name: p.name.en, near })) : []);
   // เวลาเริ่มรอบนี้และจำนวนวันที่มีอยู่แล้ว สำหรับนาฬิกาและเวลาที่น่าจะเหลือ
   const [clock, setClock] = useState({ since: 0, base: 0 });
+  const [busy, setBusy] = useState(false); // สั่งหยุดหรือทำต่อแล้ว รอเซิร์ฟเวอร์ตอบ
   const start = useCallback((j: Pending) => {
     setSend({ state: 'run' });
     setClock({ since: Date.now(), base: 0 });
-    startPlan(j.request, j.messages)
+    startPlan(j.request, j.messages, tripId)
       .then((ref) => setTrip({
         ...toAppTrip({ days: [] }, j.request, j.people), id: tripId, bookings: j.cards,
         plan: { job: ref.job, token: ref.token, status: 'running', request: j.request, people: j.people, days: [] },
@@ -74,16 +75,15 @@ export default function Work() {
     // (ตั้งเองก่อน ตัวถามสถานะอาจอ่านค่าเก่ามาทับ แผนจึงเด้งกลับเป็น "หยุดแล้ว" ทั้งที่เซิร์ฟเวอร์ทำต่ออยู่)
     const offline = () => toast(pick({ th: 'ต่ออินเทอร์เน็ตไม่ได้ ลองใหม่อีกครั้ง', en: 'No connection. Please try again.' }));
     const settle = (p: PlanInfo) => planStatus(p, p.days.length).then((s) => applyPlan(trip.id, s));
+    // ระหว่างรอเซิร์ฟเวอร์ (2-3 วินาที) ปุ่มขึ้นว่ากำลังทำ กดซ้ำไม่ได้
+    const act = (call: (p: PlanInfo) => Promise<unknown>, p: PlanInfo) => { setBusy(true); call(p).then(() => settle(p)).catch(offline).finally(() => setBusy(false)); };
     // ลองใหม่: งานที่หยุดหรือไม่สำเร็จทำต่อจากวันที่มีแล้ว; ส่งงานไม่ผ่านตั้งแต่แรกก็ส่งใหม่
     const retry = () => {
       if (!plan) return start(job);
       setClock({ since: Date.now(), base: trip.days.length });
-      resumePlan(plan).then(() => settle(plan)).catch(offline);
+      act(resumePlan, plan);
     };
-    const stop = () => {
-      if (!plan) return;
-      stopPlan(plan).then(() => settle(plan)).catch(offline);
-    };
+    const stop = () => { if (plan) act(stopPlan, plan); };
     const cards = job.cards ?? [];
     const found = (...kinds: CardKind[]) => cards.filter((c) => kinds.includes(c.kind)).length;
     const tasks = [
@@ -123,7 +123,7 @@ export default function Work() {
                           <PlanClock since={clock.since} done={ready - clock.base} left={days - ready} />
                         </View>
                         <ProgressBar value={ready / days} color={colors.success} />
-                        <Button kind="secondary" label={pick({ th: 'หยุดสร้างแผน', en: 'Stop planning' })} onPress={stop} style={{ alignSelf: 'flex-start', minHeight: 44 }} />
+                        <Button kind="secondary" label={pick({ th: 'หยุดสร้างแผน', en: 'Stop planning' })} busy={busy} busyLabel={pick({ th: 'กำลังหยุด…', en: 'Stopping…' })} onPress={stop} style={{ alignSelf: 'flex-start', minHeight: 44 }} />
                       </View>
                     )}
                   </View>
@@ -140,7 +140,7 @@ export default function Work() {
                 ? pick({ th: `ได้แผน ${ready} จาก ${days} วัน เก็บไว้ในทริปแล้ว วางวันที่เหลือต่อได้ทุกเมื่อจากหน้านี้`, en: `${ready} of ${days} days are planned and saved. You can plan the rest from here.` })
                 : pick({ th: 'ยังไม่ได้วันไหนเลย สรุปทริปยังอยู่ครบ', en: 'No days yet. Your trip summary is kept.' })}</T>
               <View style={{ flexDirection: 'row', gap: space.sm }}>
-                <Button label={pick({ th: 'วางวันที่เหลือต่อ', en: 'Plan the rest' })} onPress={retry} style={{ flex: 1 }} />
+                <Button label={pick({ th: 'วางวันที่เหลือต่อ', en: 'Plan the rest' })} busy={busy} busyLabel={pick({ th: 'กำลังเริ่มต่อ…', en: 'Starting…' })} onPress={retry} style={{ flex: 1 }} />
                 {ready > 0 && <Button kind="secondary" label={pick({ th: 'ดูแผน', en: 'See plan' })} onPress={() => router.push('/itinerary')} style={{ flex: 1 }} />}
               </View>
             </Card>
@@ -158,7 +158,7 @@ export default function Work() {
               <View style={{ flexDirection: 'row', gap: space.sm }}>
                 {gen.quota
                   ? <Button label={pick({ th: 'ดูแพ็กทริป', en: 'See trip packs' })} onPress={() => router.push({ pathname: '/paywall', params: { used: '1' } })} style={{ flex: 1 }} />
-                  : <Button label={pick({ th: 'ลองใหม่', en: 'Try again' })} onPress={retry} style={{ flex: 1 }} />}
+                  : <Button label={pick({ th: 'ลองใหม่', en: 'Try again' })} busy={busy} busyLabel={pick({ th: 'กำลังเริ่มต่อ…', en: 'Starting…' })} onPress={retry} style={{ flex: 1 }} />}
                 <Button kind="secondary" label={pick({ th: 'ไว้ทีหลัง', en: 'Later' })} onPress={() => router.back()} style={{ flex: 1 }} />
               </View>
             </Card>

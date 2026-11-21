@@ -18,6 +18,9 @@ create table if not exists public.plan_jobs (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+-- The app's trip id (migration plan_jobs_minors): a retried start whose first reply was lost gets the same job, not a second plan
+alter table public.plan_jobs add column if not exists client_key text;
+create unique index if not exists plan_jobs_client_key on public.plan_jobs (owner, client_key) where client_key is not null;
 alter table public.plan_jobs enable row level security;
 create index if not exists plan_jobs_running on public.plan_jobs (lease_until) where status = 'running';
 
@@ -40,9 +43,12 @@ begin
 end $$;
 
 -- Save the next day (p_index = days saved so far) and keep the lease; the last day finishes the job.
+-- Saving day 1 also counts the plan's free trip on its owner, in the same transaction: never lost, never twice (migration plan_jobs_minors).
 -- Null = the job was stopped or that day is already saved, so the run should end.
 create or replace function public.plan_job_add_day(p_id uuid, p_index int, p_day jsonb, p_title text)
-returns int language sql set search_path = '' as $$
+returns int language plpgsql set search_path = '' as $$
+declare n int; who text;
+begin
   update public.plan_jobs
      set days = days || jsonb_build_array(p_day),
          title = coalesce(title, p_title),
@@ -51,8 +57,10 @@ returns int language sql set search_path = '' as $$
          lease_until = case when p_index + 1 >= total_days then null else now() + interval '160 seconds' end,
          updated_at = now()
    where id = p_id and status = 'running' and jsonb_array_length(days) = p_index
-  returning jsonb_array_length(days);
-$$;
+  returning jsonb_array_length(days), owner into n, who;
+  if n = 1 then perform public.increment_guest_generation_usage(who); end if;
+  return n;
+end $$;
 
 revoke all on function public.plan_job_claim(uuid, text) from public, anon, authenticated;
 revoke all on function public.plan_job_add_day(uuid, int, jsonb, text) from public, anon, authenticated;
@@ -71,3 +79,6 @@ select cron.schedule('plan-jobs-tick', '15 seconds', $tick$
   where status = 'running' and (lease_until is null or lease_until < now())
   limit 10;
 $tick$);
+
+-- Keep one week of pg_cron run history: the 15 s tick adds about 5,760 rows a day (migration plan_jobs_minors)
+select cron.schedule('purge-cron-history', '23 3 * * *', $purge$ delete from cron.job_run_details where end_time < now() - interval '7 days' $purge$);

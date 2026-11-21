@@ -24,13 +24,18 @@ console.log('unknown job -> 403');
 
 const start = new Date(Date.now() + 40 * 86400000);
 const req = {
-  job: 'start', destination: 'Chiang Mai', startDate: iso(start), endDate: iso(new Date(+start + (days - 1) * 86400000)), language: 'th',
+  job: 'start', key: `trip-${device}`, destination: 'Chiang Mai', startDate: iso(start), endDate: iso(new Date(+start + (days - 1) * 86400000)), language: 'th',
   ...(!noChat && { conversationMessages: [{ role: 'user', content: `เที่ยวเชียงใหม่และภาคเหนือ ${days} วัน ชอบคาเฟ่ วัด ธรรมชาติ` }] }),
 };
 const s = await post(req);
 if (s.status !== 200 || !s.data?.jobId || !s.data?.token || s.data.totalDays !== days) fail(`start should give jobId, token, totalDays=${days}; got ${s.status} ${s.text.slice(0, 200)}`);
 console.log('started', s.data.jobId);
 const { jobId, token } = s.data;
+
+// The app sends its trip id as key: a start sent again (its first reply was lost) gets the same job, not a second plan
+const twice = await post(req);
+if (twice.data?.jobId !== jobId || twice.data?.token !== token) fail(`a start sent twice with one key should give the same job, got ${twice.status} ${twice.text.slice(0, 160)}`);
+console.log('same key -> same job');
 
 const wrong = await post({ job: 'status', jobId, token: token + 'x', have: 0 });
 if (wrong.status !== 403) fail(`status with a wrong token should be 403, got ${wrong.status}`);
@@ -42,6 +47,7 @@ while (Date.now() - t0 < (days > 10 ? 20 : 9) * 60_000) {
   await new Promise((r) => setTimeout(r, 20_000));
   last = (await post({ job: 'status', jobId, token, have: 0 })).data;
   console.log(`${Math.round((Date.now() - t0) / 1000)}s: ${last?.status} ${last?.days?.length}/${last?.totalDays}${last?.error ? ' error=' + last.error : ''}`);
+  if (last?.days?.length && !last.title) fail('the trip title should come with day 1');
   if (last?.status !== 'running') break;
 }
 if (last?.status !== 'done' || last.days.length !== days) fail(`job should end done with ${days} days, got ${last?.status} ${last?.days?.length}`);
@@ -55,7 +61,7 @@ if (new Set(names).size !== names.length) console.warn(`note: the AI repeated a 
 const tail = (await post({ job: 'status', jobId, token, have: days - 1 })).data;
 if (tail?.days?.length !== 1) fail(`have=${days - 1} should return only the last day, got ${tail?.days?.length}`);
 // The free trip was counted when day 1 was saved; a start that says it continues a trip is still a new trip
-const again = await post({ ...req, fromDay: days });
+const again = await post({ ...req, key: undefined, fromDay: days });
 if (again.data?.jobId) await post({ job: 'stop', jobId: again.data.jobId, token: again.data.token });
 if (again.status !== 429 || again.data?.code !== 'GUEST_QUOTA_EXCEEDED') fail(`a start with fromDay from a device past its free trip should get 429 GUEST_QUOTA_EXCEEDED, got ${again.status} ${again.text.slice(0, 160)}`);
 console.log('start with fromDay past the free trip -> 429');
