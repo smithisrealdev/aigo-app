@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { Alert, Platform, Pressable, Switch, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, Switch, View } from 'react-native';
 
 import { Icon } from '@/components/icon';
 
@@ -25,6 +25,7 @@ export default function Account() {
   const { colors, pick, lang, theme, autoEdit, set } = useSettings();
   const { user, signOut, deleteAccount } = useAuth();
   const [deleting, setDeleting] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const toast = useToast();
   const { trip, trips, removeTrip } = useTrip();
   const [confirmClear, setConfirmClear] = useState(false);
@@ -96,7 +97,11 @@ export default function Account() {
         </Row>
       </Group>
       {/* ออกจากระบบ (R36): ทริปยังอยู่ในเครื่องนี้ และยังอยู่ในบัญชีให้เข้ากลับมาเปิดได้ */}
-      {user && <Button kind="secondary" label={pick({ th: 'ออกจากระบบ', en: 'Sign out' })} onPress={async () => { await signOut(); toast(pick({ th: 'ออกจากระบบแล้ว ทริปยังอยู่ในเครื่องนี้', en: 'Signed out. Your trips are still on this phone.' })); }} />}
+      {user && <Button kind="secondary" label={pick({ th: 'ออกจากระบบ', en: 'Sign out' })} busy={leaving} busyLabel={pick({ th: 'กำลังออกจากระบบ…', en: 'Signing out…' })} onPress={async () => {
+        if (leaving) return;
+        setLeaving(true);
+        try { await signOut(); toast(pick({ th: 'ออกจากระบบแล้ว ทริปยังอยู่ในเครื่องนี้', en: 'Signed out. Your trips are still on this phone.' })); } catch (e) { toast(pick(problem(e).text)); } finally { setLeaving(false); }
+      }} />}
       {/* ลบบัญชี (R35): ถามยืนยันด้วยชื่อบัญชีก่อน ปุ่มยกเลิกเป็นค่าเริ่มต้น แยกห่างจากปุ่มอื่นและใช้สีเตือน */}
       {user && (
         <Pressable accessibilityRole="button" disabled={deleting} onPress={() => {
@@ -113,8 +118,10 @@ export default function Account() {
             { text: pick({ th: 'ลบบัญชี', en: 'Delete account' }), style: 'destructive', onPress: run },
           ], { cancelable: true });
         }}
-          style={({ pressed }) => ({ minHeight: 44, marginTop: space.xl, alignItems: 'center', justifyContent: 'center', opacity: pressed || deleting ? 0.6 : 1 })}>
-          <T v="bodyBold" tone="warn">{deleting ? pick({ th: 'กำลังลบบัญชี...', en: 'Deleting account...' }) : pick({ th: 'ลบบัญชี', en: 'Delete account' })}</T>
+          accessibilityState={{ busy: deleting }}
+          style={({ pressed }) => ({ minHeight: 44, marginTop: space.xl, flexDirection: 'row', gap: space.sm, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
+          {deleting && <ActivityIndicator size="small" color={colors.warn} />}
+          <T v="bodyBold" tone="warn">{deleting ? pick({ th: 'กำลังลบบัญชี…', en: 'Deleting account…' }) : pick({ th: 'ลบบัญชี', en: 'Delete account' })}</T>
         </Pressable>
       )}
     </Screen>

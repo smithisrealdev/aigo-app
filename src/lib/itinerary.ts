@@ -133,6 +133,8 @@ export function withPlanState(trip: AppTrip, s: PlanState): AppTrip {
 }
 
 /** งานไม่อยู่บนเซิร์ฟเวอร์แล้ว (ตอบ 403 เช่นลบบัญชีแล้ว แต่ทริปยังอยู่ในเครื่อง): จบแผนแบบไม่สำเร็จ ไม่ถามซ้ำไปตลอด */
+/** แผนเพิ่งเสร็จตอนนี้: เปลี่ยนจากกำลังวางเป็นเสร็จ ไม่ใช่เปิดหน้ามาเจอแผนที่เสร็จแล้ว */
+export const finishedNow = (before?: PlanStatus, now?: PlanStatus) => before === 'running' && now === 'done';
 export const planGone = (trip: AppTrip): PlanState => ({ status: 'failed', error: 'gone', totalDays: trip.totalDays, from: trip.plan?.days.length ?? 0, days: [] });
 
 /** ที่แวะของแต่ละวันเป็นบรรทัด ข้ามวันที่ยังว่าง */

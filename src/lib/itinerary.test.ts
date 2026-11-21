@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { dateRange, dayCount, genEvent, legOf, minutesOf, peopleOf, plannedText, planText, requestFromSummary, toAppTrip, planGone, tripContext, withPlanState } from './itinerary.ts';
+import { dateRange, dayCount, finishedNow, genEvent, legOf, minutesOf, peopleOf, plannedText, planText, requestFromSummary, toAppTrip, planGone, tripContext, withPlanState } from './itinerary.ts';
 
 const REQ = { destination: 'Tokyo', startDate: '2026-12-28', endDate: '2027-01-01', language: 'th' };
 
@@ -120,4 +120,12 @@ test('งานบนเซิร์ฟเวอร์หายไป (ลบบ
   assert.equal(gone.plan?.status, 'failed', 'ไม่ใช่ running ตัวถามทุก 3 วินาทีจึงหยุด');
   assert.equal(gone.plan?.error, 'gone');
   assert.deepEqual(gone.days.map((d) => d[0]?.id), ['a']);
+});
+
+test('แผนเพิ่งเสร็จ: เฉพาะตอนเปลี่ยนจากกำลังวางเป็นเสร็จ (เปิดหน้าแผนที่เสร็จแล้วไม่ฉลองซ้ำ)', () => {
+  assert.equal(finishedNow('running', 'done'), true);
+  assert.equal(finishedNow('done', 'done'), false, 'เสร็จอยู่แล้ว');
+  assert.equal(finishedNow(undefined, 'done'), false, 'เปิดหน้ามาก็เห็นว่าเสร็จแล้ว');
+  assert.equal(finishedNow('stopped', 'done'), false);
+  assert.equal(finishedNow('running', 'failed'), false, 'ล้มเหลวไม่ใช่เสร็จ');
 });

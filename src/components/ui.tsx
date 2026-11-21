@@ -1,7 +1,7 @@
 import { BlurView } from 'expo-blur';
 import { Image, type ImageSource } from 'expo-image';
 import * as Haptics from 'expo-haptics';
-import { usePathname } from 'expo-router';
+import { useIsFocused, usePathname } from 'expo-router';
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ComponentRef, type ReactNode } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextProps, type TextStyle, type ViewStyle } from 'react-native';
 import Animated, { Easing, FadeIn as FadeInOpacity, FadeOut, FadeOutDown, FadeInUp, LinearTransition, ReduceMotion, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withSpring, withTiming, ZoomIn } from 'react-native-reanimated';
@@ -243,10 +243,60 @@ export function Tape({ color, style, rotate = -8 }: { color: string; style?: Sty
 /** รูป ถ้าไม่มีรูป (ทริปที่ AiGo สร้างยังไม่มีภาพ) ใช้ช่องสีพาสเทลมีหมุด สีเลือกจากชื่อให้คงที่ */
 export function PhotoBox({ source, seed = '', style }: { source?: ImageSource; seed?: string; style: StyleProp<ViewStyle> & { width: number; height: number } }) {
   const { colors } = useSettings();
-  if (source) return <Image source={source} style={style as StyleProp<import('react-native').ImageStyle>} contentFit="cover" accessible={false} transition={200} />;
+  if (source) return <View style={[style, { overflow: 'hidden', backgroundColor: colors.surfaceSoft }]}><Fill source={source} /></View>;
   const tones = Object.values(colors.sticker);
   const tone = tones[[...seed].reduce((n, c) => n + c.charCodeAt(0), 0) % tones.length];
   return <View style={[style, { backgroundColor: tone, alignItems: 'center', justifyContent: 'center' }]}><Icon name="pin" color={colors.ink} size={Math.min(style.width, style.height) * 0.36} /></View>;
+}
+
+/** รูปเต็มกรอบ: ระหว่างรอรูปมีแสงกวาด รูปมาแล้ว (หรือโหลดไม่ได้) แสงหยุด */
+function Fill({ source, transition = 200 }: { source: ImageSource; transition?: number }) {
+  const k = JSON.stringify(source);
+  const [done, setDone] = useState('');
+  return (
+    <>
+      {done !== k && <Sweep />}
+      <Image source={source} style={StyleSheet.absoluteFill} contentFit="cover" accessible={false} transition={transition} onLoad={() => setDone(k)} onError={() => setDone(k)} />
+    </>
+  );
+}
+
+/** แสงกวาดของโครงร่าง: แถบไล่สีเลื่อนผ่านด้วย translateX ทุก 1.2 วินาที; ลดการเคลื่อนไหวแล้วจางเข้าออกช้าๆ แทน; หยุดเมื่อออกจากหน้า */
+function Sweep() {
+  const { isDark } = useSettings();
+  const reduce = useReduceMotion();
+  const focused = useIsFocused();
+  const id = 'k' + useId().replace(/[^a-zA-Z0-9]/g, '');
+  const [w, setW] = useState(0);
+  const v = useSharedValue(0);
+  useEffect(() => {
+    v.set(0);
+    if (!focused || !w) return;
+    // ลดการเคลื่อนไหว: ยังจางให้เห็นว่ากำลังโหลด (Reanimated ข้ามทุกแอนิเมชันถ้าเปิดไว้ตั้งแต่เปิดแอป จึงสั่งให้เล่นเสมอ)
+    v.set(reduce
+      ? withRepeat(withTiming(1, { duration: 1200, reduceMotion: ReduceMotion.Never }), -1, true, undefined, ReduceMotion.Never)
+      : withRepeat(withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.quad) }), -1, false));
+  }, [focused, reduce, w, v]);
+  const band = useAnimatedStyle(() => (reduce ? { opacity: v.value } : { transform: [{ translateX: (v.value * 2 - 1) * w }] }));
+  const glow = isDark ? 0.07 : 0.55;
+  return (
+    <View pointerEvents="none" style={StyleSheet.absoluteFill} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
+      <Animated.View style={[StyleSheet.absoluteFill, reduce && { backgroundColor: `rgba(255,255,255,${glow})` }, band]}>
+        {!reduce && (
+          <Svg width="100%" height="100%" viewBox="0 0 1 1" preserveAspectRatio="none">
+            <Defs><LinearGradient id={id} x1="0" y1="0" x2="1" y2="0"><Stop offset="0" stopColor="#FFFFFF" stopOpacity="0" /><Stop offset="0.5" stopColor="#FFFFFF" stopOpacity={glow} /><Stop offset="1" stopColor="#FFFFFF" stopOpacity="0" /></LinearGradient></Defs>
+            <Rect width="1" height="1" fill={`url(#${id})`} />
+          </Svg>
+        )}
+      </Animated.View>
+    </View>
+  );
+}
+
+/** โครงร่างระหว่างโหลด: ก้อนสีอ่อนรูปทรงเดียวกับของจริง มีแสงกวาด */
+export function Skeleton({ style }: { style?: StyleProp<ViewStyle> }) {
+  const { colors } = useSettings();
+  return <View style={[{ backgroundColor: colors.surfaceSoft, overflow: 'hidden' }, style]}><Sweep /></View>;
 }
 
 /** รูปโพลารอยด์ กรอบขาว เอียงได้ ติดเทปได้ */
@@ -277,6 +327,21 @@ export function PhotoStrip({ items }: { items: { key: string; source?: ImageSour
   );
 }
 
+/** โครงร่างของแถวโพลารอยด์ (สามใบ ขนาดและมุมเอียงเดียวกับของจริง) ระหว่างรอ AiGo วางวันถัดไป */
+export function PhotoStripSkeleton({ label }: { label: string }) {
+  const { isDark } = useSettings();
+  return (
+    <View accessible accessibilityLabel={label} style={{ flexDirection: 'row', gap: space.md, marginHorizontal: -space.lg, paddingHorizontal: space.lg, paddingVertical: space.md, overflow: 'hidden' }}>
+      {[0, 1, 2].map((i) => (
+        <View key={i} style={[{ width: 148, padding: 8, paddingBottom: 10, borderRadius: 8, backgroundColor: '#FFFFFF', transform: [{ rotate: `${i % 2 ? 2.5 : -2.5}deg` }] }, lift(isDark, 0.7)]}>
+          <Skeleton style={{ width: 132, height: 137, borderRadius: 4 }} />
+          <Skeleton style={{ marginTop: 11, marginBottom: 3, marginHorizontal: 22, height: 14, borderRadius: 7 }} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 /** ไล่สีดำโปร่งบนรูป ให้ตัวหนังสือขาวอ่านออก (id ไม่ซ้ำกันเพราะบนเว็บ SVG หลายอันอยู่หน้าเดียวกัน) */
 function Scrim({ from = 0.2, to = 0.8, top }: { from?: number; to?: number; top?: boolean }) {
   const id = 'g' + useId().replace(/[^a-zA-Z0-9]/g, '');
@@ -292,7 +357,7 @@ function Scrim({ from = 0.2, to = 0.8, top }: { from?: number; to?: number; top?
 export function PhotoCard({ source, height = 220, title, subtitle, badge, onPress, label, children, style }: { source?: ImageSource; height?: number; title?: string; subtitle?: string; badge?: ReactNode; onPress?: () => void; label?: string; children?: ReactNode; style?: StyleProp<ViewStyle> }) {
   const body = (
     <View style={[{ height, borderRadius: radius.xl, overflow: 'hidden', backgroundColor: source ? '#C9C2B8' : '#2F6BFF' }, style]}>
-      {source && <Image source={source} style={StyleSheet.absoluteFill} contentFit="cover" accessible={false} transition={250} />}
+      {source && <Fill source={source} transition={250} />}
       <Scrim />
       {badge && <View style={{ position: 'absolute', top: space.md, left: space.md }}>{badge}</View>}
       <View style={{ position: 'absolute', left: space.lg, right: space.lg, bottom: space.lg, gap: 2 }}>
@@ -308,11 +373,12 @@ export function PhotoCard({ source, height = 220, title, subtitle, badge, onPres
 /** ตัว AiGo ลอยขึ้นลงช้าๆ (ลดการเคลื่อนไหวแล้วอยู่นิ่ง) */
 export function Mascot({ pose, size = 72, bob = true }: { pose: ImageSource; size?: number; bob?: boolean }) {
   const reduce = useReduceMotion();
+  const focused = useIsFocused();
   const v = useSharedValue(0);
   useEffect(() => {
-    if (reduce || !bob) { v.set(0); return; }
+    if (reduce || !bob || !focused) { v.set(0); return; }
     v.set(withRepeat(withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }), -1, true));
-  }, [reduce, bob, v]);
+  }, [reduce, bob, focused, v]);
   const st = useAnimatedStyle(() => ({ transform: [{ translateY: -6 * v.value }, { rotate: `${-3 + 6 * v.value}deg` }] }));
   return <Animated.View style={st}><Image source={pose} style={{ width: size, height: size }} contentFit="contain" accessible={false} /></Animated.View>;
 }
@@ -388,10 +454,11 @@ export function StatusDot({ state }: { state: 'done' | 'now' | 'wait' }) {
 /** จุด "กำลังทำ" มีวงกระเพื่อมออกเป็นจังหวะ ให้เห็นว่างานยังเดินอยู่ (ลดการเคลื่อนไหวแล้วนิ่ง) */
 function NowDot({ color }: { color: string }) {
   const reduce = useReduceMotion();
+  const focused = useIsFocused();
   const p = useSharedValue(0);
   useEffect(() => {
-    p.set(reduce ? 0 : withRepeat(withTiming(1, { duration: 1400, easing: Easing.out(Easing.quad) }), -1, false));
-  }, [reduce, p]);
+    p.set(reduce || !focused ? 0 : withRepeat(withTiming(1, { duration: 1400, easing: Easing.out(Easing.quad) }), -1, false));
+  }, [reduce, focused, p]);
   const ring = useAnimatedStyle(() => ({ opacity: 0.45 * (1 - p.value), transform: [{ scale: 1 + p.value * 0.9 }] }));
   return (
     <View style={{ width: 26, height: 26 }}>
@@ -582,11 +649,12 @@ export function Thinking({ label, under = false }: { label: string; under?: bool
 }
 function Dot({ i, color }: { i: number; color: string }) {
   const reduce = useReduceMotion();
+  const focused = useIsFocused();
   const v = useSharedValue(0);
   useEffect(() => {
-    if (reduce) { v.set(0); return; }
+    if (reduce || !focused) { v.set(0); return; }
     v.set(withDelay(i * 140, withRepeat(withSequence(withTiming(1, { duration: 280 }), withTiming(0, { duration: 280 }), withTiming(0, { duration: 260 })), -1)));
-  }, [i, reduce, v]);
+  }, [i, reduce, focused, v]);
   const st = useAnimatedStyle(() => ({ transform: [{ translateY: -5 * v.value }] }));
   return <Animated.View style={[{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }, st]} />;
 }

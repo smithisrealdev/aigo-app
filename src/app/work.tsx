@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import { TripCards } from '@/components/cards';
-import { AiSays, AskBar, Button, Card, FadeIn, PhotoStrip, PressScale, PriceTag, ProgressBar, Screen, Section, T, Ticket, TimelineItem, useToast } from '@/components/ui';
+import { AiSays, AskBar, Button, Card, FadeIn, PhotoStrip, PhotoStripSkeleton, PressScale, PriceTag, ProgressBar, Screen, Section, T, Ticket, TimelineItem, useToast } from '@/components/ui';
 import { agentTasks, baht, offers, poses, trip as sampleTrip } from '@/data/trip';
 import { stateWord } from '@/lib/agent';
 import { askAigo } from '@/lib/ask';
@@ -173,6 +173,14 @@ export default function Work() {
             </Section>
           </FadeIn>
         ))}
+        {/* วันถัดไปที่ AiGo กำลังวาง: โครงร่างรูปทรงเดียวกับแถวรูปจริง */}
+        {gen.state === 'run' && ready < days && (
+          <FadeIn key={`next-${ready}`}>
+            <Section title={t('it.day', { n: ready + 1 })}>
+              <PhotoStripSkeleton label={pick({ th: `กำลังวางวันที่ ${ready + 1}…`, en: `Planning day ${ready + 1}…` })} />
+            </Section>
+          </FadeIn>
+        )}
         {ok && (
           <FadeIn>
             <Button label={pick({ th: 'เปิดแผนทั้งหมด', en: 'Open the full plan' })} icon="next" onPress={() => router.push('/itinerary')} />
