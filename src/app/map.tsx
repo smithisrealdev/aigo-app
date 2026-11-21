@@ -1,7 +1,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Linking, PanResponder, Platform, ScrollView, useWindowDimensions, View } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { Linking, Platform, ScrollView, useWindowDimensions, View } from 'react-native';
+import { GestureDetector, useCompetingGestures, usePanGesture, useTapGesture } from 'react-native-gesture-handler';
+import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TripMap } from '@/components/tripMap';
@@ -12,7 +14,11 @@ import { dayPoints, navTarget } from '@/lib/mapPoints';
 import { usePhotos, usePlaceGeo } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
+import { tween } from '@/theme/motion';
 import { radius, space, touch } from '@/theme/tokens';
+
+// เส้นโค้งลิ้นชักเลยเป้าราว 1% ของระยะ: ต่อแผ่นลงใต้ขอบจอไว้ จะได้ไม่เห็นแผนที่โผล่ใต้แผ่นตอนเด้ง
+const OVER = 24;
 
 // แผนที่ของวัน (R12, สเปกแผนที่ในแอปเฟส 1): แผนที่เต็มจอ แผ่นข้อมูลด้านล่างลากขึ้นลงได้ (แตะที่จับก็สลับได้)
 // หมุดเลขตามลำดับในแผน แตะหมุดหรือชิปแล้วการ์ดของที่นั้นขึ้น และหมุดนั้นใหญ่ขึ้น; แผนที่จัดหมุดให้อยู่ในส่วนที่ไม่ถูกแผ่นบัง
@@ -46,20 +52,22 @@ export default function MapScreen() {
   const [open, setOpen] = useState(false);
   const y = useSharedValue(travel);
   const sheet = useAnimatedStyle(() => ({ transform: [{ translateY: y.get() }] }));
-  const snap = (toOpen: boolean) => { y.set(withTiming(toOpen ? 0 : travel, { duration: 260, easing: Easing.out(Easing.cubic) })); setOpen(toOpen); };
-  const [grip] = useState(() => {
-    let from = 0;
-    return PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => { from = y.get(); },
-      onPanResponderMove: (_, g) => { y.set(Math.min(travel, Math.max(0, from + g.dy))); },
-      onPanResponderRelease: (_, g) => {
-        // แตะเฉยๆ สลับยุบ/ขยาย; ลากแล้วปล่อยไปทางที่ปัด หรือใกล้ฝั่งไหนไปฝั่งนั้น
-        if (Math.abs(g.dy) < 6) return snap(from > travel / 2);
-        snap(g.vy < -0.3 || (g.vy <= 0.3 && from + g.dy < travel / 2));
-      },
-    });
+  const snap = (toOpen: boolean) => { y.set(withTiming(toOpen ? 0 : travel, tween.drawer)); setOpen(toOpen); };
+  // ลากบนเธรดหน้าจอ แผ่นตามนิ้วแม้แอปกำลังทำงานหนัก; แตะเฉยๆ สลับยุบ/ขยาย ลากแล้วปล่อยไปทางที่ปัด หรือใกล้ฝั่งไหนไปฝั่งนั้น
+  const from = useSharedValue(0);
+  const settle = (toOpen: boolean) => {
+    'worklet';
+    y.set(withTiming(toOpen ? 0 : travel, tween.drawer));
+    scheduleOnRN(setOpen, toOpen);
+  };
+  const pan = usePanGesture({
+    // จับแผ่นที่กำลังเลื่อนได้ และเริ่มจากตรงที่นิ้วเริ่มลากจริง ไม่กระโดด
+    onActivate: (e) => { cancelAnimation(y); from.set(y.get() - e.translationY); },
+    onUpdate: (e) => { y.set(Math.min(travel, Math.max(0, from.get() + e.translationY))); },
+    onDeactivate: (e) => { settle(e.velocityY < -300 || (e.velocityY <= 300 && y.get() < travel / 2)); },
   });
+  const tap = useTapGesture({ onDeactivate: (e) => { if (!e.canceled) settle(y.get() > travel / 2); } });
+  const grip = useCompetingGestures(pan, tap);
   // ส่วนล่างของแผนที่ที่ถูกแผ่นบัง (+28: โลโก้ เครดิต และปุ่มตำแหน่งของแผนที่อยู่เหนือขอบแผ่นพอดี)
   const covered = open ? high : low;
   const footer = touch.big + space.md + Math.max(insets.bottom, space.md);
@@ -70,16 +78,18 @@ export default function MapScreen() {
       <View style={{ position: 'absolute', left: space.lg, top: insets.top + space.sm }}>
         <IconButton icon="back" label={t('common.back')} onPress={() => router.back()} variant="glass" />
       </View>
-      <Animated.View style={[{ position: 'absolute', left: 0, right: 0, bottom: 0, height: high, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, backgroundColor: colors.bg }, lift(isDark, 1), sheet]}>
+      <Animated.View style={[{ position: 'absolute', left: 0, right: 0, bottom: -OVER, height: high + OVER, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, backgroundColor: colors.bg }, lift(isDark, 1), sheet]}>
         {/* ที่จับและหัวแผ่น: ลากขึ้นลง หรือแตะเพื่อสลับ (โปรแกรมอ่านหน้าจอใช้ปัดขึ้นลงแทน) */}
-        <View {...grip.panHandlers} accessible accessibilityRole="adjustable" accessibilityLabel={pick({ th: 'แผ่นข้อมูลของวัน ลากขึ้นลงเพื่อดูเพิ่ม', en: 'Day sheet, drag up or down to see more' })}
+        <GestureDetector gesture={grip}>
+        <View accessible accessibilityRole="adjustable" accessibilityLabel={pick({ th: 'แผ่นข้อมูลของวัน ลากขึ้นลงเพื่อดูเพิ่ม', en: 'Day sheet, drag up or down to see more' })}
           accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]} onAccessibilityAction={(e) => snap(e.nativeEvent.actionName === 'increment')}
           style={{ paddingTop: space.sm, paddingHorizontal: space.lg, paddingBottom: space.md, gap: 2 }}>
           <View style={{ alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: colors.line, marginBottom: space.sm }} />
           <T v="title" accessibilityRole="header">{`${pick({ th: 'แผนที่', en: 'Map' })} · ${t('it.day', { n: day + 1 })}`}</T>
           <T v="bodyBold" tone="muted">{pick({ th: `${places.length} ที่`, en: `${places.length} stops` })}</T>
         </View>
-        <ScrollView scrollEnabled={open} showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: space.md, paddingHorizontal: space.lg, paddingBottom: footer + space.lg }}>
+        </GestureDetector>
+        <ScrollView scrollEnabled={open} showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: space.md, paddingHorizontal: space.lg, paddingBottom: footer + space.lg + OVER }}>
           {!p && <T tone="muted">{pick({ th: 'วันนี้ยังไม่มีที่แวะ ถ้า AiGo กำลังวางแผนอยู่ เดี๋ยวจะขึ้นเอง', en: 'No stops on this day yet. If AiGo is still planning, they will show up here.' })}</T>}
           {p && (
             <>

@@ -5,6 +5,7 @@ import Stack from 'expo-router/stack';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ToastProvider } from '@/components/ui';
 import { AuthProvider, useAuth } from '@/lib/auth';
@@ -34,5 +35,5 @@ function Root() {
 }
 
 export default function RootLayout() {
-  return <SettingsProvider><AuthProvider><TripProvider><Root /></TripProvider></AuthProvider></SettingsProvider>;
+  return <GestureHandlerRootView style={{ flex: 1 }}><SettingsProvider><AuthProvider><TripProvider><Root /></TripProvider></AuthProvider></SettingsProvider></GestureHandlerRootView>;
 }
