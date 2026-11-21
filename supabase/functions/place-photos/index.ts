@@ -24,17 +24,22 @@ const json = (body: unknown, status = 200) =>
 
 // Cache rows: "v5|n|<slug>" for Wikipedia photos and Commons photos found without a hint, shared by every trip ("Senso-ji", "Sensoji" and "Sensō-ji" are one row);
 // "v5|<name>|<near>" for Commons photos found with a hint and for misses, which depend on the near hint. Rows of earlier versions are never read again.
-const slug = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+// Letters NFD does not split into a base letter and a mark: "Tromsø" is "Tromso"
+const FOLD: Record<string, string> = { "ø": "o", "æ": "ae", "ß": "ss", "ł": "l", "đ": "d", "ð": "d", "þ": "th" };
+const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[øæßłđðþ]/g, (c) => FOLD[c]);
+const slug = (s: string) => fold(s).replace(/[^a-z0-9]+/g, "");
 const nearKey = (p: Place) => `v5|${p.name}|${p.near}`.toLowerCase();
 const nameKey = (s: string) => (slug(s) ? `v5|n|${slug(s)}` : null);
 const keysOf = (p: Place) => [nameKey(p.name), nearKey(p)].filter((k): k is string => !!k);
 
-// Words that may differ between a name and its article title ("Mt. Moiwa" / "Mount Moiwa")
-const LOOSE = new Set(["the", "of", "and", "de", "la", "le", "el", "mount", "mt", "st", "saint"]);
-const words = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 1 && !LOOSE.has(w));
-// Only JPEG photos count: articles and Commons also hold flags, seals, logos, maps and satellite views, which are SVG or PNG drawings
-const NOT_PHOTO = /[/_](flag|coat[_ ]of[_ ]arms|seal|emblem|logo|map|locator|location|satellite)[-_.0-9]/i;
-const isPhoto = (url: string) => /[.]jpe?g([?]|$)/i.test(url) && !NOT_PHOTO.test(url);
+// Words that may differ between a name and its article title ("Mt. Moiwa" / "Mount Moiwa", "New York" / "New York City")
+const LOOSE = new Set(["the", "of", "and", "de", "la", "le", "el", "mount", "mt", "st", "saint", "city"]);
+const words = (s: string) => fold(s).split(/[^a-z0-9]+/).filter((w) => w.length > 1 && !LOOSE.has(w));
+// Not a photo of the place: SVG or PNG drawings, and by file name flags, seals, logos, maps, satellite views and disasters
+const NOT_PHOTO = /[/_](flag|coat[_ ]of[_ ]arms|seal|emblem|logo|map|locator|location|earthquake|tsunami|wrecks?|disaster)[-_.0-9]|[/_(](satellit|sentinel[-_0-9]|landsat|modis[-_.)]|srtm[-_.)]|nasa[-_.)]|astronaut|iss[0-9])/i;
+const drawing = (url: string) => !/[.]jpe?g([?]|$)/i.test(url) || NOT_PHOTO.test(url);
+// Thumbnails only: an original file is smaller than a card, and Wikimedia rate-limits originals (they came back 429)
+const isPhoto = (url: string) => url.includes("/thumb/") && !drawing(url);
 const KIND = new Set(["temple", "shrine", "park", "market", "castle", "museum", "garden", "gardens", "palace", "station", "cathedral", "church", "bridge", "tower"]);
 /** "Christ the Redeemer (statue)" and "Museum of Islamic Art, Doha" are articles about "Christ the Redeemer" and "Museum of Islamic Art" */
 const base = (title: string) => title.split("(")[0].split(",")[0];
@@ -76,12 +81,19 @@ async function search(p: Place): Promise<Found | null> {
   const exact = fits.find((pg) => { const t = new Set(words(base(pg.title!))); return t.size >= size || (t.size >= 2 && name.every((w) => t.has(w) || KIND.has(w))); });
   if (exact) return { url: exact.thumbnail!.source!, title: exact.title!, shared: true };
   const near = p.near && !NON_LATIN.test(p.near) ? ` ${p.near}` : "";
-  const files = await results("commons.wikimedia.org", { gsrsearch: `${p.name}${near} filetype:bitmap`, gsrnamespace: "6", gsrlimit: "10", prop: "imageinfo", iiprop: "url", iiurlwidth: "640" });
-  if (files === null) return null;
-  const known = new Set([...name, ...words(near), "file", "jpg", "jpeg", "png", "webp", "tif", "tiff"]);
+  const known = new Set([...name, ...words(near), "landscape", "file", "jpg", "jpeg", "png", "webp", "tif", "tiff"]);
   const other = (title: string) => words(title).filter((w) => !known.has(w) && !/^[0-9]+$/.test(w)).length;
-  const file = files.filter((f) => f.imageinfo?.[0]?.thumburl && isPhoto(f.imageinfo[0].thumburl) && f.title && mentions(f.title, p.name))
-    .sort((a, b) => other(a.title!) - other(b.title!))[0];
+  /** The Commons photo of a search whose file name mentions the place with the fewest other words; undefined = none, null = no answer */
+  const commons = async (q: string) => {
+    const files = await results("commons.wikimedia.org", { gsrsearch: `${q} filetype:bitmap`, gsrnamespace: "6", gsrlimit: "10", prop: "imageinfo", iiprop: "url", iiurlwidth: "640" });
+    return files && files.filter((f) => f.imageinfo?.[0]?.thumburl && isPhoto(f.imageinfo[0].thumburl) && f.title && mentions(f.title, p.name))
+      .sort((a, b) => other(a.title!) - other(b.title!))[0];
+  };
+  // a country, region or island whose article opens with a flag, map or satellite view: a landscape photo first ("Scotland" got a house in Texas)
+  const scenic = pages.some((pg) => pg.title && pg.thumbnail?.source && titleFits(pg.title, p.name) && drawing(pg.thumbnail.source));
+  let file = scenic ? await commons(`${p.name}${near} landscape`) : undefined;
+  if (file === undefined) file = await commons(`${p.name}${near}`);
+  if (file === null) return null;
   if (file) return { url: file.imageinfo![0].thumburl!, title: file.title!, shared: !p.near };
   const broad = fits.find((pg) => { const t = new Set(words(base(pg.title!))); return t.has(name[0]) && t.size * 2 >= size; });
   if (broad) return { url: broad.thumbnail!.source!, title: broad.title!, shared: true };

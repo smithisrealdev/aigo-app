@@ -9,7 +9,7 @@ Ueno Park
 Tsukiji Outer Market
 Akihabara
 Takeshita Street
-Imperial Palace
+Tokyo Imperial Palace
 Odaiba
 teamLab Planets
 teamLab Borderless
@@ -479,7 +479,7 @@ Hirado
 Unzen
 Shimabara
 Shimabara Castle
-Saga
+Saga City
 Yoshinogari Historic Park
 Karatsu Castle
 Arita
