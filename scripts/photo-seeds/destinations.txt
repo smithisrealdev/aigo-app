@@ -1,0 +1,280 @@
+#
+Tokyo, Japan
+Osaka, Japan
+Kyoto, Japan
+Nara, Japan
+Hokkaido, Japan
+Sapporo, Japan
+Otaru, Japan
+Hakodate, Japan
+Furano, Japan
+Niseko, Japan
+Nagoya, Japan
+Fukuoka, Japan
+Okinawa, Japan
+Hiroshima, Japan
+Kobe, Japan
+Hakone, Japan
+Kawaguchiko, Japan
+Mount Fuji, Japan
+Kanazawa, Japan
+Takayama, Japan
+Nikko, Japan
+Kamakura, Japan
+Yokohama, Japan
+Himeji, Japan
+Nagano, Japan
+Matsumoto, Japan
+Sendai, Japan
+Beppu, Japan
+Yufuin, Japan
+Kumamoto, Japan
+Nagasaki, Japan
+Kagoshima, Japan
+Kyushu, Japan
+Shikoku, Japan
+Tohoku, Japan
+Okayama, Japan
+Naoshima, Japan
+Shirakawa-go, Japan
+Koyasan, Japan
+Ise, Japan
+Seoul, South Korea
+Busan, South Korea
+Jeju, South Korea
+Jeju Island, South Korea
+Gyeongju, South Korea
+Incheon, South Korea
+Chuncheon, South Korea
+Sokcho, South Korea
+Jeonju, South Korea
+Daegu, South Korea
+Gangneung, South Korea
+Taipei, Taiwan
+Taichung, Taiwan
+Tainan, Taiwan
+Kaohsiung, Taiwan
+Hualien, Taiwan
+Jiufen, Taiwan
+Sun Moon Lake, Taiwan
+Alishan, Taiwan
+Kenting, Taiwan
+Hong Kong
+Macau
+Beijing, China
+Shanghai, China
+Chengdu, China
+Guilin, China
+Yangshuo, China
+Zhangjiajie, China
+Xi'an, China
+Chongqing, China
+Hangzhou, China
+Suzhou, China
+Kunming, China
+Lijiang, China
+Dali, China
+Guangzhou, China
+Shenzhen, China
+Harbin, China
+Xiamen, China
+Sanya, China
+Lhasa, Tibet
+Hanoi, Vietnam
+Ha Long Bay, Vietnam
+Ninh Binh, Vietnam
+Sapa, Vietnam
+Da Nang, Vietnam
+Hoi An, Vietnam
+Hue, Vietnam
+Ho Chi Minh City, Vietnam
+Nha Trang, Vietnam
+Da Lat, Vietnam
+Phu Quoc, Vietnam
+Mui Ne, Vietnam
+Singapore
+Kuala Lumpur, Malaysia
+Penang, Malaysia
+Malacca, Malaysia
+Langkawi, Malaysia
+Cameron Highlands, Malaysia
+Kota Kinabalu, Malaysia
+Kuching, Malaysia
+Johor Bahru, Malaysia
+Bali, Indonesia
+Ubud, Indonesia
+Yogyakarta, Indonesia
+Jakarta, Indonesia
+Bandung, Indonesia
+Lombok, Indonesia
+Komodo, Indonesia
+Labuan Bajo, Indonesia
+Manila, Philippines
+Cebu, Philippines
+Boracay, Philippines
+Palawan, Philippines
+El Nido, Philippines
+Bohol, Philippines
+Siem Reap, Cambodia
+Phnom Penh, Cambodia
+Sihanoukville, Cambodia
+Luang Prabang, Laos
+Vientiane, Laos
+Vang Vieng, Laos
+Yangon, Myanmar
+Bagan, Myanmar
+Mandalay, Myanmar
+Bangkok, Thailand
+Chiang Mai, Thailand
+Chiang Rai, Thailand
+Pai, Thailand
+Phuket, Thailand
+Krabi, Thailand
+Koh Samui, Thailand
+Koh Phangan, Thailand
+Koh Tao, Thailand
+Pattaya, Thailand
+Hua Hin, Thailand
+Ayutthaya, Thailand
+Sukhothai, Thailand
+Kanchanaburi, Thailand
+Khao Yai, Thailand
+Koh Chang, Thailand
+Koh Lipe, Thailand
+Koh Samet, Thailand
+Nan, Thailand
+Hat Yai, Thailand
+Khao Lak, Thailand
+Delhi, India
+Agra, India
+Jaipur, India
+Varanasi, India
+Mumbai, India
+Goa, India
+Kerala, India
+Udaipur, India
+Kathmandu, Nepal
+Pokhara, Nepal
+Colombo, Sri Lanka
+Kandy, Sri Lanka
+Maldives
+Bhutan
+Dubai, United Arab Emirates
+Abu Dhabi, United Arab Emirates
+Doha, Qatar
+Istanbul, Turkey
+Cappadocia, Turkey
+Antalya, Turkey
+Pamukkale, Turkey
+Petra, Jordan
+Cairo, Egypt
+Marrakech, Morocco
+Cape Town, South Africa
+Paris, France
+Nice, France
+Lyon, France
+Provence, France
+Mont Saint-Michel, France
+London, United Kingdom
+Edinburgh, United Kingdom
+Scotland
+Dublin, Ireland
+Rome, Italy
+Venice, Italy
+Florence, Italy
+Milan, Italy
+Naples, Italy
+Amalfi Coast, Italy
+Tuscany, Italy
+Cinque Terre, Italy
+Lake Como, Italy
+Sicily, Italy
+Dolomites, Italy
+Switzerland
+Interlaken, Switzerland
+Lucerne, Switzerland
+Zurich, Switzerland
+Zermatt, Switzerland
+Geneva, Switzerland
+Barcelona, Spain
+Madrid, Spain
+Seville, Spain
+Granada, Spain
+Lisbon, Portugal
+Porto, Portugal
+Amsterdam, Netherlands
+Brussels, Belgium
+Bruges, Belgium
+Berlin, Germany
+Munich, Germany
+Frankfurt, Germany
+Vienna, Austria
+Salzburg, Austria
+Hallstatt, Austria
+Prague, Czech Republic
+Budapest, Hungary
+Krakow, Poland
+Warsaw, Poland
+Athens, Greece
+Santorini, Greece
+Mykonos, Greece
+Crete, Greece
+Dubrovnik, Croatia
+Split, Croatia
+Copenhagen, Denmark
+Stockholm, Sweden
+Oslo, Norway
+Bergen, Norway
+Tromso, Norway
+Reykjavik, Iceland
+Iceland
+Helsinki, Finland
+Rovaniemi, Finland
+Lapland, Finland
+Saint Petersburg, Russia
+Moscow, Russia
+New York, United States
+Los Angeles, United States
+San Francisco, United States
+Las Vegas, United States
+Hawaii, United States
+Honolulu, United States
+Orlando, United States
+Chicago, United States
+Washington, D.C., United States
+Seattle, United States
+Grand Canyon, United States
+Yellowstone, United States
+Alaska, United States
+Vancouver, Canada
+Toronto, Canada
+Banff, Canada
+Montreal, Canada
+Quebec City, Canada
+Niagara Falls, Canada
+Sydney, Australia
+Melbourne, Australia
+Gold Coast, Australia
+Cairns, Australia
+Brisbane, Australia
+Perth, Australia
+Tasmania, Australia
+Auckland, New Zealand
+Queenstown, New Zealand
+Rotorua, New Zealand
+Christchurch, New Zealand
+Fiji
+Bora Bora, French Polynesia
+Tahiti, French Polynesia
+Guam
+Saipan
+Cancun, Mexico
+Mexico City, Mexico
+Havana, Cuba
+Rio de Janeiro, Brazil
+Buenos Aires, Argentina
+Cusco, Peru
+Machu Picchu, Peru
+Santiago, Chile
+Patagonia
+Galapagos Islands, Ecuador

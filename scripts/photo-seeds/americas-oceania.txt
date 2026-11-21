@@ -1,0 +1,735 @@
+# New York, United States
+Statue of Liberty
+Empire State Building
+Central Park
+Times Square
+Brooklyn Bridge
+Top of the Rock
+Metropolitan Museum of Art
+Museum of Modern Art
+One World Trade Center
+National September 11 Memorial
+High Line
+Grand Central Terminal
+Fifth Avenue
+Broadway
+Coney Island
+Flatiron Building
+Chrysler Building
+Wall Street
+Staten Island Ferry
+Ellis Island
+American Museum of Natural History
+Guggenheim Museum
+Chelsea Market
+DUMBO
+Brooklyn Botanic Garden
+Madison Square Garden
+Radio City Music Hall
+Vessel
+Washington Square Park
+Bryant Park
+Rockefeller Center
+St. Patrick's Cathedral
+New York Public Library
+Roosevelt Island
+Brooklyn Museum
+The Cloisters
+Bethesda Fountain
+Strawberry Fields
+Bow Bridge
+Little Island
+Hudson River Park
+The Battery
+Fulton Center
+Oculus
+Summit One Vanderbilt
+Edge Observation Deck
+Intrepid Museum
+Whitney Museum
+Frick Collection
+Apollo Theater
+Harlem
+Soho
+Greenwich Village
+Chinatown New York
+Little Italy
+Lower East Side
+Williamsburg
+Brooklyn Navy Yard
+Prospect Park
+Yankee Stadium
+Citi Field
+Niagara Falls
+# Los Angeles, San Francisco and Las Vegas, United States
+Hollywood Sign
+Griffith Observatory
+Santa Monica Pier
+Venice Beach
+Universal Studios Hollywood
+Hollywood Walk of Fame
+Getty Center
+Rodeo Drive
+Disneyland Resort
+Griffith Park
+Beverly Hills
+Malibu
+Los Angeles County Museum of Art
+TCL Chinese Theatre
+Dolby Theatre
+Capitol Records Building
+Hollywood Bowl
+Grand Central Market
+Golden Gate Bridge
+Alcatraz Island
+Fisherman's Wharf
+Lombard Street
+Painted Ladies
+San Francisco cable car system
+Chinatown San Francisco
+Golden Gate Park
+Pier 39
+Coit Tower
+Twin Peaks
+Ghirardelli Square
+Palace of Fine Arts
+Union Square
+Ferry Building
+Muir Woods
+Napa Valley
+Yosemite National Park
+Half Dome
+El Capitan
+Lake Tahoe
+Monterey Bay Aquarium
+17-Mile Drive
+Big Sur
+Bixby Creek Bridge
+Sequoia National Park
+Death Valley
+Joshua Tree National Park
+Las Vegas Strip
+Bellagio Fountains
+Fremont Street
+The Venetian Las Vegas
+Caesars Palace
+Sphere
+High Roller
+Hoover Dam
+Red Rock Canyon
+Valley of Fire
+San Diego Zoo
+Balboa Park
+La Jolla Cove
+Coronado Bridge
+Hotel del Coronado
+SeaWorld San Diego
+Santa Barbara
+Mission Santa Barbara
+Pasadena
+Rose Bowl
+Huntington Library
+Hearst Castle
+Carmel-by-the-Sea
+Point Reyes
+Alcatraz
+Haight-Ashbury
+Mission Dolores
+Sutro Baths
+Lands End
+Salesforce Tower
+Transamerica Pyramid
+Oracle Park
+Cable Car Museum
+Exploratorium
+California Academy of Sciences
+De Young Museum
+# United States National Parks and Cities, United States
+Grand Canyon National Park
+Antelope Canyon
+Horseshoe Bend
+Monument Valley
+Zion National Park
+Bryce Canyon
+Arches National Park
+Lake Powell
+Sedona
+Yellowstone National Park
+Old Faithful
+Grand Teton National Park
+Mount Rushmore
+Badlands National Park
+Glacier National Park
+Space Needle
+Pike Place Market
+Chihuly Garden and Glass
+Mount Rainier
+Cloud Gate
+Navy Pier
+Willis Tower
+Millennium Park
+Art Institute of Chicago
+Magnificent Mile
+Chicago Riverwalk
+Lincoln Park Zoo
+Freedom Trail
+Fenway Park
+Boston Common
+Faneuil Hall
+Lincoln Memorial
+Washington Monument
+White House
+United States Capitol
+National Air and Space Museum
+Jefferson Memorial
+National Mall
+Arlington National Cemetery
+Vietnam Veterans Memorial
+Liberty Bell
+Independence Hall
+South Beach
+Ocean Drive
+Wynwood Walls
+Everglades National Park
+Walt Disney World
+Magic Kingdom
+Epcot
+Universal Orlando
+Kennedy Space Center
+SeaWorld Orlando
+French Quarter
+Bourbon Street
+Jackson Square
+Grand Ole Opry
+Waikiki Beach
+Diamond Head
+Pearl Harbor
+Hanauma Bay
+Haleakala National Park
+Road to Hana
+Kilauea
+Hawaii Volcanoes National Park
+Na Pali Coast
+Waimea Canyon
+Banzai Pipeline
+Polynesian Cultural Center
+Iolani Palace
+Manoa Falls
+Lanikai Beach
+Kualoa Ranch
+Denali National Park
+Great Smoky Mountains National Park
+Shenandoah National Park
+Acadia National Park
+Olympic National Park
+Mount St. Helens
+Crater Lake
+Redwood National Park
+Mesa Verde National Park
+Carlsbad Caverns
+White Sands National Park
+Saguaro National Park
+Canyonlands National Park
+Capitol Reef National Park
+Rocky Mountain National Park
+Garden of the Gods
+Pikes Peak
+Mount Washington
+Niagara Falls State Park
+Mackinac Island
+Gateway Arch
+Graceland
+Alamo
+San Antonio River Walk
+Space Center Houston
+Savannah
+Forsyth Park
+Charleston
+Fort Sumter
+Atlanta
+Georgia Aquarium
+World of Coca-Cola
+Colonial Williamsburg
+Mount Vernon
+Monticello
+Biltmore Estate
+Blue Ridge Parkway
+Key West
+Southernmost Point Buoy
+Dry Tortugas
+Cape Canaveral
+St. Augustine
+Castillo de San Marcos
+Palm Beach
+Mar-a-Lago
+Fort Lauderdale
+Little Havana
+Vizcaya Museum and Gardens
+Lincoln Center
+Carnegie Hall
+Ground Zero
+Guggenheim
+Hershey
+Pennsylvania Dutch Country
+Cooperstown
+Baseball Hall of Fame
+Salem
+Plymouth Rock
+Cape Cod
+Martha's Vineyard
+Nantucket
+Newport
+The Breakers
+Mystic Seaport
+Hamptons
+Montauk Point Lighthouse
+Fire Island
+West Point
+Hudson Valley
+Catskills
+Adirondacks
+Lake Placid
+Burlington
+Stowe
+Portland Head Light
+Bar Harbor
+# Canada
+CN Tower
+Banff National Park
+Lake Louise
+Moraine Lake
+Jasper National Park
+Icefields Parkway
+Athabasca Glacier
+Capilano Suspension Bridge
+Stanley Park
+Granville Island
+Whistler
+Butchart Gardens
+Old Montreal
+Notre-Dame Basilica of Montreal
+Mount Royal
+Chateau Frontenac
+Old Quebec
+Parliament Hill
+Rideau Canal
+Peggy's Cove
+Cabot Trail
+Toronto Islands
+Royal Ontario Museum
+St. Lawrence Market
+Casa Loma
+Ripley's Aquarium of Canada
+Emerald Lake
+Yoho National Park
+Kelowna
+Okanagan Valley
+Victoria
+Inner Harbour Victoria
+Tofino
+Pacific Rim National Park Reserve
+Vancouver Island
+Gastown
+Steam Clock
+Lions Gate Bridge
+Grouse Mountain
+Lynn Canyon
+Squamish
+Sea to Sky Gondola
+Calgary Stampede
+Calgary Tower
+Drumheller
+Royal Tyrrell Museum
+Waterton Lakes National Park
+Kootenay National Park
+Yukon
+Dawson City
+Churchill
+Gros Morne National Park
+Signal Hill
+Fogo Island
+Halifax Citadel
+Lunenburg
+Bay of Fundy
+Hopewell Rocks
+Prince Edward Island
+Green Gables Heritage Place
+Fortress of Louisbourg
+Thousand Islands
+Algonquin Provincial Park
+Niagara-on-the-Lake
+Ottawa
+Canadian Museum of History
+Montmorency Falls
+Quebec City
+Place Royale
+Plains of Abraham
+Saguenay Fjord
+Tadoussac
+Jacques-Cartier National Park
+Percé Rock
+Magdalen Islands
+Winnipeg
+The Forks
+Churchill Polar Bears
+Saskatoon
+Banff Gondola
+Johnston Canyon
+Peyto Lake
+Bow Lake
+Lake Minnewanka
+Cave and Basin National Historic Site
+Fairmont Banff Springs
+Fairmont Chateau Lake Louise
+Maligne Lake
+Spirit Island
+Pyramid Lake
+Mount Edith Cavell
+Columbia Icefield
+# Latin America and the Caribbean
+Machu Picchu
+Cusco
+Sacred Valley
+Vinicunca
+Christ the Redeemer
+Sugarloaf Mountain
+Copacabana Beach
+Ipanema Beach
+Iguazu Falls
+Salar de Uyuni
+Perito Moreno Glacier
+Torres del Paine
+La Boca
+Recoleta Cemetery
+Casa Rosada
+Obelisco de Buenos Aires
+Easter Island
+Galapagos Islands
+Atacama Desert
+Chichen Itza
+Tulum
+Cancun
+Teotihuacan
+Zocalo
+Frida Kahlo Museum
+Palenque
+Cenote Ik Kil
+El Malecon
+Old Havana
+Panama Canal
+Walled City of Cartagena
+Castillo San Felipe de Barajas
+Comuna 13
+Piedra del Penol
+Mitad del Mundo
+Huacachina
+Nazca Lines
+Lake Titicaca
+Arenal Volcano
+Monteverde Cloud Forest
+Manuel Antonio National Park
+Great Blue Hole
+Santa Catalina Arch
+Tikal
+Lake Atitlan
+Rio de Janeiro
+Selaron Steps
+Pelourinho
+Salvador
+Lencois Maranhenses
+Amazon Rainforest
+Manaus
+Pantanal
+Fernando de Noronha
+Buenos Aires
+Teatro Colon
+Plaza de Mayo
+Caminito
+El Ateneo Grand Splendid
+Mendoza
+Aconcagua
+Ushuaia
+El Chalten
+Fitz Roy
+Los Glaciares National Park
+Bariloche
+Valparaiso
+Santiago
+Cerro San Cristobal
+Lake Llanquihue
+Chiloe
+Puerto Natales
+Patagonia
+Punta del Este
+Colonia del Sacramento
+Montevideo
+Cartagena
+Tayrona National Park
+Bogota
+Monserrate
+Salt Cathedral of Zipaquira
+Cocora Valley
+Medellin
+Quito
+Cotopaxi
+Banos
+Quilotoa
+Otavalo
+Lima
+Miraflores
+Colca Canyon
+Arequipa
+Santa Catalina Monastery
+Ollantaytambo
+Pisac
+Moray
+Maras Salt Mines
+Rainbow Mountain
+Sacsayhuaman
+Plaza de Armas Cusco
+La Paz
+Death Road
+Moon Valley
+Copacabana
+Isla del Sol
+Mexico City
+Chapultepec Castle
+Palacio de Bellas Artes
+Xochimilco
+Coyoacan
+Oaxaca
+Hierve el Agua
+Monte Alban
+San Miguel de Allende
+Guanajuato
+Puebla
+Cholula
+Playa del Carmen
+Cozumel
+Isla Mujeres
+Holbox
+Bacalar
+Coba
+Uxmal
+Merida
+Los Cabos
+El Arco
+Puerto Vallarta
+Cabo San Lucas
+Copper Canyon
+Baja California
+Havana
+Varadero
+Trinidad Cuba
+Vinales Valley
+Punta Cana
+Santo Domingo
+Jamaica
+Dunn's River Falls
+Negril
+Montego Bay
+Bahamas
+Nassau
+Exuma
+Pig Beach
+Aruba
+Eagle Beach
+Curacao
+Willemstad
+St. Lucia
+Pitons
+Barbados
+Bridgetown
+Antigua
+Nelson's Dockyard
+Grenada
+Martinique
+Guadeloupe
+St. Barths
+St. Maarten
+Maho Beach
+Turks and Caicos
+Grace Bay
+Cayman Islands
+Seven Mile Beach
+Bermuda
+Horseshoe Bay Beach
+Belize City
+Caye Caulker
+San Pedro
+Costa Rica
+Tortuguero
+Volcan Poas
+La Fortuna
+Nicoya Peninsula
+Panama City
+Casco Viejo
+San Blas Islands
+Bocas del Toro
+# Australia, New Zealand and the Pacific
+Sydney Opera House
+Sydney Harbour Bridge
+Bondi Beach
+Taronga Zoo
+Darling Harbour
+The Rocks
+Royal Botanic Garden Sydney
+Three Sisters
+Manly Beach
+Luna Park Sydney
+Sydney Tower
+Federation Square
+Royal Exhibition Building
+Flinders Street Station
+Queen Victoria Market
+Great Ocean Road
+Twelve Apostles
+Phillip Island Penguin Parade
+Yarra Valley
+Brighton Bathing Boxes
+Melbourne Cricket Ground
+Eureka Skydeck
+Surfers Paradise
+Dreamworld
+Sea World Gold Coast
+Warner Bros. Movie World
+Currumbin Wildlife Sanctuary
+Great Barrier Reef
+Daintree Rainforest
+Kuranda Scenic Railway
+Skyrail Rainforest Cableway
+Whitsunday Islands
+Whitehaven Beach
+Heart Reef
+K'gari
+Uluru
+Kata Tjuta
+Kakadu National Park
+Kings Park
+Rottnest Island
+Pinnacles Desert
+Margaret River
+Cradle Mountain
+Wineglass Bay
+Port Arthur Historic Site
+Museum of Old and New Art
+Barossa Valley
+Kangaroo Island
+South Bank Parklands
+Lone Pine Koala Sanctuary
+Story Bridge
+Parliament House Canberra
+Australian War Memorial
+Blue Mountains
+Hunter Valley
+Byron Bay
+Cape Byron Lighthouse
+Noosa
+Fraser Island
+Lady Elliot Island
+Ningaloo Reef
+Shark Bay
+Wave Rock
+Bungle Bungle Range
+Karijini National Park
+Broome
+Cable Beach
+Darwin
+Litchfield National Park
+Alice Springs
+Kings Canyon
+Flinders Ranges
+Coober Pedy
+Adelaide Oval
+Glenelg Beach
+Port Douglas
+Four Mile Beach
+Cairns Esplanade
+Magnetic Island
+Hamilton Island
+Fitzroy Island
+Green Island
+Lord Howe Island
+Norfolk Island
+Tasmania
+Freycinet National Park
+Bay of Fires
+Hobart
+Salamanca Market
+Mount Wellington
+Sky Tower Auckland
+Waiheke Island
+Hobbiton Movie Set
+Waitomo Glowworm Caves
+Wai-O-Tapu
+Whakarewarewa
+Lake Taupo
+Tongariro Alpine Crossing
+Skyline Queenstown
+Lake Wakatipu
+Milford Sound
+Mount Cook
+Lake Tekapo
+Church of the Good Shepherd
+Fox Glacier
+Franz Josef Glacier
+Abel Tasman National Park
+Kaikoura
+Te Papa
+Wellington Cable Car
+Christchurch Botanic Gardens
+Fiordland National Park
+Doubtful Sound
+Bay of Islands
+Cape Reinga
+Queenstown
+Wanaka
+Roys Peak
+That Wanaka Tree
+Arrowtown
+Glenorchy
+Lake Pukaki
+Aoraki
+Hooker Valley Track
+Tasman Glacier
+Rotorua
+Redwoods Whakarewarewa Forest
+Mount Maunganui
+Coromandel
+Hot Water Beach
+Cathedral Cove
+Hahei
+Napier
+Art Deco Napier
+Mount Taranaki
+Auckland Harbour Bridge
+Rangitoto Island
+Piha Beach
+Bora Bora
+Mount Otemanu
+Matira Beach
+Tahiti
+Moorea
+Fiji
+Mamanuca Islands
+Yasawa Islands
+Cook Islands
+Rarotonga
+Aitutaki
+Samoa
+To Sua Ocean Trench
+Tonga
+Vanuatu
+Mount Yasur
+New Caledonia
+Guam
+Two Lovers Point
+Saipan
+Palau
+Rock Islands
+Jellyfish Lake
+Hawaii
+Maui
+Oahu
+Kauai
+Big Island

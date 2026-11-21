@@ -1,0 +1,389 @@
+# India
+Taj Mahal
+Agra Fort
+Red Fort
+Qutub Minar
+India Gate
+Humayun's Tomb
+Lotus Temple
+Jama Masjid Delhi
+Akshardham Delhi
+Amer Fort
+Hawa Mahal
+City Palace Jaipur
+Jantar Mantar Jaipur
+Jaisalmer Fort
+Mehrangarh Fort
+Umaid Bhawan Palace
+Lake Pichola
+Dashashwamedh Ghat
+Golden Temple
+Mysore Palace
+Gateway of India
+Elephanta Caves
+Chhatrapati Shivaji Terminus
+Marine Drive Mumbai
+Baga Beach
+Basilica of Bom Jesus
+Fort Aguada
+Calangute Beach
+Kerala Backwaters
+Munnar
+Hampi
+Khajuraho Temples
+Ajanta Caves
+Ellora Caves
+Pangong Lake
+Leh Palace
+Nubra Valley
+Laxman Jhula
+Ram Jhula
+Tiger Hill Darjeeling
+Fatehpur Sikri
+Sanchi Stupa
+Konark Sun Temple
+Meenakshi Temple
+Brihadisvara Temple
+Charminar
+Golconda Fort
+Ramoji Film City
+Victoria Memorial Kolkata
+Howrah Bridge
+Dakshineswar Kali Temple
+Lal Bagh
+Bangalore Palace
+Ooty
+Kodaikanal
+Rann of Kutch
+Statue of Unity
+Somnath Temple
+Dwarkadhish Temple
+Gir National Park
+Ranthambore National Park
+Jim Corbett National Park
+Kaziranga National Park
+Sundarbans
+Valley of Flowers
+Spiti Valley
+Manali
+Shimla
+Mall Road Shimla
+Rohtang Pass
+Gulmarg
+Dal Lake
+Srinagar
+Mughal Gardens
+Rishikesh
+Haridwar
+Har Ki Pauri
+Amritsar
+Wagah Border
+Jallianwala Bagh
+Chandigarh Rock Garden
+Pushkar
+Udaipur City Palace
+Jaswant Thada
+Nahargarh Fort
+Jal Mahal
+Chittorgarh Fort
+Kumbhalgarh
+Bikaner Junagarh Fort
+Mount Abu
+Dilwara Temples
+Orchha
+Gwalior Fort
+Bodh Gaya
+Mahabodhi Temple
+Nalanda
+Puri Jagannath Temple
+Chilika Lake
+Andaman Islands
+Radhanagar Beach
+Cellular Jail
+Lakshadweep
+# Nepal, Sri Lanka, Maldives and Bhutan
+Pashupatinath Temple
+Boudhanath
+Swayambhunath
+Kathmandu Durbar Square
+Patan Durbar Square
+Bhaktapur Durbar Square
+Phewa Lake
+World Peace Pagoda Pokhara
+Sarangkot
+Devi's Fall
+Annapurna Conservation Area
+Poon Hill
+Everest Base Camp
+Chitwan National Park
+Lumbini
+Nagarkot
+Namche Bazaar
+Tengboche Monastery
+Mount Everest
+Annapurna Circuit
+Sigiriya
+Temple of the Tooth
+Galle Fort
+Nine Arches Bridge
+Yala National Park
+Dambulla Cave Temple
+Adam's Peak
+Mirissa
+Pinnawala Elephant Orphanage
+Polonnaruwa
+Anuradhapura
+Horton Plains National Park
+Kandy Lake
+Ella
+Nuwara Eliya
+Colombo
+Gangaramaya Temple
+Galle Face Green
+Unawatuna
+Bentota
+Hikkaduwa
+Arugam Bay
+Trincomalee
+Pigeon Island National Park
+Jaffna
+Malé
+Maafushi
+Hulhumalé
+Vaadhoo Island
+Paro Taktsang
+Punakha Dzong
+Buddha Dordenma
+Tashichho Dzong
+National Memorial Chorten
+Dochula Pass
+Paro Dzong
+Haa Valley
+Phobjikha Valley
+Gangtey Monastery
+Bumthang
+# Dubai and Abu Dhabi, United Arab Emirates
+Burj Khalifa
+Dubai Mall
+Palm Jumeirah
+Burj Al Arab
+Dubai Marina
+Dubai Fountain
+Dubai Frame
+Jumeirah Beach
+Gold Souk Dubai
+Dubai Spice Souk
+Dubai Creek
+Al Fahidi Historical Neighbourhood
+Museum of the Future
+Atlantis The Palm
+Dubai Miracle Garden
+Global Village Dubai
+Ski Dubai
+Jumeirah Mosque
+Ain Dubai
+Sheikh Zayed Grand Mosque
+Louvre Abu Dhabi
+Emirates Palace
+Ferrari World
+Yas Island
+Qasr Al Watan
+Corniche Abu Dhabi
+Etihad Towers
+Sharjah
+Ajman
+Ras Al Khaimah
+Jebel Jais
+Fujairah
+Hatta
+Al Ain
+Jebel Hafeet
+Doha
+Museum of Islamic Art
+Souq Waqif
+The Pearl-Qatar
+Katara Cultural Village
+Muscat
+Sultan Qaboos Grand Mosque
+Wadi Shab
+Wahiba Sands
+Nizwa Fort
+Jabal Shams
+Bahrain Fort
+Kuwait Towers
+# Turkey, Jordan, Egypt and Israel
+Hagia Sophia
+Blue Mosque
+Topkapi Palace
+Grand Bazaar Istanbul
+Basilica Cistern
+Galata Tower
+Dolmabahce Palace
+Spice Bazaar
+Bosphorus
+Suleymaniye Mosque
+Taksim Square
+Istiklal Avenue
+Maiden's Tower
+Ortakoy Mosque
+Chora Church
+Princes' Islands
+Goreme Open-Air Museum
+Uchisar Castle
+Derinkuyu Underground City
+Devrent Valley
+Pamukkale
+Hierapolis
+Ephesus
+House of the Virgin Mary
+Pergamon
+Troy
+Kaleici
+Hadrian's Gate
+Duden Waterfalls
+Aspendos Theatre
+Perge
+Olympos
+Cappadocia
+Mount Nemrut
+Sumela Monastery
+Ani
+Bodrum Castle
+Oludeniz
+Fethiye
+Butterfly Valley
+Kas
+Saklikent Gorge
+Marmaris
+Izmir
+Alacati
+Sirince
+Selcuk
+Petra
+Treasury Petra
+Wadi Rum
+Dead Sea
+Amman Citadel
+Jerash
+Mount Nebo
+Madaba
+Aqaba
+Pyramids of Giza
+Great Sphinx of Giza
+Egyptian Museum
+Khan el-Khalili
+Karnak
+Luxor Temple
+Valley of the Kings
+Abu Simbel
+Philae Temple
+Saqqara
+Alexandria Library
+Citadel of Qaitbay
+Hurghada
+Sharm El Sheikh
+Ras Mohammed National Park
+Mount Sinai
+Saint Catherine's Monastery
+Siwa Oasis
+White Desert
+Old City of Jerusalem
+Western Wall
+Dome of the Rock
+Church of the Holy Sepulchre
+Masada
+Mount of Olives
+Yad Vashem
+Tel Aviv
+Jaffa
+Bahai Gardens Haifa
+Sea of Galilee
+Bethlehem
+Church of the Nativity
+Jericho
+# Morocco and Africa
+Jemaa el-Fnaa
+Hassan II Mosque
+Chefchaouen
+Fes el Bali
+Majorelle Garden
+Ait Benhaddou
+Bahia Palace
+Koutoubia Mosque
+Erg Chebbi
+Marrakech
+Essaouira
+Merzouga
+Todra Gorge
+Volubilis
+Rabat
+Kasbah of the Udayas
+Hassan Tower
+Table Mountain
+Cape of Good Hope
+Robben Island
+Kruger National Park
+V&A Waterfront
+Boulders Beach
+Cape Point
+Chapman's Peak
+Kirstenbosch National Botanical Garden
+Stellenbosch
+Garden Route
+Blyde River Canyon
+Sun City
+Victoria Falls
+Chobe National Park
+Okavango Delta
+Etosha National Park
+Sossusvlei
+Namib Desert
+Skeleton Coast
+Serengeti National Park
+Ngorongoro Crater
+Mount Kilimanjaro
+Masai Mara
+Amboseli National Park
+Stone Town
+Zanzibar
+Nungwi
+Mount Kenya
+Lake Nakuru
+Tsavo National Park
+Bwindi Impenetrable National Park
+Volcanoes National Park
+Murchison Falls
+Lake Victoria
+Ethiopia Lalibela
+Rock-Hewn Churches of Lalibela
+Danakil Depression
+Simien Mountains
+Gondar
+Axum
+Mauritius
+Le Morne Brabant
+Seychelles
+Anse Source d'Argent
+La Digue
+Praslin
+Mahe
+Madagascar
+Avenue of the Baobabs
+Tsingy de Bemaraha
+Reunion Island
+Piton de la Fournaise
+Cape Verde
+Tunis
+Carthage
+Sidi Bou Said
+Djerba
+Dougga
+El Djem Amphitheatre
+Cairo
+Aswan
+Luxor
+Nile River
+Lake Nasser
+Dahab
+Blue Hole Dahab
+Marsa Alam

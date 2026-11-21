@@ -1,0 +1,587 @@
+# Seoul, South Korea
+Gyeongbokgung
+Changdeokgung
+Bukchon Hanok Village
+N Seoul Tower
+Myeongdong
+Dongdaemun Design Plaza
+Hongdae
+Insadong
+Namsan Park
+Lotte World
+Lotte World Tower
+Cheonggyecheon
+Gwangjang Market
+Namdaemun Market
+Deoksugung
+Jongmyo Shrine
+Changgyeonggung
+Itaewon
+Gangnam
+COEX Mall
+Starfield Library
+Seoul Forest
+Han River
+Banpo Bridge
+Ihwa Mural Village
+National Museum of Korea
+War Memorial of Korea
+Fortress Wall of Seoul
+Jogyesa
+Bongeunsa
+Ewha Womans University
+Seoullo 7017
+Olympic Park
+Naksan Park
+Ikseon-dong
+Seongsu-dong
+Yeouido Park
+63 Building
+Seodaemun Prison
+Korean Folk Village
+Everland
+Nami Island
+Petite France
+Garden of Morning Calm
+Korean Demilitarized Zone
+Suwon Hwaseong
+Namsangol Hanok Village
+Seoul Grand Park
+Seoul Museum of Art
+Leeum Museum of Art
+Seoul Station
+Heunginjimun
+Gwanghwamun
+Gwanghwamun Square
+Cheongwadae
+Blue House
+Seoul City Hall
+Seoul Plaza
+Ttukseom
+Yongsan
+Hannam-dong
+Garosu-gil
+Apgujeong
+Cheongdam
+Dosan Park
+Seonyudo Park
+World Cup Park
+Haneul Park
+Seoul Sky
+Lotte Tower
+Dongmyo
+Heukseok
+Mangwon Market
+Yeonnam-dong
+Hapjeong
+Sinchon
+Konkuk University
+Seoul National University
+Yonsei University
+Gyeonghuigung
+Unhyeongung
+Sungnyemun
+Cheonggyecheon Stream
+Seoul Dragon City
+Children's Grand Park
+Seoul Botanic Park
+Bukhansan National Park
+Bukhansan
+Ganghwa Island
+Incheon Chinatown
+Songdo Central Park
+Wolmido
+Incheon Airport
+Gangwha Dolmen
+# Busan, South Korea
+Haeundae Beach
+Gamcheon Culture Village
+Haedong Yonggungsa
+Gwangalli Beach
+Jagalchi Market
+Taejongdae
+BIFF Square
+Busan Tower
+Songdo Beach
+Beomeosa
+Dongnae
+Haeundae Blueline Park
+Gukje Market
+Oryukdo
+Busan Cinema Center
+Nurimaru APEC House
+Huinnyeoul Culture Village
+Igidae Park
+Busan Museum of Art
+Lotte World Adventure Busan
+Sea Life Busan Aquarium
+Gwangandaegyo
+Yongdusan Park
+Seokbulsa
+Yeongdo
+Busan Station
+Nampo-dong
+Seomyeon
+Busan Citizens Park
+Dadaepo Beach
+Ilgwang Beach
+Haeundae Market
+Dongbaek Island
+The Bay 101
+Centum City
+Shinsegae Centum City
+Spa Land
+Busan Port
+Busan Bridge
+Taejongdae Park
+Songjeong Beach
+Gijang
+Haeundae Sky Capsule
+Haeundae Blue Line Park Sky Capsule
+# Jeju, South Korea
+Hallasan
+Seongsan Ilchulbong
+Manjanggul
+Cheonjiyeon Falls
+Jeongbang Falls
+Hyeopjae Beach
+Seopjikoji
+Udo Island
+Jusangjeolli Cliff
+Hamdeok Beach
+Sangumburi Crater
+Yongduam Rock
+Camellia Hill
+O'sulloc Tea Museum
+Jeju Folk Village
+Aqua Planet Jeju
+Dongmun Market
+Hallim Park
+Songaksan
+Jeju Olle Trail
+Seongeup Folk Village
+Jeju Stone Park
+Jeju Island
+Jeju Loveland
+Jeju Teddy Bear Museum
+Jeju Haenyeo Museum
+Hallasan National Park
+Eongttalpokpo
+Cheonjeyeon Falls
+Soesokkak
+Oedolgae
+Daepo Jusangjeolli
+Hyeopjae
+Gimnyeong Beach
+Woljeongri Beach
+Iho Tewoo Beach
+Gwakji Beach
+Sinchang Windmill Coast
+Suwolbong
+Chagwido
+Gasiri
+Gotjawal Forest
+Bijarim Forest
+Saryeoni Forest
+Seogwipo
+Seogwipo Olle Market
+Jeongbang
+Cheonjiyeon
+Jungmun Beach
+Jeju Glass Castle
+Jeju Pottery Village
+Jeju Museum of Art
+Jeju World Cup Stadium
+Jeju Stone Cultural Park
+# Other places in South Korea
+Bulguksa
+Seokguram
+Cheomseongdae
+Anapji Pond
+Daereungwon
+Gyochon Hanok Village
+Donggung Palace and Wolji Pond
+Gyeongju National Museum
+Yangdong Folk Village
+Mount Namsan
+Gyeongju
+Hwangnidan-gil
+Seoraksan National Park
+Sokcho
+Jeonju Hanok Village
+Juknokwon
+Suncheon Bay
+Boseong Green Tea Fields
+Hahoe Folk Village
+Andong
+Daegu
+Dalseong Park
+Gyeongpo Beach
+Jeongdongjin
+Ojukheon
+Alpensia
+Yeosu
+Odongdo
+Tongyeong
+Geoje
+Gangneung
+Chuncheon
+Soyang River
+Cheongpyeong
+Paju
+Imjingak
+Heyri Art Village
+Pyeongchang
+Daegwallyeong Sheep Farm
+Woljeongsa
+Odaesan National Park
+Taebaek
+Samcheok
+Hwanseon Cave
+Haesindang Park
+Daejeon
+Gongju
+Buyeo
+Baekje Historic Areas
+Gongsanseong
+Muryeong Royal Tomb
+Songnisan National Park
+Beopjusa
+Naejangsan
+Jirisan
+Hwaeomsa
+Damyang
+Metasequoia Road
+Soswaewon
+Naganeupseong Folk Village
+Mokpo
+Haenam
+Wando
+Cheongsando
+Jindo
+Gunsan
+Byeonsanbando
+Naksan Temple
+Hongdo
+Ulleungdo
+Dokdo
+Pohang
+Homigot
+Yeongdeok
+Uljin
+Bonghwa
+Danyang
+Cheongju
+Chungju
+Suanbo
+Sejong
+Ansan
+Suwon
+Hwaseong Fortress
+Yongin
+Gwangmyeong Cave
+Bucheon
+Ilsan
+Goyang
+Lake Park Ilsan
+# Taipei, Taiwan
+Taipei 101
+Shilin Night Market
+Chiang Kai-shek Memorial Hall
+National Palace Museum
+Longshan Temple
+Elephant Mountain
+Ximending
+Raohe Street Night Market
+Beitou Hot Springs
+Yangmingshan National Park
+Dihua Street
+Maokong Gondola
+Taipei Zoo
+Songshan Cultural and Creative Park
+Huashan 1914 Creative Park
+National Dr. Sun Yat-sen Memorial Hall
+Presidential Office Building
+Bopiliao Old Street
+Daan Forest Park
+Ningxia Night Market
+Tamsui Old Street
+Fisherman's Wharf Tamsui
+Dadaocheng
+Guandu Temple
+Jiufen
+Shifen
+Pingxi
+Jinguashi
+Yehliu Geopark
+Houtong Cat Village
+Keelung Miaokou Night Market
+Xinbeitou
+Shifen Waterfall
+Xiangshan
+Taipei Fine Arts Museum
+Taipei Expo Park
+National Taiwan Museum
+228 Peace Memorial Park
+Taipei Main Station
+Taipei Zoo Panda
+Treasure Hill
+Gongguan
+Shida Night Market
+Tonghua Night Market
+Liaoning Street Night Market
+Taipei Confucius Temple
+Baoan Temple
+Xingtian Temple
+Lin Family Mansion and Garden
+Miramar Entertainment Park
+Dajia Riverside Park
+Rainbow Bridge Taipei
+Maokong
+Tea Plantation Maokong
+Yongkang Street
+Din Tai Fung
+Ay-Chung Flour-Rice Noodle
+Wulai
+Wulai Waterfall
+Sandiaoling Waterfall Trail
+Pinglin
+Taipei Tea Promotion Center
+Beitou Library
+Thermal Valley
+Taipei Astronomical Museum
+Taipei Children's Amusement Park
+Taipei Story House
+Jiantan
+Tamsui
+Bali Left Bank Park
+Bitan
+Pingxi Sky Lantern
+Ruifang
+Jinguashi Gold Ecological Park
+Golden Waterfall
+Yin Yang Sea
+Teapot Mountain
+Shenao Railway
+Dawulun Fortress
+Fulong Beach
+Longdong Bay Cape
+Northeast Coast
+Taipei Eslite
+# Taichung, Tainan, Kaohsiung and Hualien, Taiwan
+Rainbow Village
+Gaomei Wetlands
+National Taichung Theater
+Fengjia Night Market
+Calligraphy Greenway
+Miyahara
+Taichung Park
+Sun Moon Lake
+Wenwu Temple
+Xuanzang Temple
+Alishan National Scenic Area
+Lukang Old Street
+Cingjing Farm
+Zhongshe Flower Market
+Dakeng
+Taichung National Opera House
+Fort Zeelandia
+Chihkan Tower
+Anping Old Street
+Tainan Confucius Temple
+Hayashi Department Store
+Shennong Street
+Cigu Salt Mountain
+Anping Tree House
+Tainan Flower Night Market
+Garden Night Market
+Sicao Green Tunnel
+Beimen
+Pier-2 Art Center
+Lotus Pond
+Dragon and Tiger Pagodas
+Liuhe Night Market
+Fo Guang Shan Buddha Memorial Center
+85 Sky Tower
+Cijin Island
+Love River
+Formosa Boulevard
+Kaohsiung Music Center
+Kaohsiung Port
+Taroko National Park
+Qixingtan Beach
+Qingshui Cliff
+Liyu Lake
+Shakadang Trail
+Hualien Dongdamen Night Market
+Sanxiantai
+Chishang
+Green Island
+Kenting National Park
+Eluanbi Lighthouse
+Maobitou
+Penghu
+Penghu Islands
+Taitung
+Taitung Railway Arts Village
+Dulan
+Luye Highland
+Hualien
+Cingshui Cliff
+Hualien Stone Sculpture
+Hualien Farglory Ocean Park
+Cihu Lake
+Fenqihu
+Yushan
+Jade Mountain
+Shei-Pa National Park
+Hehuanshan
+Wuling Farm
+Taroko Gorge
+Eternal Spring Shrine
+Swallow Grotto
+Baiyang Trail
+Lushui
+Bunun
+# Hong Kong
+Victoria Peak
+Tian Tan Buddha
+Hong Kong Disneyland
+Ocean Park Hong Kong
+Star Ferry
+Temple Street Night Market
+Ladies' Market
+Wong Tai Sin Temple
+Lan Kwai Fong
+Tsim Sha Tsui Promenade
+Avenue of Stars
+Symphony of Lights
+Man Mo Temple
+Hong Kong Museum of History
+Ngong Ping 360
+Nan Lian Garden
+Chi Lin Nunnery
+Lantau Island
+Tai O
+Repulse Bay
+Stanley Market
+Aberdeen
+Mong Kok
+Sai Kung
+Dragon's Back
+Lamma Island
+Cheung Chau
+Hong Kong Park
+Kowloon Walled City Park
+PMQ
+Tai Kwun
+Hong Kong Cultural Centre
+Hong Kong Space Museum
+M+ Museum
+West Kowloon Cultural District
+Sky100
+International Commerce Centre
+Peak Tram
+Mid-Levels Escalator
+Hong Kong Wetland Park
+Hong Kong Science Museum
+Hong Kong Heritage Museum
+Hong Kong Maritime Museum
+Hong Kong Observation Wheel
+Central Harbourfront
+Big Wave Bay
+Shek O
+Repulse Bay Beach
+Deep Water Bay
+Hong Kong Zoological and Botanical Gardens
+Kowloon Park
+Victoria Park
+Lung Fu Shan
+Sheung Wan
+Po Lin Monastery
+Tsing Ma Bridge
+Hong Kong Stadium
+Sha Tin
+Ten Thousand Buddhas Monastery
+Che Kung Temple
+Hong Kong Racecourse
+Happy Valley Racecourse
+Wan Chai
+Causeway Bay
+Times Square Hong Kong
+Elements Hong Kong
+Harbour City
+Ocean Terminal
+Hong Kong Convention and Exhibition Centre
+Golden Bauhinia Square
+Hollywood Road
+Cat Street
+Tung Chung
+Sunset Peak
+Lantau Peak
+Cheung Sha Beach
+Mui Wo
+Silvermine Bay
+Plover Cove
+Tai Mo Shan
+Lion Rock
+Kowloon Peak
+High Island Reservoir
+Sharp Island
+Ap Lei Chau
+Pak Tai Temple
+Hung Shing Temple
+Tin Hau Temple
+Kwun Yam Temple
+# Macau
+Ruins of St. Paul's
+The Venetian Macao
+Senado Square
+Macau Tower
+A-Ma Temple
+Taipa Village
+Cotai Strip
+Hotel Lisboa
+Grand Lisboa
+Coloane Village
+Guia Fortress
+Fortaleza do Monte
+Fisherman's Wharf Macau
+The Parisian Macao
+City of Dreams
+Studio City Macau
+Macau Giant Panda Pavilion
+Macau Cathedral
+St. Dominic's Church
+Lou Lim Ieoc Garden
+Barra Square
+Macau Museum
+Macau Science Center
+Wynn Palace
+Wynn Macau
+MGM Cotai
+Galaxy Macau
+Sands Macao
+The Londoner Macao
+Macau Fisherman's Wharf
+Taipa Houses Museum
+Kun Iam Temple
+Lin Fung Temple
+Tam Tai
+Coloane
+Hac Sa Beach
+Cheoc Van Beach
+Macau Grand Prix Museum
+Macau Wine Museum
+Macau Maritime Museum
+Mandarin's House
+Moorish Barracks
+Dom Pedro V Theatre
+Leal Senado
+St. Lawrence's Church
+St. Augustine's Church
+Rua da Felicidade
+Penha Hill
+Sai Van Lake
+Macau Bridge
+Hong Kong-Zhuhai-Macau Bridge
