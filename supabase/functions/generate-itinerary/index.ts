@@ -544,7 +544,11 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
     const writeSSE = async (type: string, data: any) => {
       if (!job) return void (await writer.write(encoder.encode(sseEvent(type, data))));
       if (type === 'day_complete') await saveJobDay(data.dayIndex, data.day);
-      else if (type === 'complete') for (const [i, d] of (data.itinerary?.days ?? []).entries()) await saveJobDay(fromDay - 1 + i, d, data.itinerary?.title);
+      else if (type === 'complete') {
+        for (const [i, d] of (data.itinerary?.days ?? []).entries()) await saveJobDay(fromDay - 1 + i, d, data.itinerary?.title);
+        // the days usually went in while streaming, before the AI's title existed: keep the first title any part wrote
+        if (data.itinerary?.title) await db.from('plan_jobs').update({ title: data.itinerary.title }).eq('id', job.id).is('title', null);
+      }
       else if (type === 'error') await releaseJob(String(data.error ?? 'error'));
     };
 

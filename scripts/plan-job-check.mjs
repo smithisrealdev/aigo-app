@@ -43,6 +43,7 @@ while (Date.now() - t0 < (days > 10 ? 20 : 9) * 60_000) {
   if (last?.status !== 'running') break;
 }
 if (last?.status !== 'done' || last.days.length !== days) fail(`job should end done with ${days} days, got ${last?.status} ${last?.days?.length}`);
+if (!last.title) fail('the job should keep the trip title the AI wrote');
 // every day once, in order (a run that was cut or two runs at once must not skip or repeat a day)
 const dates = last.days.map((d) => d.date);
 const want = Array.from({ length: days }, (_, i) => iso(new Date(+start + i * 86400000)));
