@@ -1,0 +1,50 @@
+// Live check of the plan-job API in generate-itinerary (docs/superpowers/specs/2026-11-21-server-plan-jobs-design.md).
+// Starts a short plan as a brand-new guest device, never drives it, and waits for the server to finish it on its own.
+//   NODE_USE_ENV_PROXY=1 node scripts/plan-job-check.mjs [days=2]
+// Costs one short AI plan. Exits 1 on the first failed expectation.
+const URL = 'https://vjblrglalptgdxabteqm.supabase.co/functions/v1/generate-itinerary';
+const KEY = 'sb_publishable_ThF183z7kk5KPpjGxBggFQ_Op7La_La';
+const days = Number(process.argv[2] ?? 2);
+const device = 'check' + Array.from({ length: 27 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+const post = async (body) => {
+  const res = await fetch(URL, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: KEY, 'x-device-id': device }, body: JSON.stringify(body) });
+  const text = await res.text();
+  let data = null;
+  try { data = JSON.parse(text); } catch { /* not JSON */ }
+  return { status: res.status, data, text };
+};
+const fail = (msg) => { console.error('FAIL:', msg); process.exit(1); };
+const iso = (d) => d.toISOString().slice(0, 10);
+
+const bad = await post({ job: 'status', jobId: crypto.randomUUID(), token: 'nope', have: 0 });
+if (bad.status !== 403) fail(`status of an unknown job should be 403, got ${bad.status} ${bad.text.slice(0, 120)}`);
+console.log('unknown job -> 403');
+
+const start = new Date(Date.now() + 40 * 86400000);
+const req = {
+  job: 'start', destination: 'Chiang Mai', startDate: iso(start), endDate: iso(new Date(+start + (days - 1) * 86400000)), language: 'th',
+  conversationMessages: [{ role: 'user', content: `เที่ยวเชียงใหม่ ${days} วัน ชอบคาเฟ่และวัด` }],
+};
+const s = await post(req);
+if (s.status !== 200 || !s.data?.jobId || !s.data?.token || s.data.totalDays !== days) fail(`start should give jobId, token, totalDays=${days}; got ${s.status} ${s.text.slice(0, 200)}`);
+console.log('started', s.data.jobId);
+const { jobId, token } = s.data;
+
+const wrong = await post({ job: 'status', jobId, token: token + 'x', have: 0 });
+if (wrong.status !== 403) fail(`status with a wrong token should be 403, got ${wrong.status}`);
+console.log('wrong token -> 403');
+
+const t0 = Date.now();
+let last;
+while (Date.now() - t0 < 9 * 60_000) {
+  await new Promise((r) => setTimeout(r, 20_000));
+  last = (await post({ job: 'status', jobId, token, have: 0 })).data;
+  console.log(`${Math.round((Date.now() - t0) / 1000)}s: ${last?.status} ${last?.days?.length}/${last?.totalDays}${last?.error ? ' error=' + last.error : ''}`);
+  if (last?.status !== 'running') break;
+}
+if (last?.status !== 'done' || last.days.length !== days) fail(`job should end done with ${days} days, got ${last?.status} ${last?.days?.length}`);
+const names = last.days.flatMap((d) => (d.places ?? []).map((p) => p.name));
+if (new Set(names).size !== names.length) fail(`days repeat places: ${names.join(', ')}`);
+const tail = (await post({ job: 'status', jobId, token, have: days - 1 })).data;
+if (tail?.days?.length !== 1) fail(`have=${days - 1} should return only the last day, got ${tail?.days?.length}`);
+console.log(`PASS: ${days} days in ${Math.round((Date.now() - t0) / 1000)} s without the app; places: ${names.join(', ')}`);

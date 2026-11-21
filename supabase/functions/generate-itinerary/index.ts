@@ -103,6 +103,42 @@ const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 // so a request gets only what is left of that time (seen: a 30-day trip cut 85 s in on a reused worker)
 const WORKER_STARTED_AT = Date.now();
 
+// --- Plans made on the server (supabase/plan_jobs.sql, docs/superpowers/specs/2026-11-21-server-plan-jobs-design.md) ---
+// { job: 'start', ...request } stores a job and kicks a run; { jobId, token } is a run (from the kick or the 15 s pg_cron tick);
+// status / stop / resume answer at once. The token stands in for a login, so guests can follow their plan too.
+declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
+const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+/** Places already in the plan, so a later run does not repeat them (the same text as the app's plannedText) */
+const plannedText = (days: any[]) => days.map((d, i) => `Day ${i + 1}${d?.title ? ` (${d.title})` : ''}: ${(d?.places ?? []).map((p: any) => p?.name).filter(Boolean).join(', ')}`).join('\n').slice(0, 4000);
+/** Run the job now, after this reply; if this request is cut, the cron tick starts the run instead */
+const kick = (jobId: string, token: string) => EdgeRuntime.waitUntil(
+  fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/generate-itinerary`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: Deno.env.get('SUPABASE_ANON_KEY')! },
+    body: JSON.stringify({ jobId, token }),
+  }).then((r) => r.body?.cancel()).catch((e) => console.warn('[generate-itinerary] kick failed', e)),
+);
+
+async function jobControl(body: any): Promise<Response> {
+  if (typeof body.jobId !== 'string' || typeof body.token !== 'string') return json({ error: 'jobId and token are required' }, 400);
+  const { data: job } = await db.from('plan_jobs').select('id, token, status, total_days, title, error, days').eq('id', body.jobId).maybeSingle();
+  if (!job || job.token !== body.token) return json({ error: 'Not found' }, 403);
+  const now = new Date().toISOString();
+  if (body.job === 'stop') {
+    await db.from('plan_jobs').update({ status: 'stopped', lease_until: null, updated_at: now }).eq('id', job.id).eq('status', 'running');
+    return json({ status: job.status === 'running' ? 'stopped' : job.status });
+  }
+  if (body.job === 'resume') {
+    if (job.status === 'done') return json({ status: 'done' });
+    await db.from('plan_jobs').update({ status: 'running', attempts: 0, lease_until: null, error: null, updated_at: now }).eq('id', job.id).in('status', ['failed', 'stopped']);
+    kick(job.id, job.token);
+    return json({ status: 'running' });
+  }
+  const have = Math.max(0, Math.floor(Number(body.have) || 0));
+  return json({ status: job.status, totalDays: job.total_days, title: job.title, error: job.error, from: have, days: (job.days ?? []).slice(have) });
+}
+
 // --- Main handler ---
 serve(async (req) => {
   const startedAt = Date.now();
@@ -134,10 +170,26 @@ serve(async (req) => {
       });
     }
 
-    // Validate auth - allow guest mode with device ID
-    const authResult = await validateAuth(req);
-    const deviceId = extractDeviceId(req);
-    const userId = authResult.user?.id || null;
+    if (['status', 'stop', 'resume'].includes(body?.job)) return await jobControl(body);
+
+    // A job run: take the job's lease, then make its missing days from the stored request
+    let job: { id: string; owner: string; request: any; days: any[] } | null = null;
+    if (typeof body?.jobId === 'string' && body?.job === undefined) {
+      // A worker reused for a while is cut at ~150 s mid-day; leave the job for the next tick, which gets a fresh one
+      if (Date.now() - WORKER_STARTED_AT > 20_000) return json({ status: 'busy' }, 503);
+      const { data: claimed, error } = await db.rpc('plan_job_claim', { p_id: body.jobId, p_token: String(body.token ?? '') });
+      if (error) console.error('[generate-itinerary] job claim failed', error);
+      if (!claimed?.id) return json({ status: 'not claimed' }, 409);
+      job = claimed;
+      const saved = job!.days ?? [];
+      body = { ...job!.request, fromDay: saved.length + 1, planned: saved.length ? plannedText(saved) : undefined };
+      console.log(`[generate-itinerary] Job ${job!.id} run from day ${saved.length + 1}`);
+    }
+
+    // Validate auth - allow guest mode with device ID; a job run speaks for the job's owner (the cron tick has no login)
+    const authResult = job ? null : await validateAuth(req);
+    const userId = job ? (job.owner.startsWith('user:') ? job.owner.slice(5) : null) : authResult?.user?.id || null;
+    const deviceId = job ? (job.owner.startsWith('user:') ? null : job.owner) : extractDeviceId(req);
     const isGuest = !userId && !!deviceId;
 
     // Must be either authenticated or have a device ID
@@ -161,8 +213,10 @@ serve(async (req) => {
     const fromDay = validatedData.fromDay ?? 1;
     const isContinuation = fromDay > 1;
 
-    // Check quota based on user type
-    if (userId) {
+    // Check quota based on user type (a job was checked when it started, and is counted when its first day is saved)
+    if (job) {
+      // nothing to check
+    } else if (userId) {
       // Signed-in user: the same free plans as a guest, counted on the account (guest_sessions row "user:<id>"),
       // so a new phone or a reinstall does not reset them
       const quotaResponse = isContinuation ? null : await checkGuestGenerationQuota(accountKey(userId), corsHeaders);
@@ -196,6 +250,19 @@ serve(async (req) => {
     const partDays = totalDays - fromDay + 1;
     const partStart = new Date(startMs + (fromDay - 1) * 86400000).toISOString().split('T')[0];
 
+    // The stream continues a trip only for a one-day replan (replanDay); a whole plan is a job, which counts the free trip
+    if (!job && isContinuation && partDays > 1) return json({ error: 'Start a plan with job: start' }, 400);
+
+    if (body?.job === 'start') {
+      const token = crypto.randomUUID().replaceAll('-', '');
+      const { data: row, error } = await db.from('plan_jobs')
+        .insert({ token, owner: userId ? accountKey(userId) : deviceId, request: { ...validatedData, fromDay: undefined, planned: undefined }, total_days: totalDays })
+        .select('id').single();
+      if (error || !row) { console.error('[generate-itinerary] job start failed', error); return json({ error: 'Could not start the plan' }, 500); }
+      kick(row.id, token);
+      return json({ jobId: row.id, token, totalDays });
+    }
+
     const destinationStr = validatedData.destination;
     const tripStyle = validatedData.tripStyle || 'mixed';
     // FIX #7: Use language from request body instead of hardcoded 'en'
@@ -217,8 +284,10 @@ serve(async (req) => {
     );
 
     let skeletonItinerary: any = null;
-    // A continuation makes only some days, so it never reads or writes the whole-trip cache
-    if (!isContinuation) try {
+    // A continuation makes only some days, so it never reads or writes the whole-trip cache. A plan shaped by a chat
+    // never does either: the key does not see the chat, so a hit would hand out someone else's plan
+    const useCache = !isContinuation && !validatedData.conversationMessages?.length;
+    if (useCache) try {
       // FIX #6: Check cache TTL — only use cache entries younger than 7 days
       const { data: cached, error } = await supabase
         .from('itinerary_skeleton_cache')
@@ -453,8 +522,25 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
     const writer = writable.getWriter();
     const encoder = new TextEncoder();
 
+    // A job run saves finished days in plan_jobs instead of streaming them (nobody reads its stream)
+    let jobHalt = false; // the job was stopped, or another run saved this day: end the run
+    let jobSaved = job ? (job.days ?? []).length : 0;
+    const saveJobDay = async (index: number, day: any, title?: string) => {
+      if (!job || jobHalt || index !== jobSaved) return; // days come in order; one already saved is skipped
+      const { data: n, error } = await db.rpc('plan_job_add_day', { p_id: job.id, p_index: index, p_day: day, p_title: title ?? null });
+      if (error) console.error('[generate-itinerary] job day save failed', error);
+      if (typeof n !== 'number') { jobHalt = true; return; }
+      jobSaved = n;
+      if (n === 1) await incrementGuestGenerationUsage(job.owner); // the job's one free-trip count
+    };
+    const releaseJob = (error?: string) => db.from('plan_jobs')
+      .update({ lease_until: null, updated_at: new Date().toISOString(), ...(error && { error }) })
+      .eq('id', job!.id).eq('status', 'running');
     const writeSSE = async (type: string, data: any) => {
-      await writer.write(encoder.encode(sseEvent(type, data)));
+      if (!job) return void (await writer.write(encoder.encode(sseEvent(type, data))));
+      if (type === 'day_complete') await saveJobDay(data.dayIndex, data.day);
+      else if (type === 'complete') for (const [i, d] of (data.itinerary?.days ?? []).entries()) await saveJobDay(fromDay - 1 + i, d, data.itinerary?.title);
+      else if (type === 'error') await releaseJob(String(data.error ?? 'error'));
     };
 
     // Start the async generation pipeline (runs in background, writes to stream)
@@ -621,6 +707,7 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
         const streamDecoder = new TextDecoder();
         let accumulated = '';
         let lastEmittedDay = 0;
+        let firstDayAt = 0;
         let finishReason = 'unknown';
         let sseLineBuffer = ''; // buffer for lines split across chunks
         let stoppedEarly = false;
@@ -658,6 +745,7 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
               while (lastEmittedDay < completeDays) {
                 const dayIndex = lastEmittedDay; // 0-based within this call
                 lastEmittedDay++;
+                if (lastEmittedDay === 1) firstDayAt = Date.now();
                 const dayNo = fromDay - 1 + lastEmittedDay; // day number in the whole trip
                 const hydratedDay = hydrateSingleDay(dayObjects[dayIndex], dayIndex);
                 if (hydratedDay) {
@@ -686,10 +774,12 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
                 }
               }
 
-              // If the next day (at this request's time per day so far) would run past the worker's time budget, end this
-              // call cleanly instead of being killed mid-day; the app asks for the remaining days with fromDay
+              // If the next day would run past the worker's time budget, end this call cleanly instead of being killed mid-day;
+              // the job's next run (or a replan) makes the remaining days. The first day carries the AI's thinking (25-75 s seen),
+              // later days come every few seconds, so time a day from the first finished one (20 s until there are two)
               const now = Date.now();
-              if (lastEmittedDay > 0 && lastEmittedDay < partDays && now - WORKER_STARTED_AT + (now - startedAt) / lastEmittedDay > TIME_BUDGET_MS) {
+              const nextDayMs = lastEmittedDay >= 2 ? (now - firstDayAt) / (lastEmittedDay - 1) : 20_000;
+              if (jobHalt || (lastEmittedDay > 0 && lastEmittedDay < partDays && now - WORKER_STARTED_AT + nextDayMs > TIME_BUDGET_MS)) {
                 stoppedEarly = true;
                 break;
               }
@@ -703,8 +793,8 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
         if (stoppedEarly) {
           console.log(`[generate-itinerary] Stopped after day ${fromDay - 1 + lastEmittedDay} of ${totalDays} at ${Date.now() - startedAt} ms (worker age ${Date.now() - WORKER_STARTED_AT} ms) to stay inside the time limit`);
           // Continuations never count the trip, so its first call counts it now
-          if (!isContinuation && userId) await incrementGuestGenerationUsage(accountKey(userId));
-          else if (!isContinuation && deviceId) await incrementGuestGenerationUsage(deviceId);
+          if (!job && !isContinuation && userId) await incrementGuestGenerationUsage(accountKey(userId));
+          else if (!job && !isContinuation && deviceId) await incrementGuestGenerationUsage(deviceId);
           return; // no 'complete' event: the app sees the missing days and continues
         }
 
@@ -788,7 +878,7 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
         }
 
         // Cache the skeleton (whole trips only: a continuation holds just the remaining days)
-        if (!isContinuation) try {
+        if (useCache) try {
           const skeleton = stripPersonalData(itinerary);
           await supabase.from('itinerary_skeleton_cache').upsert({
             cache_key: cacheKey,
@@ -821,8 +911,8 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
         }
 
         // Count the plan on the account or the device, and save a guest's trip (a continuation's trip was counted by its first call)
-        if (isContinuation) {
-          // nothing to count
+        if (isContinuation || job) {
+          // nothing to count (a job counts its first saved day)
         } else if (userId) {
           await incrementGuestGenerationUsage(accountKey(userId));
         } else if (deviceId) {
@@ -841,6 +931,7 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
           // Writer may already be closed
         }
       } finally {
+        if (job && !jobHalt) await releaseJob(); // the next tick continues whatever is still missing
         try {
           await writer.close();
         } catch (_e) {
@@ -849,7 +940,11 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
       }
     };
 
-    // FIX #5: Start pipeline (non-blocking) and return readable stream immediately
+    // A job run works on after this reply and saves days in plan_jobs; a stream starts now and is read by the caller
+    if (job) {
+      EdgeRuntime.waitUntil(generatePipeline());
+      return json({ status: 'running', fromDay }, 202);
+    }
     generatePipeline();
 
     return new Response(readable, {
