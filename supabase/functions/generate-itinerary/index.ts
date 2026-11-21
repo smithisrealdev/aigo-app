@@ -102,6 +102,9 @@ const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 // Supabase stops a worker ~150 s after it starts, and one worker serves several requests in a row,
 // so a request gets only what is left of that time (seen: a 30-day trip cut 85 s in on a reused worker)
 const WORKER_STARTED_AT = Date.now();
+// A job run asks the AI for at most this many days: it thinks longer before day 1 the more days it is asked for
+// (2 days ~25 s, 8 days ~75 s, 30 days ~110 s seen), so a whole long trip in one ask gave one day per run
+const JOB_DAYS_PER_RUN = 4;
 
 // --- Plans made on the server (supabase/plan_jobs.sql, docs/superpowers/specs/2026-11-21-server-plan-jobs-design.md) ---
 // { job: 'start', ...request } stores a job and kicks a run; { jobId, token } is a run (from the kick or the 15 s pg_cron tick);
@@ -173,10 +176,10 @@ serve(async (req) => {
     if (['status', 'stop', 'resume'].includes(body?.job)) return await jobControl(body);
 
     // A job run: take the job's lease, then make its missing days from the stored request
-    let job: { id: string; owner: string; request: any; days: any[] } | null = null;
+    let job: { id: string; token: string; owner: string; request: any; days: any[] } | null = null;
     if (typeof body?.jobId === 'string' && body?.job === undefined) {
-      // A worker reused for a while is cut at ~150 s mid-day; leave the job for the next tick, which gets a fresh one
-      if (Date.now() - WORKER_STARTED_AT > 20_000) return json({ status: 'busy' }, 503);
+      // A worker reused for a while is cut at ~150 s mid-day; one past 65 s leaves the job for the next tick (a fresh worker)
+      if (Date.now() - WORKER_STARTED_AT > 65_000) return json({ status: 'busy' }, 503);
       const { data: claimed, error } = await db.rpc('plan_job_claim', { p_id: body.jobId, p_token: String(body.token ?? '') });
       if (error) console.error('[generate-itinerary] job claim failed', error);
       if (!claimed?.id) return json({ status: 'not claimed' }, 409);
@@ -246,9 +249,11 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    // Days this call makes: the whole trip, or days fromDay..totalDays of a continuation
-    const partDays = totalDays - fromDay + 1;
+    // Days this call makes: the whole trip, days fromDay..totalDays of a continuation, or a job run's next few days
+    const remainingDays = totalDays - fromDay + 1;
+    const partDays = Math.min(remainingDays, job ? JOB_DAYS_PER_RUN : remainingDays);
     const partStart = new Date(startMs + (fromDay - 1) * 86400000).toISOString().split('T')[0];
+    const partEnd = new Date(startMs + (fromDay + partDays - 2) * 86400000).toISOString().split('T')[0];
 
     // The stream continues a trip only for a one-day replan (replanDay); a whole plan is a job, which counts the free trip
     if (!job && isContinuation && partDays > 1) return json({ error: 'Start a plan with job: start' }, 400);
@@ -436,8 +441,8 @@ serve(async (req) => {
       }
     }
 
-    const continueBlock = isContinuation
-      ? `\n\n## CONTINUATION\nDays 1-${fromDay - 1} are already planned:\n${validatedData.planned || '(list not provided)'}\nGenerate ONLY days ${fromDay}-${totalDays} (${partStart} to ${validatedData.endDate}); the "days" array starts at day ${fromDay}. Do not repeat places that are already planned.`
+    const continueBlock = isContinuation || partDays < remainingDays
+      ? `\n\n## THIS PART\n${isContinuation ? `Days 1-${fromDay - 1} are already planned:\n${validatedData.planned || '(list not provided)'}\n` : ''}Generate ONLY days ${fromDay}-${fromDay + partDays - 1} (${partStart} to ${partEnd}); the "days" array starts at day ${fromDay}.${partDays < remainingDays ? ` Days ${fromDay + partDays}-${totalDays} come in a later request.` : ''} Do not repeat places that are already planned.`
       : '';
 
     const prompt = `You are an expert travel planner creating a detailed ${totalDays}-day itinerary for ${destinationStr}.
@@ -931,7 +936,11 @@ ${dietaryRestrictions ? `${detailedOutline ? '13' : '12'}. All restaurant/food r
           // Writer may already be closed
         }
       } finally {
-        if (job && !jobHalt) await releaseJob(); // the next tick continues whatever is still missing
+        if (job && !jobHalt) {
+          await releaseJob();
+          // more days to make: the next run starts now instead of waiting for the tick (which stays the safety net)
+          if (jobSaved > (job.days ?? []).length && jobSaved < totalDays) kick(job.id, job.token);
+        }
         try {
           await writer.close();
         } catch (_e) {

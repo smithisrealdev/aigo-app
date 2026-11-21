@@ -55,3 +55,18 @@ $$;
 
 revoke all on function public.plan_job_claim(uuid, text) from public, anon, authenticated;
 revoke all on function public.plan_job_add_day(uuid, int, jsonb, text) from public, anon, authenticated;
+
+-- Every 15 s, poke running jobs that nobody is working on: a run that stopped before the worker's time limit, or one
+-- that was cut, whose lease ran out. The function claims the lease, so a poke during a live run does nothing.
+-- (migration plan_jobs_tick; the publishable key is the app's public key)
+select cron.schedule('plan-jobs-tick', '15 seconds', $tick$
+  select net.http_post(
+    url := 'https://vjblrglalptgdxabteqm.supabase.co/functions/v1/generate-itinerary',
+    headers := jsonb_build_object('Content-Type', 'application/json', 'apikey', 'sb_publishable_ThF183z7kk5KPpjGxBggFQ_Op7La_La'),
+    body := jsonb_build_object('jobId', id, 'token', token),
+    timeout_milliseconds := 5000
+  )
+  from public.plan_jobs
+  where status = 'running' and (lease_until is null or lease_until < now())
+  limit 10;
+$tick$);
