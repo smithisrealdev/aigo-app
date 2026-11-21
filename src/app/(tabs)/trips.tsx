@@ -1,10 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Linking, Platform, View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/icon';
-import { AiSays, ArtCard, Badge, Button, Card, FadeIn, IconButton, PhotoCard, Row, Screen, Section, Stamp, StatusDot, T } from '@/components/ui';
+import { AiSays, ArtCard, Badge, Button, Card, FadeIn, IconButton, PhotoCard, Row, Screen, Section, Stamp, StatusDot, T, useToast } from '@/components/ui';
+import { ANYWHERE, KIT_CHECKED, kitFor, ordered, type KitItem } from '@/data/travelKit';
 import { art } from '@/data/trip';
 import { askAigo } from '@/lib/ask';
 import type { L } from '@/lib/i18n';
@@ -65,6 +67,7 @@ export default function Trips() {
           <Button label={t('trips.open')} icon="next" onPress={() => router.push('/itinerary')} />
         </FadeIn>
         <FadeIn index={2}><Checklist trip={trip} /></FadeIn>
+        <FadeIn index={2}><TravelKit trip={trip} /></FadeIn>
         <FadeIn index={2}>
           <ArtCard tone="lilac" art={art.plan} title={t('trips.new')} body={pick({ th: 'บอกที่อยากไป AiGo จัดให้ครบ', en: 'Say where, AiGo sorts out the rest' })} onPress={() => router.push('/paywall')} />
         </FadeIn>
@@ -144,6 +147,59 @@ function Checklist({ trip }: { trip: AppTrip }) {
       </Card>
       <Button kind="secondary" label={pick({ th: `ถาม AiGo เรื่องวีซ่า ${country}`, en: `Ask AiGo about ${country} visas` })}
         onPress={() => askAigo(pick({ th: `พาสปอร์ตไทยต้องใช้วีซ่าไป ${country} ไหม ต้องเตรียมอะไรบ้าง`, en: `Do Thai passport holders need a visa for ${country}? What should I prepare?` }), trip, lang)} />
+    </Section>
+  );
+}
+
+// ลิงก์ค้นแอปในสโตร์ของเครื่อง (ไม่ผูกเลข id ของแอป ซึ่งเปลี่ยนได้และพิมพ์ผิดง่าย)
+const storeSearch = (term: string) => {
+  const q = encodeURIComponent(term);
+  if (Platform.OS === 'ios') return `itms-apps://search.itunes.apple.com/WebObjects/MZSearch.woa/wa/search?media=software&term=${q}`;
+  if (Platform.OS === 'android') return `market://search?q=${q}&c=apps`;
+  return `https://play.google.com/store/search?q=${q}&c=apps`;
+};
+
+// แอปท้องถิ่นและของที่ช่วยให้เดินทางสะดวกในประเทศปลายทาง (src/data/travelKit.ts) ประเทศที่ยังไม่มีรายการได้แอปที่ใช้ได้ทุกที่ และถาม AiGo ต่อได้
+function TravelKit({ trip }: { trip: AppTrip }) {
+  const { colors, pick, lang } = useSettings();
+  const toast = useToast();
+  const kit = kitFor(trip.destination.en);
+  const items = ordered(kit?.items ?? ANYWHERE);
+  const place = kit ? pick(kit.name) : pick(trip.destination);
+  const open = async (x: KitItem) => {
+    try {
+      if (x.url) await WebBrowser.openBrowserAsync(x.url);
+      else if (x.store) await Linking.openURL(storeSearch(x.store));
+    } catch {
+      // เครื่องไม่มีสโตร์ (เช่น ตัวจำลอง) หรือเปิดไม่ได้: ค้นชื่อแอปในเว็บแทน
+      if (x.store) WebBrowser.openBrowserAsync(`https://www.google.com/search?q=${encodeURIComponent(`${x.store} app`)}`).catch(() => {});
+      else toast(pick({ th: 'เปิดลิงก์ไม่ได้ ลองใหม่เมื่อมีเน็ต', en: 'Could not open the link. Try again when you are online.' }));
+    }
+  };
+  return (
+    <Section title={pick({ th: `แอปและของที่ควรมี · ${place}`, en: `Apps and essentials · ${place}` })}>
+      <Card style={{ paddingVertical: space.xs }}>
+        {items.map((x, i) => {
+          const linked = !!(x.url || x.store);
+          const action = x.url ? pick({ th: 'เปิดเว็บทางการ', en: 'opens the official site' }) : pick({ th: 'ค้นในสโตร์', en: 'searches the store' });
+          return (
+            <Row key={x.name.en} last={i === items.length - 1} onPress={linked ? () => open(x) : undefined} label={`${pick(x.name)}, ${pick(x.what)}${linked ? `, ${action}` : ''}`}>
+              <View style={{ width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.sticker[x.when === 'before' ? 'sun' : 'sky'] }}>
+                <Icon name={x.icon} color={colors.ink} size={20} />
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <T v="bodyBold">{pick(x.name)}</T>
+                <T v="small" tone="muted">{pick(x.what)}</T>
+                <T v="smallBold" style={{ color: colors.mutedStrong }}>{x.when === 'before' ? pick({ th: 'ทำก่อนไป', en: 'Before you go' }) : pick({ th: 'ใช้ตอนอยู่ที่นั่น', en: 'Use it there' })}</T>
+              </View>
+              {linked && <Icon name="next" color={colors.muted} />}
+            </Row>
+          );
+        })}
+      </Card>
+      <T v="small" tone="muted">{pick({ th: `ข้อมูล ณ ${KIT_CHECKED.th} แอปเปลี่ยนชื่อหรือเงื่อนไขได้ เช็กในสโตร์ก่อนโหลด`, en: `Checked ${KIT_CHECKED.en}. Apps change names and terms, so check the store before you install.` })}</T>
+      <Button kind="secondary" label={pick({ th: `ถาม AiGo ว่าไป${place}ควรเตรียมอะไรอีก`, en: `Ask AiGo what else to get for ${place}` })}
+        onPress={() => askAigo(pick({ th: `ไป${place} ควรโหลดแอปอะไรและเตรียมของอะไรบ้าง`, en: `Which apps should I install and what should I bring for ${place}?` }), trip, lang)} />
     </Section>
   );
 }

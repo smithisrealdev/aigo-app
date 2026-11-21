@@ -6,6 +6,7 @@ import { Icon } from '@/components/icon';
 
 import { ArtCard, Button, Card, Chip, FadeIn, Row, Screen, T, useToast } from '@/components/ui';
 import { art } from '@/data/trip';
+import { useAuth } from '@/lib/auth';
 import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
 import { space } from '@/theme/tokens';
@@ -21,15 +22,16 @@ function Group({ title, children, index }: { title: string; children: ReactNode;
 }
 
 export default function Account() {
-  const { colors, pick, lang, theme, autoEdit, signedIn, set } = useSettings();
+  const { colors, pick, lang, theme, autoEdit, set } = useSettings();
+  const { user, signOut } = useAuth();
   const toast = useToast();
   const { trip, trips, removeTrip } = useTrip();
   const [confirmClear, setConfirmClear] = useState(false);
   return (
-    <Screen title={pick({ th: 'บัญชีของฉัน', en: 'My account' })} subtitle={signedIn ? pick({ th: 'เข้าสู่ระบบแล้ว', en: 'Signed in' }) : pick({ th: 'ยังไม่ได้เข้าสู่ระบบ', en: 'Not signed in' })} onBack={() => router.back()}>
-      {!signedIn && (
+    <Screen title={pick({ th: 'บัญชีของฉัน', en: 'My account' })} subtitle={user ? (user.email ?? pick({ th: 'เข้าสู่ระบบแล้ว', en: 'Signed in' })) : pick({ th: 'ยังไม่ได้เข้าสู่ระบบ', en: 'Not signed in' })} onBack={() => router.back()}>
+      {!user && (
         <FadeIn>
-          <ArtCard tone="sky" art={art.offline} onPress={() => router.push('/save')} title={pick({ th: 'เข้าสู่ระบบ', en: 'Sign in' })}
+          <ArtCard tone="sky" art={art.offline} onPress={() => router.push('/login')} title={pick({ th: 'เข้าสู่ระบบ', en: 'Sign in' })}
             body={pick({ th: 'เก็บแผนไว้ทุกเครื่อง เปิดได้แม้ไม่มีเน็ต', en: 'Keep plans on every device, even offline' })} />
         </FadeIn>
       )}
@@ -92,9 +94,10 @@ export default function Account() {
           <Icon name="next" color={colors.muted} />
         </Row>
       </Group>
-      {signedIn && <Button kind="secondary" label={pick({ th: 'ออกจากระบบ', en: 'Sign out' })} onPress={() => set({ signedIn: false })} />}
+      {/* ออกจากระบบ (R36): ทริปยังอยู่ในเครื่องนี้ และยังอยู่ในบัญชีให้เข้ากลับมาเปิดได้ */}
+      {user && <Button kind="secondary" label={pick({ th: 'ออกจากระบบ', en: 'Sign out' })} onPress={async () => { await signOut(); toast(pick({ th: 'ออกจากระบบแล้ว ทริปยังอยู่ในเครื่องนี้', en: 'Signed out. Your trips are still on this phone.' })); }} />}
       {/* shortcut: ลบบัญชียังไม่มีฟังก์ชันบน backend (R35), ปุ่มบอกตรงๆ; แยกห่างจากปุ่มอื่นและใช้สีเตือน */}
-      {signedIn && (
+      {user && (
         <Pressable accessibilityRole="button" onPress={() => toast(pick({ th: 'การลบบัญชียังใช้ไม่ได้ในตัวอย่างนี้', en: 'Account deletion is not available in this preview' }))}
           style={({ pressed }) => ({ minHeight: 44, marginTop: space.xl, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
           <T v="bodyBold" tone="warn">{pick({ th: 'ลบบัญชีและข้อมูลทั้งหมด', en: 'Delete account and all data' })}</T>

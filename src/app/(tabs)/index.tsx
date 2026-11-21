@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,11 +20,13 @@ const POPULAR = [
 const ASKS = [{ th: 'งบ 30,000 บาท ไปไหนได้บ้าง', en: 'Where can I go on 30,000 baht?' }, { th: 'หาเที่ยวบินไปโซล เดือน ม.ค.', en: 'Find flights to Seoul in January' }];
 
 export default function Home() {
-  const { colors, t, pick, isDark } = useSettings();
+  const { colors, t, pick, isDark, onboarded } = useSettings();
   const insets = useSafeAreaInsets();
   const [wish, setWish] = useState('');
   const { trip } = useTrip();
   const toast = useToast();
+  // เปิดแอปครั้งแรก: หน้าแนะนำแอปก่อน (ลิงก์ทริปที่เพื่อนแชร์เปิดได้ทันทีโดยไม่ต้องผ่านหน้านี้)
+  if (!onboarded) return <Redirect href="/onboarding" />;
   const start = (text: string) => router.push({ pathname: '/chat', params: { prompt: text } });
   const hero = (
     <CurveHero color={colors.sticker.sky} height={0}>

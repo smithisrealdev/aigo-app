@@ -6,8 +6,36 @@
     "orientation": "portrait",
     "scheme": "aigo",
     "userInterfaceStyle": "automatic",
-    "web": { "output": "single" },
-    "plugins": ["expo-router", ["expo-splash-screen", { "backgroundColor": "#4B5BEF" }]],
-    "experiments": { "reactCompiler": true }
+    "web": {
+      "output": "single",
+      "favicon": "./assets/brand/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/brand/splash-icon.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "backgroundColor": "#4B5BEF"
+        }
+      ]
+    ],
+    "experiments": {
+      "reactCompiler": true
+    },
+    "icon": "./assets/brand/icon.png",
+    "ios": {
+      "bundleIdentifier": "co.theaigo.app",
+      "usesAppleSignIn": true
+    },
+    "android": {
+      "package": "co.theaigo.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/brand/adaptive-icon.png",
+        "backgroundColor": "#4B5BEF"
+      }
+    }
   }
 }

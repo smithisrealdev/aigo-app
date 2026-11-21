@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
 import { ToastProvider } from '@/components/ui';
+import { AuthProvider, useAuth } from '@/lib/auth';
 import { SettingsProvider, useSettings } from '@/lib/settings';
 import { TripProvider, useTrip } from '@/lib/tripStore';
 
@@ -15,9 +16,10 @@ SplashScreen.preventAutoHideAsync();
 function Root() {
   const { ready, isDark, colors } = useSettings();
   const { ready: tripReady } = useTrip();
+  const { ready: authReady } = useAuth();
   const [fontsLoaded, fontError] = useFonts({ Anuphan_400Regular, Anuphan_600SemiBold, Anuphan_700Bold });
   // ฟอนต์โหลดไม่ได้ก็เปิดแอปด้วยฟอนต์ระบบ ดีกว่าค้างที่หน้าเปิด
-  const show = ready && tripReady && (fontsLoaded || !!fontError);
+  const show = ready && tripReady && authReady && (fontsLoaded || !!fontError);
   useEffect(() => { if (show) SplashScreen.hideAsync(); }, [show]);
   if (!show) return null;
   const base = isDark ? DarkTheme : DefaultTheme;
@@ -32,5 +34,5 @@ function Root() {
 }
 
 export default function RootLayout() {
-  return <SettingsProvider><TripProvider><Root /></TripProvider></SettingsProvider>;
+  return <SettingsProvider><AuthProvider><TripProvider><Root /></TripProvider></AuthProvider></SettingsProvider>;
 }

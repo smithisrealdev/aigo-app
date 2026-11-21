@@ -6,7 +6,7 @@ import { addDays, dayCount, genEvent, plannedText, type GenDay, type GenItinerar
 
 // โปรเจกต์ Supabase ของแอป (docs/backend.md) publishable key ออกแบบมาให้ฝังในแอปได้
 export const SUPABASE_URL = 'https://vjblrglalptgdxabteqm.supabase.co';
-const PUBLISHABLE_KEY = 'sb_publishable_ThF183z7kk5KPpjGxBggFQ_Op7La_La';
+export const PUBLISHABLE_KEY = 'sb_publishable_ThF183z7kk5KPpjGxBggFQ_Op7La_La';
 
 let device: string | null = null;
 /** เลขประจำเครื่องสำหรับโหมดผู้เยี่ยมชม (edge function อ่านจาก header x-device-id) */

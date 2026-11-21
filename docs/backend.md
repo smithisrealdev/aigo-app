@@ -94,7 +94,18 @@ publishable key (ใส่ในแอปได้): `sb_publishable_ThF183z7kk5
 2. edge function อีกราว 58 ตัวยังไม่ได้ deploy วิธีที่เร็วที่สุดคือรันจากเครื่องที่มี Supabase CLI ในโฟลเดอร์ของ repo เว็บ:
    `supabase functions deploy --project-ref vjblrglalptgdxabteqm`
 3. secret อื่นที่ฟังก์ชันใช้: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `GOOGLE_SEARCH_API_KEY`, `GOOGLE_SEARCH_CX`, `ELEVENLABS_API_KEY`, `FIRECRAWL_API_KEY`, `TAVILY_API_KEY`
-4. ตั้งค่า Auth: Sign in with Apple, Google, URL ของแอปสำหรับ redirect
+4. เข้าสู่ระบบ: แอปมีอีเมลพร้อมรหัส 6 หลัก, Google และ Apple แล้ว (`src/lib/auth.tsx`, หน้า `/login` และหน้าบันทึกทริป) แต่ต้องตั้งค่าใน Supabase dashboard ก่อนใช้ได้จริง
+   - อีเมล: Authentication > Emails > Templates แก้แม่แบบ **Magic Link** และ **Confirm signup** ให้มี `{{ .Token }}` เช่น `<h2>รหัสเข้าสู่ระบบ AiGo</h2><p>{{ .Token }}</p>`
+     ไม่แก้ อีเมลจะมีแต่ลิงก์ ซึ่งแอปไม่ได้รับ
+   - ส่งอีเมลให้คนทั่วไป: ตอนนี้ใช้อีเมลในตัวของ Supabase ซึ่งส่งได้เฉพาะอีเมลของคนในทีมโปรเจกต์ (คนอื่นได้ error `email_address_not_authorized` แอปบอกเป็นภาษาคน) และจำกัดจำนวนต่อชั่วโมง
+     ต้องต่อบริการส่งอีเมล เช่น Resend ที่ Authentication > Emails > SMTP Settings
+   - Google: สร้าง OAuth client แบบ Web ใน Google Cloud, เปิด Google ที่ Authentication > Sign In / Providers ใส่ client ID และ secret
+     แล้วเพิ่ม `aigo://**` และ `exp://**` (สำหรับทดสอบใน Expo Go) ที่ Authentication > URL Configuration > Redirect URLs
+   - Apple: ต้องมี Apple Developer Program, เปิด Apple ที่ Providers ใส่ client ID `co.theaigo.app` และ `host.exp.Exponent` (ทดสอบใน Expo Go) ปุ่ม Apple ขึ้นเฉพาะบน iPhone
+   - ก่อนตั้งค่า ปุ่ม Google และ Apple บอกว่ายังไม่เปิด (แอปอ่าน `/auth/v1/settings`) ไม่เปิดหน้าเว็บค้าง
+   - ทริปของผู้ใช้ที่เข้าสู่ระบบมีสำเนาในตาราง `user_trips` ([../supabase/user_trips.sql](../supabase/user_trips.sql)) อ่านเขียนได้เฉพาะเจ้าของ (RLS)
+     แอปส่งขึ้นเมื่อรายการนิ่ง 2 วินาที และดึงทริปที่ไม่มีในเครื่องลงมาตอนเข้าสู่ระบบ ทริปในเครื่องเป็นหลักเสมอ ออกจากระบบแล้วทริปยังอยู่ในเครื่อง
+   - ยังไม่มี: ลบบัญชีในแอป (R35) App Store บังคับให้มีก่อนออกแอปที่สมัครบัญชีได้, โควตาสร้างแผนยังนับต่อเครื่องเหมือนผู้เยี่ยมชม
 5. ถ้าจะให้เว็บ theaigo.co ใช้โปรเจกต์นี้ด้วย: เปลี่ยน `VITE_SUPABASE_URL` / key ใน Vercel และ CNAME ของ `auth.theaigo.co` แต่เว็บเรียก `deduct_credits` และ `reward_referral_trip_credits` จากเบราว์เซอร์โดยตรง ซึ่งตอนนี้ถูกปิดแล้ว ต้องย้ายไปเรียกผ่าน edge function ก่อน
    และ `trip-chat` ตัวนี้ตั้งให้ตอบสั้นและส่งการ์ดในรูปแบบของแอป (DIRECTIVE 12) เว็บต้องใช้ฟังก์ชันแยกที่ไม่มีข้อนี้
 6. ข้อเตือนจาก security advisor ที่ยังไม่แก้: view แบบ SECURITY DEFINER 7 ตัว (สรุปค่าใช้จ่ายและสถานที่), ฟังก์ชันที่ไม่ได้ตั้ง search_path 16 ตัว, `pg_trgm` อยู่ใน schema public
