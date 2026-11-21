@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { dayPoints, mapLoadFailed, navTarget } from './mapPoints.ts';
+import { dayPoints, mapLoadFailed, navTarget, tripSpots } from './mapPoints.ts';
 
 const place = (id: string, lat: number, lon: number) => ({ id, lat, lon, name: { th: id, en: id } });
 const label = (p: { name: { en: string } }) => p.name.en;
@@ -55,4 +55,27 @@ test('แผนที่ถือว่าโหลดไม่ขึ้นเ�
   assert.equal(mapLoadFailed({ error: 'unknown' }), true, 'ไม่บอกชนิด ถือว่าโหลดไม่ขึ้น');
   assert.equal(mapLoadFailed(undefined), true);
   for (const type of ['tile', 'source', 'sprite', 'glyphs'] as const) assert.equal(mapLoadFailed({ error: type, type }), false, type);
+});
+
+// ลูกโลกของทริปทั้งหมด
+const castle = place('castle', 34.6873, 135.5262), kuromon = place('kuromon', 34.6655, 135.5066), namba = place('namba', 34.666, 135.5);
+const kaiyukan = place('kaiyukan', 34.6545, 135.4289), umeda = place('umeda', 34.7025, 135.4959), tokyo = place('tokyo', 35.6586, 139.7454);
+const kiyomizu = place('kiyomizu', 34.9949, 135.785), fushimi = place('fushimi', 34.9671, 135.7727);
+
+test('ทริปที่ยังไม่มีที่ที่มีพิกัด ไม่ขึ้นบนลูกโลก ทริปอื่นเรียงตามเดิม', () => {
+  const spots = tripSpots([{ id: 'none', days: [[place('x', 0, 0)], []] }, { id: 'osaka', days: [[castle]] }, { id: 'empty', days: [] }]);
+  assert.deepEqual(spots.map((s) => s.key), ['osaka']);
+});
+
+test('รูปของทริปปักบนที่จริงที่อยู่กลางทริป ไม่ใช่ที่ที่พิกัดหลุดไปเมืองอื่น', () => {
+  const [s] = tripSpots([{ id: 'osaka', days: [[castle, kuromon, tokyo], [namba], [kaiyukan, umeda]] }]);
+  assert.deepEqual([s.lat, s.lon], [namba.lat, namba.lon]);
+  assert.equal(s.stops.length, 1, 'ทริปเมืองเดียวมีจุดเดียว ไม่มีเส้น');
+});
+
+test('วันที่อยู่เมืองเดียวกันเป็นจุดเดียว วันที่ไปอีกเมืองเป็นอีกจุด ตามลำดับวัน วันที่ไม่มีพิกัดข้าม', () => {
+  const [s] = tripSpots([{ id: 'kansai', days: [[castle, kuromon], [namba], [place('ghost', 0, 0)], [kiyomizu, fushimi], [kaiyukan]] }]);
+  const near = (p: { lat: number; lon: number }, q: { lat: number; lon: number }) => Math.abs(p.lat - q.lat) < 0.05 && Math.abs(p.lon - q.lon) < 0.05;
+  assert.equal(s.stops.length, 3);
+  assert.ok(near(s.stops[0], castle) && near(s.stops[1], kiyomizu) && near(s.stops[2], kaiyukan), JSON.stringify(s.stops));
 });

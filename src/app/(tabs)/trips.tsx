@@ -5,16 +5,19 @@ import { useEffect, useState } from 'react';
 import { Linking, Platform, View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/icon';
-import { AiSays, ArtCard, Badge, Button, Card, FadeIn, IconButton, PhotoCard, Row, Screen, Section, Stamp, StatusDot, T, useToast } from '@/components/ui';
+import { TripGlobe } from '@/components/tripMap';
+import { AiSays, ArtCard, Badge, Button, Card, FadeIn, IconButton, lift, PhotoCard, PressScale, Row, Screen, Section, Stamp, StatusDot, T, useToast } from '@/components/ui';
 import { ANYWHERE, KIT_CHECKED, kitFor, ordered, type KitItem } from '@/data/travelKit';
 import { art } from '@/data/trip';
 import { askAigo } from '@/lib/ask';
+import { useGlobeTrips } from '@/lib/globe';
 import type { L } from '@/lib/i18n';
 import { addDays, type AppTrip } from '@/lib/itinerary';
+import { GLOBE_SPACE } from '@/lib/mapPoints';
 import { usePhotos } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { daysUntil, useTrip } from '@/lib/tripStore';
-import { space } from '@/theme/tokens';
+import { radius, space } from '@/theme/tokens';
 
 // shortcut: ทางเข้าหน้าตัวอย่างระหว่างเที่ยว ในแอปจริงหน้าเหล่านี้เปิดจาก push notification และลิงก์แชร์
 const PREVIEWS: { href: '/itinerary' | '/today' | '/disruption' | '/shared/demo'; icon: IconName; tone: 'sky' | 'blush' | 'lilac' | 'sun'; label: L }[] = [
@@ -25,8 +28,9 @@ const PREVIEWS: { href: '/itinerary' | '/today' | '/disruption' | '/shared/demo'
 ];
 
 export default function Trips() {
-  const { colors, t, pick } = useSettings();
+  const { colors, isDark, t, pick } = useSettings();
   const { trip, trips, openTrip } = useTrip();
+  const globe = useGlobeTrips();
   const places = trip.days.flat().length;
   const away = daysUntil(trip.startDate);
   // ระหว่างเที่ยวหรือเที่ยวแล้ว ไม่ขึ้น "อีก 0 วัน"
@@ -66,6 +70,18 @@ export default function Trips() {
             : pick({ th: 'แผนเที่ยวพร้อมแล้ว เปิดดูได้แม้ไม่มีเน็ต', en: 'Your plan is ready and works offline.' })}</AiSays>
           <Button label={t('trips.open')} icon="next" onPress={() => router.push('/itinerary')} />
         </FadeIn>
+        {/* ทริปทั้งหมดบนลูกโลก (แบบ Polarsteps) แตะแล้วเปิดลูกโลกเต็มจอที่ซูมเข้าออกได้ */}
+        {globe.length > 0 && (
+          <FadeIn index={2}>
+            <Section title={pick({ th: 'ทริปของฉันบนลูกโลก', en: 'My trips on the globe' })}>
+              <PressScale onPress={() => router.push('/globe')} label={pick({ th: 'เปิดลูกโลกของทริปทั้งหมด', en: 'Open the globe of all your trips' })}>
+                <View style={[{ height: 240, borderRadius: radius.xl, overflow: 'hidden', backgroundColor: GLOBE_SPACE }, lift(isDark, 0.8)]}>
+                  <TripGlobe trips={globe} interactive={false} pad={{ top: 0.08, bottom: 0.14, x: 0.06 }} />
+                </View>
+              </PressScale>
+            </Section>
+          </FadeIn>
+        )}
         <FadeIn index={2}><Checklist trip={trip} /></FadeIn>
         <FadeIn index={2}><TravelKit trip={trip} /></FadeIn>
         <FadeIn index={2}>

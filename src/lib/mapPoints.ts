@@ -1,5 +1,7 @@
-// หมุดบนแผนที่ของหนึ่งวัน (สเปก R12 และ docs/superpowers/specs/2026-11-21-in-app-map-design.md)
+// หมุดบนแผนที่ของหนึ่งวัน (สเปก R12 และ docs/superpowers/specs/2026-11-21-in-app-map-design.md) และทริปทั้งหมดบนลูกโลก
 // ใช้ทั้งแผนที่ Mapbox (src/components/tripMap.native.tsx) และแผนที่วาดบนเว็บ (src/components/tripMap.tsx)
+import type { ImageSource } from 'expo-image';
+
 export type MapPoint = { key: string; lat: number; lon: number; n: number; label: string; approx: boolean };
 
 export type TripMapProps = {
@@ -46,6 +48,46 @@ export function dayPoints<P extends { id: string; lat: number; lon: number }>(pl
     }
   });
   return { points, missing };
+}
+
+/** ทริปบนลูกโลก: key = id ของทริป, lat/lon = ที่ปักรูปของทริป, stops = เมืองที่ไปตามลำดับวัน (เส้นทางบนลูกโลก) */
+export type GlobeSpot = { key: string; lat: number; lon: number; stops: { lat: number; lon: number }[] };
+const STOP_KM = 30;
+/** ทริปบนลูกโลกพร้อมของที่แสดง: ชื่อ รูป และจำนวนวัน */
+export type GlobeTrip = GlobeSpot & { label: string; photo?: ImageSource; days: number };
+export type TripGlobeProps = {
+  trips: GlobeTrip[];
+  /** ทริปที่เลือก: กล้องบินเข้าไปดูทั้งทริป; ไม่เลือก = ลูกโลกทั้งใบ */
+  selected?: string;
+  onSelect?: (key: string) => void;
+  /** false = ภาพเฉยๆ (การ์ดในแท็บทริป) เลื่อนหรือซูมไม่ได้ */
+  interactive?: boolean;
+  pad: TripMapProps['pad'];
+};
+/** สีอวกาศรอบลูกโลก: พื้นของหน้าและการ์ดที่มีลูกโลก (เห็นระหว่างรอแผนที่โหลด) */
+export const GLOBE_SPACE = '#0B0B19';
+/** แผนที่วาด (เว็บ, Expo Go, ไม่มี token) แสดงทริปเป็นหมุดเลขตามลำดับในรายการ */
+export const globePoints = (trips: GlobeTrip[]): MapPoint[] => trips.map((t, i) => ({ key: t.key, lat: t.lat, lon: t.lon, n: i + 1, label: t.label, approx: false }));
+
+/**
+ * ทริปทั้งหมดบนลูกโลก (src/app/globe.tsx) ใช้เฉพาะที่ที่ปักหมุดได้ตามกฎของ dayPoints ทริปที่ยังไม่มีเลยไม่ขึ้น
+ * รูปของทริปปักบนที่จริงที่ใกล้กลางทริปที่สุด (กลางแบบมัธยฐานอาจตกทะเลถ้าเส้นทางเป็นรูปตัว L)
+ * เมืองที่ไป = กลางของแต่ละวันตามลำดับ วันที่ติดกันห่างกันไม่เกิน 30 กม. นับเป็นเมืองเดียว
+ */
+export function tripSpots(trips: { id: string; days: { id: string; lat: number; lon: number }[][] }[]): GlobeSpot[] {
+  return trips.flatMap((t) => {
+    const days = t.days.map((d) => dayPoints(d, () => '', () => undefined).points).filter((d) => d.length);
+    const all = days.flat();
+    if (!all.length) return [];
+    const mid = { lat: median(all.map((p) => p.lat)), lon: median(all.map((p) => p.lon)) };
+    const at = all.reduce((a, b) => (km(b, mid) < km(a, mid) ? b : a));
+    const stops: GlobeSpot['stops'] = [];
+    for (const d of days) {
+      const c = { lat: median(d.map((p) => p.lat)), lon: median(d.map((p) => p.lon)) };
+      if (!stops.length || km(stops[stops.length - 1], c) > STOP_KM) stops.push(c);
+    }
+    return [{ key: t.id, lat: at.lat, lon: at.lon, stops }];
+  });
 }
 
 /** ที่ที่ "นำทาง" พาไป: หมุดของที่นั้น (ตำแหน่งที่ตรวจแล้วถ้ามี); ไม่ได้ปักหมุด (ไม่มีพิกัด หรือพิกัดไกลผิดเมือง) ใช้ชื่อกับเมือง ไม่ใช้พิกัดของ AI */

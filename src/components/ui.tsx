@@ -767,7 +767,8 @@ export function MapPin({ n, name, selected = false, approx = false, onPress }: {
 }
 
 /** แผนที่วาดจากพิกัด: ใช้บนเว็บ และในแอปเมื่อไม่มี Mapbox (ไม่มี token, Expo Go หรือโหลดแผนที่ไม่ขึ้น) */
-export function SketchMap({ points, pad, selected, onSelect }: Pick<TripMapProps, 'points' | 'pad' | 'selected' | 'onSelect'>) {
+// line = เส้นประตามลำดับหมุด (ลูกโลกของทริปทั้งหมดไม่มีเส้น เพราะทริปต่างๆ ไม่ได้เดินทางต่อกัน)
+export function SketchMap({ points, pad, selected, onSelect, line = true }: Pick<TripMapProps, 'points' | 'pad' | 'selected' | 'onSelect'> & { line?: boolean }) {
   const { colors } = useSettings();
   const lats = points.map((p) => p.lat), lons = points.map((p) => p.lon);
   const [la0, la1, lo0, lo1] = [Math.min(...lats), Math.max(...lats), Math.min(...lons), Math.max(...lons)];
@@ -786,7 +787,7 @@ export function SketchMap({ points, pad, selected, onSelect }: Pick<TripMapProps
         {blocks.map(([x, y, w, h], i) => <Rect key={i} x={x} y={y} width={w} height={h} rx={2.5} fill={colors.surface} opacity={0.55} />)}
         <Path d="M-5 56 C 20 47, 34 66, 56 57 S 86 46, 105 52" stroke={colors.sticker.sky} strokeWidth={14} vectorEffect="non-scaling-stroke" fill="none" />
         <Path d="M28 -5 C 33 18, 24 34, 31 54" stroke={colors.sticker.sky} strokeWidth={7} vectorEffect="non-scaling-stroke" fill="none" />
-        <Path d={route} stroke={colors.ink} strokeOpacity={0.75} strokeWidth={3} strokeDasharray="0.5 8" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" fill="none" />
+        {line && <Path d={route} stroke={colors.ink} strokeOpacity={0.75} strokeWidth={3} strokeDasharray="0.5 8" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" fill="none" />}
       </Svg>
       {points.map((p, i) => {
         const q = xy[i];

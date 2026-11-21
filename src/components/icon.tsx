@@ -22,9 +22,10 @@ const PATHS = {
   walk: ['M12.5 8.5 10.5 14', 'M10.5 14 8 20.5', 'M10.5 14l3 2.5 1 4', 'M7.5 11.5l3-3 3.5 1 2 3'],
   train: ['M7 4h10a2 2 0 0 1 2 2v9a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V6a2 2 0 0 1 2-2z', 'M5 11h14', 'M8.5 21 10 18.5', 'M15.5 21 14 18.5', 'M8.5 14.5h.01', 'M15.5 14.5h.01'],
   car: ['M5 12l1.6-4.3A1.6 1.6 0 0 1 8.1 6.5h7.8a1.6 1.6 0 0 1 1.5 1.2L19 12', 'M4 12h16v4.5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z', 'M7 17.5V19', 'M17 17.5V19', 'M7.5 14.5h.01', 'M16.5 14.5h.01'],
+  globe: ['M3.5 12h17', 'M12 3.5c2.6 2.4 3.9 5.3 3.9 8.5s-1.3 6.1-3.9 8.5', 'M12 3.5C9.4 5.9 8.1 8.8 8.1 12s1.3 6.1 3.9 8.5'],
   locate: ['M12 3.5v3', 'M12 17.5v3', 'M3.5 12h3', 'M17.5 12h3', 'M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10z', 'M12 11a1 1 0 1 1 0 2 1 1 0 0 1 0-2z'],
 } as const;
-const CIRCLES: Partial<Record<keyof typeof PATHS, [number, number, number]>> = { user: [12, 8.5, 4], pin: [12, 10, 2.4], walk: [13.5, 4.8, 1.8] };
+const CIRCLES: Partial<Record<keyof typeof PATHS, [number, number, number]>> = { user: [12, 8.5, 4], pin: [12, 10, 2.4], walk: [13.5, 4.8, 1.8], globe: [12, 12, 8.5] };
 
 export type IconName = keyof typeof PATHS;
 
