@@ -4,10 +4,11 @@ import type * as Mapbox from '@rnmapbox/maps';
 import { Image } from 'expo-image';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { NativeModules, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 
 import { Icon } from '@/components/icon';
 import { IconButton, MapPin, SketchMap } from '@/components/ui';
-import { GLOBE_SPACE, globePoints, globeZoom, mapLoadFailed, type GlobeTrip, type TripGlobeProps, type TripMapProps } from '@/lib/mapPoints';
+import { arc, GLOBE_SPACE, globePoints, globeZoom, mapLoadFailed, planeAt, type GlobeTrip, type TripGlobeProps, type TripMapProps } from '@/lib/mapPoints';
 import { useSettings } from '@/lib/settings';
 import { fonts, radius, space } from '@/theme/tokens';
 
@@ -18,9 +19,24 @@ const M: typeof Mapbox | null = TOKEN && NativeModules.RNMBXModule ? require('@r
 M?.setAccessToken(TOKEN!).catch(() => {});
 // Android ขอสิทธิ์ตำแหน่งครั้งเดียวต่อการเปิดแอป: ผู้ใช้ปฏิเสธแล้วไม่ถามซ้ำทุกครั้งที่เปิดหน้าที่มีแผนที่
 let androidAsk: Promise<boolean> | null = null;
+// สีแผนที่ชุดเดียวกับแอป (docs/superpowers/specs/2026-11-21-map-look-design.md) ปรับหลังเจ้าของดูบนเครื่องจริง
+const MAP_LOOK = {
+  light: { lightPreset: 'day', colorLand: '#F6EFE6', colorWater: '#D4ECFF', colorGreenspaces: '#D2F3E4', colorRoads: '#FFFFFF', colorMotorways: '#FFE9A8', colorBuildings: '#EDE4D8' },
+  dark: { lightPreset: 'night', colorLand: '#1F1B17', colorWater: '#22344A', colorGreenspaces: '#1F3A30', colorRoads: '#3D362E', colorMotorways: '#3D3420', colorBuildings: '#2A241F' },
+} as const;
+// ลองจิจูดของเส้นที่ข้ามเส้นแบ่งวันเกิน 180 ได้ (ให้เส้นต่อเนื่อง) จุดเดี่ยวส่งให้ Mapbox ในช่วง ±180
+const wrap = (lon: number) => ((lon + 540) % 360) - 180;
 
-export function TripMap({ points, selected, onSelect, interactive = true, showUser = false, pad }: TripMapProps) {
+export function TripMap({ points, selected, onSelect, interactive = true, showUser = false, pad, intro = false, pois = false, travel }: TripMapProps) {
   const { colors, isDark, pick } = useSettings();
+  // บินจากลูกโลก: 'globe' รอแผนที่โหลด, 'intro' บินลง 2.5 วินาที, 'normal' เปลี่ยนวันแล้วเลื่อนธรรมดา; เล่นครั้งเดียวต่อการเปิดหน้า
+  const reduce = useReducedMotion();
+  const [stage, setStage] = useState<'globe' | 'intro' | 'normal'>(intro && !reduce ? 'globe' : 'normal');
+  useEffect(() => {
+    if (stage !== 'intro') return;
+    const t = setTimeout(() => setStage('normal'), 2600);
+    return () => clearTimeout(t);
+  }, [stage]);
   const [box, setBox] = useState({ w: 0, h: 0 });
   const [failed, setFailed] = useState(false);
   const [here, setHere] = useState<[number, number] | null>(null);
@@ -47,11 +63,25 @@ export function TripMap({ points, selected, onSelect, interactive = true, showUs
   const { w: bw, h: bh } = box;
   // ที่เดียว หรือทุกที่แทบเป็นจุดเดียวกัน: ซูมไปที่จุดนั้น (พอดีกรอบของจุดเดียวจะซูมลึกสุด)
   const one = e - w < 0.002 && n - s < 0.002;
+  // วันเดินทาง: เส้นบินตามผิวโลก และรูปเครื่องบินก่อนถึงปลายทาง (คำนวณใหม่เฉพาะเมื่อจุดเปลี่ยน)
+  const has = !!travel;
+  const [fa, fo, ta, tb] = travel ? [travel.from.lat, travel.from.lon, travel.to.lat, travel.to.lon] : [0, 0, 0, 0];
+  const line = useMemo(() => (has ? arc({ lat: fa, lon: fo }, { lat: ta, lon: tb }) : null), [has, fa, fo, ta, tb]);
+  const plane = useMemo(() => line && planeAt(line), [line]);
   // ค่าคงที่ตราบที่วันและขนาดไม่เปลี่ยน กล้องจึงไม่ดีดกลับตอนผู้ใช้เลื่อนแผนที่แล้วหน้าจอวาดใหม่
   const camera = useMemo<Mapbox.CameraStop>(() => {
     const padding = { paddingTop: pad.top * bh, paddingBottom: pad.bottom * bh, paddingLeft: pad.x * bw, paddingRight: pad.x * bw };
+    // วันเดินทางจบที่ฝั่งปลายทางระดับเห็นทั้งภูมิภาค ให้เห็นเส้นบินพุ่งเข้ามาหาที่แรก
+    if (has) return { centerCoordinate: [tb, ta], zoomLevel: 7, padding };
     return one ? { centerCoordinate: [(w + e) / 2, (s + n) / 2], zoomLevel: 15, padding } : { bounds: { ne: [e, n], sw: [w, s] }, padding };
-  }, [pad.top, pad.bottom, pad.x, bw, bh, one, w, e, s, n]);
+  }, [pad.top, pad.bottom, pad.x, bw, bh, one, w, e, s, n, has, ta, tb]);
+  // จุดเริ่มของการบินลง: ลูกโลกทั้งใบหันกลางของวัน (วันเดินทางหันกลางเส้นบิน)
+  const [sx, sy] = line ? line[line.length >> 1] : [(w + e) / 2, (s + n) / 2];
+  const start = useMemo<Mapbox.CameraStop>(() => ({
+    centerCoordinate: [wrap(sx), sy], zoomLevel: globeZoom(bw, bh, { top: pad.top, bottom: pad.bottom, x: pad.x }, sy),
+    padding: { paddingTop: pad.top * bh, paddingBottom: pad.bottom * bh, paddingLeft: pad.x * bw, paddingRight: pad.x * bw },
+  }), [sx, sy, bw, bh, pad.top, pad.bottom, pad.x]);
+  const view = stage === 'globe' ? start : camera;
 
   if (!M || failed || !points.length) {
     return <View style={StyleSheet.absoluteFill}><SketchMap points={points} pad={pad} selected={selected} onSelect={interactive ? onSelect : undefined} /></View>;
@@ -73,18 +103,40 @@ export function TripMap({ points, selected, onSelect, interactive = true, showUs
       {bw > 0 && (
         // ลูกโลก: ซูมออกจนสุดเห็นโลกทั้งใบ ระดับเมืองหน้าตาเหมือนแผนที่แบน
         <M.MapView style={StyleSheet.absoluteFill} styleURL="mapbox://styles/mapbox/standard" projection="globe" onMapLoadingError={(e) => { if (mapLoadFailed(e)) setFailed(true); }}
+          onDidFinishLoadingMap={() => setStage((x) => (x === 'globe' ? 'intro' : x))}
           scrollEnabled={interactive} zoomEnabled={interactive} rotateEnabled={false} pitchEnabled={false} compassEnabled={false} scaleBarEnabled={false}
           // Android: แผนที่อยู่ในหน้าที่เลื่อนขึ้นลงได้ ให้ลากแผนที่ได้ทุกทิศ ไม่ให้หน้ารับการลากขึ้นลงไป
           requestDisallowInterceptTouchEvent={interactive}
           // Android: แผนที่เล็ก (หัวหน้าแผน, วันนี้) ใช้ TextureView ให้มุมโค้งของกรอบตัดแผนที่ได้
           surfaceView={interactive}
           logoPosition={{ bottom: orn, left: space.sm }} attributionEnabled={interactive} attributionPosition={{ bottom: orn, left: space.sm + 92 }}>
-          <M.StyleImport id="basemap" existing config={{ lightPreset: isDark ? 'night' : 'day', showPointOfInterestLabels: false }} />
-          <M.Camera ref={cam} defaultSettings={camera} {...camera} animationDuration={600} animationMode="easeTo" />
+          <M.StyleImport id="basemap" existing config={{ ...MAP_LOOK[isDark ? 'dark' : 'light'], showPointOfInterestLabels: pois }} />
+          <M.Camera ref={cam} defaultSettings={view} {...view} animationDuration={stage === 'intro' ? 2500 : 600} animationMode={stage === 'intro' ? 'flyTo' : 'easeTo'} />
           {points.length > 1 && (
             <M.ShapeSource id="aigo-route" shape={{ type: 'LineString', coordinates: points.map((p) => [p.lon, p.lat]) }}>
               <M.LineLayer id="aigo-route-line" slot="middle" style={{ lineColor: colors.primary, lineWidth: 4, lineDasharray: [0.2, 2], lineCap: 'round', lineJoin: 'round', lineEmissiveStrength: 1 }} />
             </M.ShapeSource>
+          )}
+          {line && (
+            <M.ShapeSource id="aigo-travel" shape={{ type: 'LineString', coordinates: line }}>
+              <M.LineLayer id="aigo-travel-line" slot="middle" style={{ lineColor: colors.primary, lineWidth: 3, lineDasharray: [2, 2], lineCap: 'round', lineJoin: 'round', lineEmissiveStrength: 1 }} />
+            </M.ShapeSource>
+          )}
+          {plane && (
+            <M.MarkerView coordinate={[wrap(plane.at[0]), plane.at[1]]} allowOverlap>
+              <View accessible={false} style={{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', transform: [{ rotate: `${plane.rotate}deg` }] }}>
+                <Icon name="plane" color={colors.primary} size={18} />
+              </View>
+            </M.MarkerView>
+          )}
+          {travel && (
+            <M.MarkerView coordinate={[travel.to.lon, travel.to.lat]} allowOverlap>
+              {travel.photo ? (
+                <View accessible accessibilityLabel={travel.to.label} style={{ width: 52, height: 52, borderRadius: 26, borderWidth: 3, borderColor: colors.primary, overflow: 'hidden', backgroundColor: colors.surface }}>
+                  <Image source={travel.photo} style={StyleSheet.absoluteFill} contentFit="cover" accessible={false} />
+                </View>
+              ) : <MapPin n={travel.to.n} name={travel.to.label} />}
+            </M.MarkerView>
           )}
           {showUser && granted && <M.LocationPuck />}
           {points.map((p) => (
@@ -133,7 +185,7 @@ export function TripGlobe({ trips, selected, onSelect, interactive = true, pad }
     const padding = { paddingTop: pad.top * bh, paddingBottom: pad.bottom * bh, paddingLeft: pad.x * bw, paddingRight: pad.x * bw };
     if (route) return { bounds: { ne: [e, n], sw: [w, s] }, padding };
     if (selected) return { centerCoordinate: [lon, lat], zoomLevel: 10, padding };
-    return { centerCoordinate: [lon, lat], zoomLevel: globeZoom(bw, bh, pad, lat), padding };
+    return { centerCoordinate: [lon, lat], zoomLevel: globeZoom(bw, bh, { top: pad.top, bottom: pad.bottom, x: pad.x }, lat), padding };
   }, [pad.top, pad.bottom, pad.x, bw, bh, route, selected, w, e, s, n, lon, lat]);
 
   if (!M || failed || !trips.length) {
