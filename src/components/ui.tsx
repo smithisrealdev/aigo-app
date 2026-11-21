@@ -743,10 +743,13 @@ export function Segmented({ options, value, onChange }: { options: string[]; val
 }
 
 /** การ์ดจุดแวะแบบ Polarsteps: รูปมีเลขตรงกับหมุดบนแผนที่ ชื่อ รายละเอียด สถานะ และเวลาตัวใหญ่ทางขวา */
-export function StopCard({ n, photo, name, time, meta, status, statusTone = 'success', onPress, label }: {
+export function StopCard({ n, photo, name, time, meta, status, statusTone = 'success', onPress, label, food, meal }: {
   n: number; photo?: ImageSource; name: string; time?: string; meta?: string; status?: string; statusTone?: Tone; onPress?: () => void; label?: string;
+  /** ร้านหรือคาเฟ่: ช้อนส้อมที่มุมรูป; meal = ป้ายมื้อ ("มื้อเย็น") นำหน้ารายละเอียด */
+  food?: boolean; meal?: string;
 }) {
   const { colors, isDark } = useSettings();
+  const detail = [meal, meta].filter(Boolean).join(' · ');
   const inner = (
     <View style={[{ flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.sm, paddingRight: space.lg, borderRadius: radius.lg, backgroundColor: colors.surface }, lift(isDark, 0.8), isDark && { borderWidth: 1, borderColor: colors.line }]}>
       <View>
@@ -754,34 +757,43 @@ export function StopCard({ n, photo, name, time, meta, status, statusTone = 'suc
         <View style={{ position: 'absolute', left: -4, bottom: -4, width: 26, height: 26, borderRadius: 13, backgroundColor: colors.ink, borderWidth: 2, borderColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontFamily: fonts.bodyBold, fontSize: 13, color: colors.bg }}>{n}</Text>
         </View>
+        {food && (
+          <View style={{ position: 'absolute', right: -4, top: -4, width: 24, height: 24, borderRadius: 12, backgroundColor: colors.sticker.sun, borderWidth: 2, borderColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="food" color={colors.ink} size={13} />
+          </View>
+        )}
       </View>
       <View style={{ flex: 1, gap: 2 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
           <T v="subheading" numberOfLines={1} style={{ flexShrink: 1 }}>{name}</T>
           {onPress && <Icon name="next" color={colors.muted} size={16} />}
         </View>
-        {meta && <T v="small" tone="muted">{meta}</T>}
+        {detail !== '' && <T v="small" tone="muted">{detail}</T>}
         {status && <T v="smallBold" tone={statusTone}>{status}</T>}
       </View>
       {time && <Text style={{ fontFamily: fonts.display, fontSize: type.xl, color: colors.ink, fontVariant: ['tabular-nums'] }}>{time}</Text>}
     </View>
   );
-  return onPress ? <PressScale onPress={onPress} label={label ?? name} to={scale.choice}>{inner}</PressScale> : inner;
+  return onPress ? <PressScale onPress={onPress} label={label ?? [name, meal].filter(Boolean).join(', ')} to={scale.choice}>{inner}</PressScale> : inner;
 }
 
 export type Leg = { mode: 'train' | 'walk' | 'car'; text: string };
-export type RouteStop = { key: string; photo?: ImageSource; name: string; time?: string; meta?: string; status?: string; statusTone?: Tone; onPress?: () => void };
+export type RouteStop = { key: string; photo?: ImageSource; name: string; time?: string; meta?: string; status?: string; statusTone?: Tone; onPress?: () => void; food?: boolean; meal?: string };
+/** แถวจบวัน: ธงกับข้อความ หรือที่พักของคืนนั้น (มีรูป รายละเอียด และปุ่ม) */
+export type RouteEnd = { title: string; sub?: string; icon?: IconName; photo?: ImageSource; action?: { label: string; onPress: () => void } };
 
 /**
  * แผนรายวันแบบ Polarsteps: แถวเริ่ม (บ้าน) → จุดแวะ → ป้ายการเดินทางระหว่างจุด → แถวจบ (ธง)
  * เส้นประเชื่อมทางซ้าย ปุ่ม + บนเส้นสำหรับขอให้ AiGo เพิ่มที่แวะตรงนั้น (ไม่ส่ง onAdd = ดูอย่างเดียว)
  */
 export function RouteList({ start, end, stops, legs = [], onAdd, addLabel }: {
-  start: { title: string; sub?: string; right?: ReactNode; icon?: IconName }; end?: { title: string; sub?: string }; stops: RouteStop[];
+  start: { title: string; sub?: string; right?: ReactNode; icon?: IconName }; end?: RouteEnd; stops: RouteStop[];
   legs?: (Leg | undefined)[]; onAdd?: (i: number) => void; addLabel?: (i: number) => string;
 }) {
-  const { colors } = useSettings();
+  const { colors, isDark } = useSettings();
   const col = 44;
+  // เส้นประจบที่กลางไอคอนของแถวจบ (แถวที่พักสูงกว่าแถวธง)
+  const [endH, setEndH] = useState(56);
   const between = (i: number) => {
     const leg = i > 0 ? legs[i - 1] : undefined;
     if (!onAdd && !leg) return <View style={{ height: space.md }} />;
@@ -817,16 +829,34 @@ export function RouteList({ start, end, stops, legs = [], onAdd, addLabel }: {
   );
   return (
     <View>
-      <View style={{ position: 'absolute', left: col / 2 - 1, top: 28, bottom: end ? 28 : 0, borderLeftWidth: 2, borderStyle: 'dashed', borderColor: colors.line }} />
+      <View style={{ position: 'absolute', left: col / 2 - 1, top: 28, bottom: end ? endH / 2 : 0, borderLeftWidth: 2, borderStyle: 'dashed', borderColor: colors.line }} />
       {edge(start.icon ?? 'home', true, start.title, start.sub, start.right)}
       {stops.map((s, i) => (
         <View key={s.key}>
           {between(i)}
-          <FadeIn index={i}><StopCard n={i + 1} photo={s.photo} name={s.name} time={s.time} meta={s.meta} status={s.status} statusTone={s.statusTone} onPress={s.onPress} /></FadeIn>
+          <FadeIn index={i}><StopCard n={i + 1} photo={s.photo} name={s.name} time={s.time} meta={s.meta} status={s.status} statusTone={s.statusTone} onPress={s.onPress} food={s.food} meal={s.meal} /></FadeIn>
         </View>
       ))}
       {between(stops.length)}
-      {end && edge('flag', false, end.title, end.sub)}
+      {end && (
+        <View onLayout={(e) => setEndH(e.nativeEvent.layout.height)}>
+          {end.action ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+              <View style={{ width: col, alignItems: 'center' }}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.ink }}><Icon name={end.icon ?? 'bed'} color={colors.bg} size={20} /></View>
+              </View>
+              <View style={[{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.sm, borderRadius: radius.lg, backgroundColor: colors.surface }, lift(isDark, 0.8), isDark && { borderWidth: 1, borderColor: colors.line }]}>
+                <PhotoBox source={end.photo} seed={end.title} style={{ width: 64, height: 64, borderRadius: radius.sm }} />
+                <View style={{ flex: 1, gap: 2 }}>
+                  <T v="bodyBold" numberOfLines={2}>{end.title}</T>
+                  {end.sub && <T v="small" tone="muted">{end.sub}</T>}
+                  <Button kind="secondary" label={end.action.label} onPress={end.action.onPress} style={{ alignSelf: 'flex-start', minHeight: 40, marginTop: 4 }} />
+                </View>
+              </View>
+            </View>
+          ) : edge(end.icon ?? 'flag', false, end.title, end.sub)}
+        </View>
+      )}
     </View>
   );
 }

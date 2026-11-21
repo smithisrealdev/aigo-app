@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Linking, ScrollView, View } from 'react-native';
 
 import { TripCards } from '@/components/cards';
 import { Icon } from '@/components/icon';
@@ -11,7 +11,8 @@ import { askAigo } from '@/lib/ask';
 import { replanDay } from '@/lib/backend';
 import { shortDate } from '@/lib/chat';
 import { useTravelLeg } from '@/lib/globe';
-import { addDays, toAppTrip, type AppTrip } from '@/lib/itinerary';
+import { addDays, MEAL, stayOf, toAppTrip, type AppTrip } from '@/lib/itinerary';
+import { stayLink } from '@/lib/links';
 import { dayPoints } from '@/lib/mapPoints';
 import { usePhotos, usePlaceGeo } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
@@ -37,13 +38,20 @@ export default function Itinerary() {
     const before = saved;
     setEdit({ day: d, wish }); setUndo(null); setOffer(null);
     const current = before.days[d]?.map((p) => p.name.en).join(', ');
+    // ที่พักของคืนนี้: บอก AiGo ให้คงไว้ (ขอเปลี่ยนได้) และบอกว่าทริปยังไม่จบ ไม่อย่างนั้นวันที่วางใหม่จะถูกนับเป็นวันกลับ
+    const stay = before.stays?.[d] ?? null;
+    const goesOn = d < before.totalDays - 1;
+    const context = [current && `Current plan for this day: ${current}.`, stay && `Tonight's stay: ${stay.name}.`, goesOn && 'The trip continues after this day, so this day has a stay.'].filter(Boolean).join(' ');
     const req = { destination: before.destination.en, startDate: before.startDate, endDate: before.startDate, travelers: `${before.people} people`, language: lang };
-    replanDay(req, addDays(before.startDate, d), current ? `Current plan for this day: ${current}. Change it as the traveller asks and keep the rest: ${wish}` : wish,
-      before.days.map((ps, i) => ({ places: i === d ? [] : ps.map((x) => ({ name: x.name.en })) })))
+    replanDay(req, addDays(before.startDate, d), context ? `${context} Change it as the traveller asks and keep the rest: ${wish}` : wish,
+      before.days.map((ps, i) => ({ places: i === d ? [] : ps.map((x) => ({ name: x.name.en })), stay: i !== d && before.stays?.[i] ? { name: before.stays[i]!.name } : undefined })))
       .then((g) => {
         const fresh = toAppTrip({ days: [g] }, req, before.people);
+        // คำตอบไม่มีที่พัก: คงที่พักเดิมของคืนนั้น; วันกลับไม่มีที่พัก
+        const night = goesOn ? stayOf(g.stay) ?? stay : null;
+        const stays = before.stays || night ? before.days.map((_, i) => (i === d ? night : before.stays?.[i] ?? null)) : undefined;
         const next: AppTrip = { ...before, days: before.days.map((ps, i) => (i === d ? fresh.days[0] : ps)), legs: { ...before.legs, ...fresh.legs },
-          dayTitles: before.days.map((_, i) => (i === d ? fresh.dayTitles?.[0] : before.dayTitles?.[i]) ?? { th: '', en: '' }) };
+          dayTitles: before.days.map((_, i) => (i === d ? fresh.dayTitles?.[0] : before.dayTitles?.[i]) ?? { th: '', en: '' }), ...(stays && { stays }) };
         if (autoEdit) { setTrip(next); setUndo({ day: d, trip: before }); } else setOffer({ day: d, trip: next });
         setEdit(null);
       })
@@ -53,7 +61,19 @@ export default function Itinerary() {
   const places = trip.days[day] ?? [];
   // ทริปที่ AiGo สร้างไม่มีรูปมาด้วย ค้นรูปจากชื่อสถานที่ (ชื่อภาษาอังกฤษ) ในเมืองของทริป
   const near = trip.destination.en;
-  const photo = usePhotos(places.filter((p) => !p.photo).map((p) => ({ name: p.name.en, near })));
+  const tonight = trip.stays?.[day] ?? null;
+  const photo = usePhotos([...places.filter((p) => !p.photo).map((p) => ({ name: p.name.en, near })), ...(tonight ? [{ name: tonight.name, near }] : [])]);
+  // จบวัน: ทริปที่มีที่พักบอกว่าคืนนี้พักที่ไหน วันสุดท้ายจบทริป; ทริปเก่า (ไม่มีที่พัก) แบบเดิม
+  const lastDay = day === trip.totalDays - 1;
+  const end = trip.stays?.some(Boolean) && lastDay
+    ? { title: pick({ th: 'จบทริป · เดินทางกลับ', en: 'End of trip · heading home' }) }
+    : tonight
+      ? {
+          icon: 'bed' as const, title: pick({ th: `คืนนี้พักที่ ${tonight.name}`, en: `Tonight: ${tonight.name}` }),
+          sub: [tonight.area, tonight.price && pick(tonight.price)].filter(Boolean).join(' · ') || undefined, photo: photo({ name: tonight.name, near }),
+          action: { label: pick({ th: 'ดูราคาที่พัก', en: 'See prices' }), onPress: () => Linking.openURL(stayLink(tonight, trip, day)) },
+        }
+      : { title: pick({ th: 'จบวัน · กลับที่พัก', en: 'End of day · back to the hotel' }), sub: trip.hotel && pick(trip.hotel) };
   const checked = places.filter((p) => p.checked).length;
   const allChecked = places.length > 0 && checked === places.length;
   const date = shortDate(addDays(trip.startDate, day), lang);
@@ -146,14 +166,14 @@ export default function Itinerary() {
             ),
           }}
           stops={places.map((p) => ({
-            key: p.id, photo: p.photo ?? photo({ name: p.name.en, near }), name: pick(p.name), time: p.time, meta: hours(p.minutes),
+            key: p.id, photo: p.photo ?? photo({ name: p.name.en, near }), name: pick(p.name), time: p.time, meta: hours(p.minutes), food: p.food, meal: p.meal && pick(MEAL[p.meal]),
             status: p.checked ? t('it.open') : t('it.unchecked'), statusTone: p.checked ? 'success' : 'muted',
             onPress: () => router.push({ pathname: '/place/[id]', params: { id: p.id } }),
           }))}
           legs={places.map((p) => trip.legs[p.id] && { mode: trip.legs[p.id].mode, text: pick(trip.legs[p.id].text) })}
           onAdd={(i) => tell(pick({ th: `เพิ่มที่แวะ${between(i)}`, en: `Add a stop ${between(i)}` }))}
           addLabel={(i) => pick({ th: `ขอให้ AiGo เพิ่มที่แวะ${between(i)}`, en: `Ask AiGo to add a stop ${between(i)}` })}
-          end={{ title: pick({ th: 'จบวัน · กลับที่พัก', en: 'End of day · back to the hotel' }), sub: trip.hotel && pick(trip.hotel) }} />
+          end={end} />
       ) : (
         // shortcut: ทริปตัวอย่างมีข้อมูลแค่วันที่ 1; ทริปที่ AiGo สร้างมีวันว่างเฉพาะวันที่ยังสร้างไม่ถึง
         <FadeIn key={day}>
