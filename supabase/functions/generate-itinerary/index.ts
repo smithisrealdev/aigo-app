@@ -46,7 +46,7 @@ function getSkeletonCacheKey(
 
   // FIX #2: Include outline hash so outline-based generations can be cached too
   const outlinePart = outlineHash ? `|outline:${outlineHash}` : '';
-  const raw = `${destination.toLowerCase().trim()}|${totalDays}|${(tripStyle || 'mixed').toLowerCase().trim()}|${(lang || 'en').toLowerCase()}${prefParts ? '|' + prefParts.toLowerCase() : ''}${outlinePart}`;
+  const raw = `${PLAN_SHAPE}|${destination.toLowerCase().trim()}|${totalDays}|${(tripStyle || 'mixed').toLowerCase().trim()}|${(lang || 'en').toLowerCase()}${prefParts ? '|' + prefParts.toLowerCase() : ''}${outlinePart}`;
   return sha256(raw).then(h => `itinerary_skeleton:${h}`);
 }
 
@@ -98,6 +98,8 @@ function sseEvent(type: string, data: any): string {
 
 // FIX #6: Skeleton cache TTL — 7 days
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+// Part of the cache key: change it when the plan's shape changes, so plans cached in the old shape are not served
+const PLAN_SHAPE = 'meals-stays-1';
 
 // Supabase stops a worker ~150 s after it starts, and one worker serves several requests in a row,
 // so a request gets only what is left of that time (seen: a 30-day trip cut 85 s in on a reused worker)
@@ -113,7 +115,7 @@ declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
 const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 /** Places already in the plan, so a later run does not repeat them (the same text as the app's plannedText) */
-const plannedText = (days: any[]) => days.map((d, i) => `Day ${i + 1}${d?.title ? ` (${d.title})` : ''}: ${(d?.places ?? []).map((p: any) => p?.name).filter(Boolean).join(', ')}`).join('\n').slice(0, 4000);
+const plannedText = (days: any[]) => days.map((d, i) => `Day ${i + 1}${d?.title ? ` (${d.title})` : ''}: ${(d?.places ?? []).map((p: any) => p?.name).filter(Boolean).join(', ')}${d?.stay?.name ? `; stay: ${d.stay.name}` : ''}`).join('\n').slice(0, 4000);
 /** Run the job now, after this reply; if this request is cut, the cron tick starts the run instead */
 const kick = (jobId: string, token: string) => EdgeRuntime.waitUntil(
   fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/generate-itinerary`, {
@@ -498,6 +500,7 @@ Generate a JSON itinerary with this EXACT structure:
         {
           "name": "Place Name",
           "category": "attraction|restaurant|hotel|shopping|nature|cultural|activity|transport|nightlife",
+          "meal": "lunch|dinner (only on the restaurant where that meal is eaten; leave it out on every other place)",
           "coordinates": { "lat": 0.0, "lng": 0.0 },
           "startTime": "09:00",
           "duration": "2 hours",
@@ -505,14 +508,15 @@ Generate a JSON itinerary with this EXACT structure:
           "tips": ["One short practical tip"],
           "travelToNext": { "mode": "walk", "time": 15 }
         }
-      ]
+      ],
+      "stay": { "name": "Hotel name as people search for it", "area": "Neighbourhood, City", "coordinates": { "lat": 0.0, "lng": 0.0 }, "pricePerNight": { "amount": 0, "currency": "<local currency code>" } }
     }
   ]
 }
 
 Requirements:
 1. Generate exactly ${partDays} days with correct sequential dates starting from ${partStart}
-2. Each day should have 4-5 places/activities
+2. Each day has 3-4 places to see plus lunch and dinner at specific, named restaurants (category "restaurant" with "meal": "lunch" or "dinner") close to the stops around them, at local meal times (lunch about 11:30-13:30, dinner about 18:00-20:00) and within the budget. Leave a meal out only when it cannot fit (an early flight out, a long transfer); no breakfast unless the traveller asked for it. Every day except day ${totalDays} (the day the travellers leave) has a "stay": one real, specific hotel, ryokan or guesthouse that suits the budget, style and number of travellers, in a convenient area for that day and the next, with an approximate price of one room per night. Keep the same stay on consecutive nights in one city and change it only when the trip moves to another city; if the conversation already chose a hotel, use it. If the special requirements say the trip continues after day ${totalDays}, that day has a stay too. The stay is never one of the places
 3. Include mix of categories based on trip style
 4. Provide realistic lat/lng coordinates for ${destinationStr}
 5. Include realistic costs in the local currency, durations, and travel times between places (omit travelToNext on the last place of a day)
