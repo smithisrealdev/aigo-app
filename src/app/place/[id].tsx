@@ -7,7 +7,8 @@ import { baht } from '@/data/trip';
 import { askAigo } from '@/lib/ask';
 import { NO_PRICE } from '@/lib/itinerary';
 import { navLink } from '@/lib/links';
-import { usePhotos } from '@/lib/photos';
+import { dayPoints, navTarget } from '@/lib/mapPoints';
+import { usePhotos, usePlaceGeo } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
 import { space } from '@/theme/tokens';
@@ -22,10 +23,14 @@ export default function Place() {
   const p = trip.days[day]?.find((x) => x.id === id);
   const near = trip.destination.en;
   const photo = usePhotos(p && !p.photo ? [{ name: p.name.en, near }] : []);
+  // นำทางไปที่เดียวกับหมุดบนแผนที่ของวันนั้น (ตำแหน่งที่ตรวจแล้วถ้ามี); ที่ที่ไม่ได้ปักหมุดใช้ชื่อกับเมือง ไม่ใช้พิกัดของ AI ที่ไกลผิดเมือง
+  const places = trip.days[day] ?? [];
+  const geo = usePlaceGeo(trip.sample ? [] : places.map((x) => ({ name: x.name.en, near })));
+  const { points } = dayPoints(places, (x) => x.name.en, trip.sample ? (x) => x : (x) => geo({ name: x.name.en, near }));
   if (!p) return <Screen title={t('common.sample')} onBack={() => router.back()}><T>{id}</T></Screen>;
   return (
     <Screen hero={p.photo ?? photo({ name: p.name.en, near })} heroHeight={340} title={pick(p.name)} subtitle={[t('it.day', { n: day + 1 }), p.time].filter(Boolean).join(' · ')} onBack={() => router.back()}
-      footer={<Button label={t('place.navigate')} icon="pin" big onPress={() => Linking.openURL(navLink({ name: p.name.en, lat: p.lat, lon: p.lon }, Platform.OS))} />}>
+      footer={<Button label={t('place.navigate')} icon="pin" big onPress={() => Linking.openURL(navLink(navTarget({ id: p.id, name: p.name.en }, points, near), Platform.OS))} />}>
       {!p.checked && (
         <FadeIn index={1}>
           <Card>

@@ -5,7 +5,7 @@ import { Linking, Platform, ScrollView, View } from 'react-native';
 import { TripMap } from '@/components/tripMap';
 import { Button, Chip, FadeIn, Screen, StopCard, T } from '@/components/ui';
 import { mapsLink, navLink } from '@/lib/links';
-import { dayPoints } from '@/lib/mapPoints';
+import { dayPoints, navTarget } from '@/lib/mapPoints';
 import { usePhotos, usePlaceGeo } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
@@ -32,8 +32,7 @@ export default function MapScreen() {
   const where = !p ? undefined : missing.includes(p.id) ? 'none' : points.find((x) => x.key === p.id)?.approx ? 'approx' : 'ok';
   const search = () => p && Linking.openURL(mapsLink(`${p.name.en} ${near}`));
   // ไม่ได้ปักหมุด (ไม่มีพิกัดหรือพิกัดไกลผิดเมือง) นำทางด้วยชื่อแทนพิกัด
-  const pin = points.find((x) => x.key === p?.id);
-  const navigate = () => p && Linking.openURL(navLink(pin ? { name: p.name.en, lat: pin.lat, lon: pin.lon } : { name: `${p.name.en}, ${near}` }, Platform.OS));
+  const navigate = () => p && Linking.openURL(navLink(navTarget({ id: p.id, name: p.name.en }, points, near), Platform.OS));
   const top = (
     <View style={{ height: MAP_H }}>
       <TripMap points={points} selected={p?.id} onSelect={setSel} showUser pad={{ top: 0.28, bottom: 0.14, x: 0.12 }} />

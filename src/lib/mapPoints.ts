@@ -35,7 +35,8 @@ const km = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) =>
  * ห่างจากของ AI ไม่เกิน 5 กม. ปักที่พิกัดที่ตรวจแล้ว ที่เหลือปักที่พิกัดของ AI เป็น "ตำแหน่งโดยประมาณ"
  */
 export function dayPoints<P extends { id: string; lat: number; lon: number }>(places: P[], label: (p: P) => string, checked: (p: P) => { lat: number; lon: number } | undefined): { points: MapPoint[]; missing: string[] } {
-  const located = places.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon) && (p.lat || p.lon));
+  // พิกัดนอกช่วงของโลก (AI สลับละติจูดกับลองจิจูด) ห้ามส่งให้ Mapbox: ถือว่าไม่มีพิกัด
+  const located = places.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon) && (p.lat || p.lon) && Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180);
   const centre = { lat: median(located.map((p) => p.lat)), lon: median(located.map((p) => p.lon)) };
   const points: MapPoint[] = [];
   const missing: string[] = [];
@@ -49,3 +50,15 @@ export function dayPoints<P extends { id: string; lat: number; lon: number }>(pl
   });
   return { points, missing };
 }
+
+/** ที่ที่ "นำทาง" พาไป: หมุดของที่นั้น (ตำแหน่งที่ตรวจแล้วถ้ามี); ไม่ได้ปักหมุด (ไม่มีพิกัด หรือพิกัดไกลผิดเมือง) ใช้ชื่อกับเมือง ไม่ใช้พิกัดของ AI */
+export function navTarget(p: { id: string; name: string }, points: MapPoint[], city: string): { name: string; lat?: number; lon?: number } {
+  const pin = points.find((x) => x.key === p.id);
+  return pin ? { name: p.name, lat: pin.lat, lon: pin.lon } : { name: `${p.name}, ${city}` };
+}
+
+/**
+ * แผนที่โหลดไม่ขึ้นจริง (ใช้แผนที่วาดแทน) เฉพาะเมื่อสไตล์โหลดไม่ได้หรือไม่บอกชนิด; ไทล์ รูป หรือแหล่งข้อมูลบางชิ้นพลาด
+ * (เน็ตหลุดสั้นๆ บนรถไฟใต้ดิน) แผนที่ยังใช้ได้ และ Mapbox โหลดใหม่เอง
+ */
+export const mapLoadFailed = (e?: { error?: string; type?: string }) => !e?.type || e.type === 'style';

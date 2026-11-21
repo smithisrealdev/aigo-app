@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { dayPoints } from './mapPoints.ts';
+import { dayPoints, mapLoadFailed, navTarget } from './mapPoints.ts';
 
 const place = (id: string, lat: number, lon: number) => ({ id, lat, lon, name: { th: id, en: id } });
 const label = (p: { name: { en: string } }) => p.name.en;
@@ -35,4 +35,24 @@ test('พิกัดจาก Wikipedia ห่างจากที่ AI ใ�
 test('วันเดียวที่เดียวยังได้หมุด และป้ายมาจากชื่อ', () => {
   const { points } = dayPoints([place('castle', 34.6873, 135.5262)], label, (p) => p);
   assert.deepEqual(points, [{ key: 'castle', lat: 34.6873, lon: 135.5262, n: 1, label: 'castle', approx: false }]);
+});
+
+test('พิกัดนอกช่วงของโลก (AI สลับละติจูดกับลองจิจูด) ไม่ปักหมุด แม้เป็นที่เดียวของวัน', () => {
+  assert.deepEqual(dayPoints([place('swapped', 135.5, 34.69)], label, none), { points: [], missing: ['swapped'] });
+  const { points, missing } = dayPoints([place('a', 34.69, 135.5), place('b', 135.51, 34.67), place('c', 34.67, 181)], label, none);
+  assert.deepEqual(points.map((p) => p.key), ['a']);
+  assert.deepEqual(missing, ['b', 'c']);
+});
+
+test('นำทางไปที่หมุด (ตำแหน่งที่ตรวจแล้วถ้ามี) ที่ไม่ได้ปักหมุดนำทางด้วยชื่อกับเมือง ไม่ใช้พิกัดของ AI', () => {
+  const pins = [{ key: 'castle', lat: 34.6873, lon: 135.5262, n: 1, label: 'Osaka Castle', approx: false }];
+  assert.deepEqual(navTarget({ id: 'castle', name: 'Osaka Castle' }, pins, 'Osaka'), { name: 'Osaka Castle', lat: 34.6873, lon: 135.5262 });
+  assert.deepEqual(navTarget({ id: 'tokyo', name: 'Tokyo Tower' }, pins, 'Osaka'), { name: 'Tokyo Tower, Osaka' });
+});
+
+test('แผนที่ถือว่าโหลดไม่ขึ้นเฉพาะเมื่อสไตล์โหลดไม่ได้ ไทล์หรือรูปบางชิ้นพลาด (เน็ตหลุดสั้นๆ) ยังใช้แผนที่จริงต่อ', () => {
+  assert.equal(mapLoadFailed({ error: 'style', type: 'style' }), true);
+  assert.equal(mapLoadFailed({ error: 'unknown' }), true, 'ไม่บอกชนิด ถือว่าโหลดไม่ขึ้น');
+  assert.equal(mapLoadFailed(undefined), true);
+  for (const type of ['tile', 'source', 'sprite', 'glyphs'] as const) assert.equal(mapLoadFailed({ error: type, type }), false, type);
 });

@@ -2,12 +2,12 @@
 // ใช้ได้เมื่อแอปมีโค้ด native ของ Mapbox และมี EXPO_PUBLIC_MAPBOX_TOKEN; Expo Go, ไม่มี token, วันที่ไม่มีหมุด หรือโหลดแผนที่ไม่ขึ้น ใช้แผนที่วาดแทน
 import type * as Mapbox from '@rnmapbox/maps';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { NativeModules, Platform, StyleSheet, View } from 'react-native';
+import { NativeModules, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { IconButton, MapPin, SketchMap } from '@/components/ui';
-import type { TripMapProps } from '@/lib/mapPoints';
+import { mapLoadFailed, type TripMapProps } from '@/lib/mapPoints';
 import { useSettings } from '@/lib/settings';
-import { space } from '@/theme/tokens';
+import { fonts, radius, space } from '@/theme/tokens';
 
 const TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
 // @rnmapbox/maps โยน error ตั้งแต่ตอนโหลดถ้าแอปไม่มีโค้ด native ของมัน (Expo Go) จึงโหลดเฉพาะเมื่อมีทั้งโมดูลและ token
@@ -66,9 +66,11 @@ export function TripMap({ points, selected, onSelect, interactive = true, showUs
     <View style={[StyleSheet.absoluteFill, { pointerEvents: interactive ? 'auto' : 'none' }, style]}
       onLayout={(ev) => { const { width, height } = ev.nativeEvent.layout; setBox((b) => (b.w === width && b.h === height ? b : { w: width, h: height })); }}>
       {bw > 0 && (
-        <M.MapView style={StyleSheet.absoluteFill} styleURL="mapbox://styles/mapbox/standard" onMapLoadingError={() => setFailed(true)}
+        <M.MapView style={StyleSheet.absoluteFill} styleURL="mapbox://styles/mapbox/standard" onMapLoadingError={(e) => { if (mapLoadFailed(e)) setFailed(true); }}
           scrollEnabled={interactive} zoomEnabled={interactive} rotateEnabled={false} pitchEnabled={false} compassEnabled={false} scaleBarEnabled={false}
-          logoPosition={{ bottom: orn, left: space.sm }} attributionPosition={{ bottom: orn, left: space.sm + 92 }}>
+          // Android: แผนที่อยู่ในหน้าที่เลื่อนขึ้นลงได้ ให้ลากแผนที่ได้ทุกทิศ ไม่ให้หน้ารับการลากขึ้นลงไป
+          requestDisallowInterceptTouchEvent={interactive}
+          logoPosition={{ bottom: orn, left: space.sm }} attributionEnabled={interactive} attributionPosition={{ bottom: orn, left: space.sm + 92 }}>
           <M.StyleImport id="basemap" existing config={{ lightPreset: isDark ? 'night' : 'day', showPointOfInterestLabels: false }} />
           <M.Camera ref={cam} defaultSettings={camera} {...camera} animationDuration={600} animationMode="easeTo" />
           {points.length > 1 && (
@@ -83,6 +85,12 @@ export function TripMap({ points, selected, onSelect, interactive = true, showUs
             </M.MarkerView>
           ))}
         </M.MapView>
+      )}
+      {/* แผนที่ที่แตะไม่ได้ (หัวหน้าแผน, วันนี้) กดปุ่ม (i) ไม่ได้: แสดงเครดิตเป็นข้อความแทน ตามเงื่อนไขของ Mapbox และ OpenStreetMap */}
+      {bw > 0 && !interactive && (
+        <Text style={{ position: 'absolute', left: space.sm + 92, bottom: orn + 3, paddingHorizontal: 4, borderRadius: radius.sm / 3, overflow: 'hidden', backgroundColor: colors.glass, color: colors.mutedStrong, fontFamily: fonts.body, fontSize: 10 }}>
+          © Mapbox © OpenStreetMap
+        </Text>
       )}
       {interactive && here && (
         <View style={{ position: 'absolute', right: space.md, bottom: orn }}>
