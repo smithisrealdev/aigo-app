@@ -7,7 +7,7 @@ import { NativeModules, Platform, Pressable, StyleSheet, Text, View } from 'reac
 
 import { Icon } from '@/components/icon';
 import { IconButton, MapPin, SketchMap } from '@/components/ui';
-import { GLOBE_SPACE, globePoints, mapLoadFailed, type GlobeTrip, type TripGlobeProps, type TripMapProps } from '@/lib/mapPoints';
+import { GLOBE_SPACE, globePoints, globeZoom, mapLoadFailed, type GlobeTrip, type TripGlobeProps, type TripMapProps } from '@/lib/mapPoints';
 import { useSettings } from '@/lib/settings';
 import { fonts, radius, space } from '@/theme/tokens';
 
@@ -133,10 +133,7 @@ export function TripGlobe({ trips, selected, onSelect, interactive = true, pad }
     const padding = { paddingTop: pad.top * bh, paddingBottom: pad.bottom * bh, paddingLeft: pad.x * bw, paddingRight: pad.x * bw };
     if (route) return { bounds: { ne: [e, n], sw: [w, s] }, padding };
     if (selected) return { centerCoordinate: [lon, lat], zoomLevel: 10, padding };
-    // ทั้งใบในพื้นที่ที่ไม่ถูกบัง: เส้นรอบโลกยาว 512·2^ซูม จุด ลูกโลกของ Mapbox ขยายตามละติจูดของจุดกลาง จึงคูณ cos
-    // shortcut: ขนาดมาจากสูตร ยังไม่ได้เห็นบน iPhone ถ้าลูกโลกใหญ่หรือเล็กไปให้ปรับ 0.9
-    const d = 0.9 * Math.min(bw * (1 - 2 * pad.x), bh * (1 - pad.top - pad.bottom));
-    return { centerCoordinate: [lon, lat], zoomLevel: Math.max(0, Math.log2((d * Math.PI * Math.cos((lat * Math.PI) / 180)) / 512)), padding };
+    return { centerCoordinate: [lon, lat], zoomLevel: globeZoom(bw, bh, pad, lat), padding };
   }, [pad.top, pad.bottom, pad.x, bw, bh, route, selected, w, e, s, n, lon, lat]);
 
   if (!M || failed || !trips.length) {

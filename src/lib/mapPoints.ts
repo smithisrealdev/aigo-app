@@ -90,6 +90,65 @@ export function tripSpots(trips: { id: string; days: { id: string; lat: number; 
   });
 }
 
+/** ลูกโลกทั้งใบในพื้นที่ที่ไม่ถูกบัง: เส้นรอบโลกยาว 512·2^ซูม จุด และลูกโลกของ Mapbox ขยายตามละติจูดของจุดกลาง จึงคูณ cos */
+export function globeZoom(w: number, h: number, pad: TripMapProps['pad'], lat: number): number {
+  // shortcut: ขนาดมาจากสูตร ยังไม่ได้เห็นบน iPhone ถ้าลูกโลกใหญ่หรือเล็กไปให้ปรับ 0.9
+  const d = 0.9 * Math.min(w * (1 - 2 * pad.x), h * (1 - pad.top - pad.bottom));
+  return Math.max(0, Math.log2((d * Math.PI * Math.cos((lat * Math.PI) / 180)) / 512));
+}
+
+/** วันเดินทาง (docs/superpowers/specs/2026-11-21-map-look-design.md): ที่สุดท้ายของวันห่างจากที่แรกของวันถัดไปเกินนี้ */
+export const TRAVEL_KM = 300;
+export type TravelLeg = { from: MapPoint; to: MapPoint };
+
+/** วันเดินทาง: จากหมุดสุดท้ายของวันไปหมุดแรกของวันถัดไป (หมุดตามกฎของ dayPoints) ห่างกันเกิน 300 กม.; วันสุดท้ายของทริปไม่ใช่ */
+export function travelLeg<P extends { id: string; lat: number; lon: number }>(days: P[][], day: number, label: (p: P) => string, checked: (p: P) => { lat: number; lon: number } | undefined): TravelLeg | undefined {
+  const from = dayPoints(days[day] ?? [], label, checked).points.at(-1);
+  const to = dayPoints(days[day + 1] ?? [], label, checked).points[0];
+  return from && to && km(from, to) > TRAVEL_KM ? { from, to } : undefined;
+}
+
+const rad = Math.PI / 180;
+/** เส้นตามผิวโลก (วงกลมใหญ่) จาก a ไป b เป็น [lon, lat] n+1 จุด ลองจิจูดต่อเนื่อง (ข้ามเส้นแบ่งวันแล้วเกิน 180 ได้) ให้ Mapbox ไม่ลากเส้นวนรอบโลก */
+export function arc(a: { lat: number; lon: number }, b: { lat: number; lon: number }, n = 64): [number, number][] {
+  const v = (p: { lat: number; lon: number }) => [Math.cos(p.lat * rad) * Math.cos(p.lon * rad), Math.cos(p.lat * rad) * Math.sin(p.lon * rad), Math.sin(p.lat * rad)];
+  const [va, vb] = [v(a), v(b)];
+  const w = Math.acos(Math.min(1, Math.max(-1, va[0] * vb[0] + va[1] * vb[1] + va[2] * vb[2])));
+  const line: [number, number][] = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    // จุดเดียวกัน (หรือตรงข้ามกันพอดี) ไม่มีวงกลมใหญ่ที่แน่นอน: ไล่เป็นเส้นตรง
+    const [ka, kb] = Math.sin(w) < 1e-9 ? [1 - t, t] : [Math.sin((1 - t) * w) / Math.sin(w), Math.sin(t * w) / Math.sin(w)];
+    const [x, y, z] = va.map((c, j) => ka * c + kb * vb[j]);
+    let lon = Math.atan2(y, x) / rad;
+    if (i) lon += 360 * Math.round((line[i - 1][0] - lon) / 360);
+    line.push([lon, Math.atan2(z, Math.hypot(x, y)) / rad]);
+  }
+  return line;
+}
+
+const PLANE_KM = 80;
+/**
+ * ที่วางรูปเครื่องบินบนเส้นบิน: ก่อนถึงปลายทางราว 80 กม. (เห็นในภาพที่ซูมอยู่ฝั่งปลายทาง) เส้นสั้นกว่า 400 กม. ใช้กลางเส้น
+ * rotate = องศาที่หมุนไอคอนเครื่องบินที่หัวชี้ขึ้นขวา ให้ชี้ทางที่บินบนแผนที่แบน (Web Mercator)
+ */
+export function planeAt(line: [number, number][]): { at: [number, number]; rotate: number } {
+  const pt = (p: [number, number]) => ({ lon: p[0], lat: p[1] });
+  const seg = line.slice(1).map((p, i) => km(pt(line[i]), pt(p)));
+  const total = seg.reduce((s, d) => s + d, 0);
+  let i = line.length >> 1, at = line[i];
+  if (total >= 5 * PLANE_KM) {
+    // เดินถอยจากปลายทาง: ช่วง i ถึง i+1 คือช่วงที่ระยะจากปลายทางถึง 80 กม.
+    let left = PLANE_KM;
+    for (i = seg.length - 1; i > 0 && seg[i] < left; i--) left -= seg[i];
+    const f = 1 - left / seg[i];
+    at = [line[i][0] + (line[i + 1][0] - line[i][0]) * f, line[i][1] + (line[i + 1][1] - line[i][1]) * f];
+  }
+  const y = (lat: number) => Math.log(Math.tan(Math.PI / 4 + (lat * rad) / 2));
+  const [p, q] = [line[i], line[Math.min(i + 1, line.length - 1)]];
+  return { at, rotate: (Math.atan2(-(y(q[1]) - y(p[1])), (q[0] - p[0]) * rad) * 180) / Math.PI + 45 };
+}
+
 /** ที่ที่ "นำทาง" พาไป: หมุดของที่นั้น (ตำแหน่งที่ตรวจแล้วถ้ามี); ไม่ได้ปักหมุด (ไม่มีพิกัด หรือพิกัดไกลผิดเมือง) ใช้ชื่อกับเมือง ไม่ใช้พิกัดของ AI */
 export function navTarget(p: { id: string; name: string }, points: MapPoint[], city: string): { name: string; lat?: number; lon?: number } {
   const pin = points.find((x) => x.key === p.id);
