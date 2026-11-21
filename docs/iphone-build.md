@@ -18,11 +18,11 @@ build ด้วย Xcode บน Mac ของคุณเอง ไม่ต้�
 ## Build
 
 ```bash
-git clone https://github.com/smithisrealdev/aigo-app.git
+git clone -b main https://github.com/smithisrealdev/aigo-app.git
 ```
 
 ```bash
-cd aigo-app && git checkout claude/awesome-cori-zvsu1f && npm install
+cd aigo-app && npm install
 ```
 
 ถ้าใช้ Apple ID ฟรี:
