@@ -20,7 +20,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#4B5BEF"
         }
-      ]
+      ],
+      "@rnmapbox/maps"
     ],
     "experiments": {
       "reactCompiler": true
@@ -28,14 +29,21 @@
     "icon": "./assets/brand/icon.png",
     "ios": {
       "bundleIdentifier": "co.theaigo.app",
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "ใช้ตำแหน่งเพื่อแสดงว่าคุณอยู่ตรงไหนบนแผนที่ทริป (Shows where you are on your trip map.)"
+      }
     },
     "android": {
       "package": "co.theaigo.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/brand/adaptive-icon.png",
         "backgroundColor": "#4B5BEF"
-      }
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     }
   }
 }

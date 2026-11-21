@@ -18,7 +18,6 @@ export const photos = {
   taipei: require('@/assets/photos/taipei.jpg'),
   hotel: require('@/assets/photos/hotel-room.jpg'),
   kaiyukan: require('@/assets/photos/kaiyukan.jpg'),
-  map: require('@/assets/photos/map-day1.jpg'),
 } satisfies Record<string, ImageSource>;
 
 export const logos = {
@@ -100,8 +99,5 @@ export const autoDone: (Action & { text: L })[] = [
   { id: 'rain', title: 'move-park', costBaht: 0, reversible: true, text: { th: 'ย้ายสวนเท็นโนจิไปวันที่ 3 เพราะบ่ายวันที่ 2 ฝนตก', en: 'Moved Tennoji Park to day 3 because of rain on day 2' } },
   { id: 'watch', title: 'watch-price', costBaht: 0, reversible: true, text: { th: 'ตั้งเฝ้าราคาเที่ยวบิน แจ้งถ้าลดเกิน ฿1,000', en: 'Watching flight prices; will alert if they drop over ฿1,000' } },
 ];
-
-/** ตำแหน่งหมุดบนภาพแผนที่วันที่ 1 (map-day1.jpg) เป็นสัดส่วนของภาพ คำนวณจากพิกัดจริงของแต่ละที่บน tile OpenStreetMap ซูม 15 */
-export const mapPins: Record<string, [number, number]> = { castle: [0.866, 0.081], kuromon: [0.251, 0.919], shinsaibashi: [0.092, 0.659], dotonbori: [0.084, 0.793] };
 
 export const baht = (n: number) => '฿' + n.toLocaleString('en-US');

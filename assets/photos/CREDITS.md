@@ -18,5 +18,4 @@
 ## แหล่งอื่น
 
 - `tokyo.jpg`: คัดลอกจาก `ai-travel-buddy-13/src/assets/places/tokyo-skyline.jpg` ยังไม่ได้ตรวจที่มาและสิทธิ์
-- `map-day1.jpg`: ต่อจาก tile ของ OpenStreetMap ซูม 15 ต้องแสดง "© OpenStreetMap contributors" (ODbL) ในแอปจริงให้ใช้ผู้ให้บริการแผนที่ที่มีสัญญา เช่น Google Maps ที่เว็บใช้อยู่
 - โลโก้ใน `assets/partners/`: คัดลอกจาก `ai-travel-buddy-13/public/brand/partners/`

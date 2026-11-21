@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 import { Icon, type IconName } from '@/components/icon';
+import type { TripMapProps } from '@/lib/mapPoints';
 import { useSettings } from '@/lib/settings';
 import { fonts, radius, space, touch, type, wide, type Palette } from '@/theme/tokens';
 
@@ -728,7 +729,22 @@ export function UndoRow({ text, photo, undone, onUndo, last }: { text: string; p
  * แผนที่วาดแบบแบนสำหรับหัวจอแผน: ตำแหน่งหมุดคำนวณจากพิกัดจริงแล้วย่อให้พอดีกรอบ เส้นทางจุดประเชื่อมตามลำดับ
  * shortcut: เป็นภาพร่างไม่ใช่แผนที่จริง (แผนที่จริงอยู่ที่ /map), เปลี่ยนเป็น react-native-maps เมื่อต่อข้อมูลจริง
  */
-export function SketchMap({ points, pad }: { points: { key: string; lat: number; lon: number; label: string }[]; pad: { top: number; bottom: number; x: number } }) {
+/** หมุดเลขตามลำดับในแผน (R12): ที่เลือกใหญ่กว่าและเป็นสีหลัก ตำแหน่งที่ AI เดา (approx) เป็นหมุดโปร่งขอบประ ใช้ทั้งแผนที่วาดและ Mapbox */
+export function MapPin({ n, name, selected = false, approx = false, onPress }: { n: number; name: string; selected?: boolean; approx?: boolean; onPress?: () => void }) {
+  const { colors } = useSettings();
+  const d = selected ? 40 : 30;
+  const pin = (
+    <View style={{ width: d, height: d, borderRadius: d / 2, alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderStyle: approx ? 'dashed' : 'solid',
+      backgroundColor: selected ? colors.primary : approx ? colors.surface : colors.ink, borderColor: approx ? colors.ink : colors.surface }}>
+      <Text style={{ fontFamily: fonts.bodyBold, fontSize: selected ? 16 : 13, color: selected ? colors.onPrimary : approx ? colors.ink : colors.bg }}>{n}</Text>
+    </View>
+  );
+  if (!onPress) return pin;
+  return <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button" accessibilityLabel={`${n} ${name}`} accessibilityState={{ selected }}>{pin}</Pressable>;
+}
+
+/** แผนที่วาดจากพิกัด: ใช้บนเว็บ และในแอปเมื่อไม่มี Mapbox (ไม่มี token, Expo Go หรือโหลดแผนที่ไม่ขึ้น) */
+export function SketchMap({ points, pad, selected, onSelect }: Pick<TripMapProps, 'points' | 'pad' | 'selected' | 'onSelect'>) {
   const { colors } = useSettings();
   const lats = points.map((p) => p.lat), lons = points.map((p) => p.lon);
   const [la0, la1, lo0, lo1] = [Math.min(...lats), Math.max(...lats), Math.min(...lons), Math.max(...lons)];
@@ -751,13 +767,15 @@ export function SketchMap({ points, pad }: { points: { key: string; lat: number;
       {points.map((p, i) => {
         const q = xy[i];
         const leftSide = q.x > 0.6;
+        const on = p.key === selected;
+        const r = on ? 20 : 15;
         return (
-          <View key={p.key} style={{ position: 'absolute', left: `${q.x * 100}%`, top: `${q.y * 100}%`, width: 0, height: 0 }}>
-            <View style={{ position: 'absolute', left: -14, top: -14, width: 28, height: 28, borderRadius: 14, backgroundColor: colors.ink, borderWidth: 2.5, borderColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontFamily: fonts.bodyBold, fontSize: 13, color: colors.bg }}>{i + 1}</Text>
-            </View>
-            <View style={[{ position: 'absolute', top: -13, paddingHorizontal: space.sm, paddingVertical: 2, borderRadius: radius.pill, backgroundColor: colors.surface }, leftSide ? { right: 20 } : { left: 20 }]}>
+          <View key={p.key} style={{ position: 'absolute', left: `${q.x * 100}%`, top: `${q.y * 100}%`, width: 0, height: 0, zIndex: on ? 1 : 0 }}>
+            <View style={[{ position: 'absolute', top: -13, paddingHorizontal: space.sm, paddingVertical: 2, borderRadius: radius.pill, backgroundColor: colors.surface }, leftSide ? { right: r + 6 } : { left: r + 6 }]}>
               <Text numberOfLines={1} style={{ fontFamily: fonts.bodyBold, fontSize: 12, lineHeight: 18, color: colors.ink }}>{p.label}</Text>
+            </View>
+            <View style={{ position: 'absolute', left: -r, top: -r }}>
+              <MapPin n={p.n} name={p.label} selected={on} approx={p.approx} onPress={onSelect && (() => onSelect(p.key))} />
             </View>
           </View>
         );

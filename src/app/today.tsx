@@ -2,16 +2,18 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Platform, View } from 'react-native';
 
-import { AiSays, AskBar, Badge, Button, FadeIn, PhotoCard, RouteList, Screen, Segmented, T, tap, useToast } from '@/components/ui';
+import { TripMap } from '@/components/tripMap';
+import { AiSays, AskBar, Badge, Button, FadeIn, lift, PhotoCard, PressScale, RouteList, Screen, Segmented, T, tap, useToast } from '@/components/ui';
 import { photos, poses } from '@/data/trip';
 import { askAigo } from '@/lib/ask';
 import { shortDate } from '@/lib/chat';
 import { addDays, type Place } from '@/lib/itinerary';
 import { navLink } from '@/lib/links';
+import { dayPoints } from '@/lib/mapPoints';
 import { usePhotos } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
-import { space } from '@/theme/tokens';
+import { radius, space } from '@/theme/tokens';
 
 export default function Today() {
   const { trip } = useTrip();
@@ -20,7 +22,7 @@ export default function Today() {
 
 /** วันนี้ของทริปจริง (R27): ที่ถัดไป เวลา และปุ่มนำทาง ก่อนวันเดินทางแสดงวันแรกไว้ดูก่อน */
 function TripToday() {
-  const { t, pick, lang } = useSettings();
+  const { t, pick, lang, isDark } = useSettings();
   const { trip } = useTrip();
   const now = new Date();
   const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -37,7 +39,9 @@ function TripToday() {
   const rest = next ? places.slice(at + 1) : [];
   const near = trip.destination.en;
   const photo = usePhotos(places.filter((p) => !p.photo).map((p) => ({ name: p.name.en, near })));
-  const navigate = (p: Place) => Linking.openURL(navLink({ name: p.name.en, lat: p.lat, lon: p.lon }, Platform.OS));
+  const { points, missing } = dayPoints(places, (p) => pick(p.name), trip.sample);
+  // ที่ไม่ได้ปักหมุด (ไม่มีพิกัดหรือพิกัดไกลผิดเมือง) นำทางด้วยชื่อแทนพิกัด
+  const navigate = (p: Place) => Linking.openURL(navLink(missing.includes(p.id) ? { name: `${p.name.en}, ${near}` } : { name: p.name.en, lat: p.lat, lon: p.lon }, Platform.OS));
   const note = idx < 0
     ? pick({ th: `อีก ${-idx} วันถึงวันเดินทาง ระหว่างเที่ยวหน้านี้จะบอกที่ถัดไปให้ทุกวัน ตอนนี้ดูวันแรกไว้ก่อนได้`, en: `${-idx} days to go. During the trip this page shows your next stop each day. Here is day 1 for now.` })
     : !during ? pick({ th: 'ทริปนี้จบแล้ว นี่คือวันสุดท้ายของแผน', en: 'This trip is over. Here is its last day.' })
@@ -58,8 +62,18 @@ function TripToday() {
           </PhotoCard>
         </FadeIn>
       )}
+      {points.length > 0 && (
+        <FadeIn index={3}>
+          {/* แผนที่เล็กของวัน: ที่ถัดไปเป็นหมุดที่เลือก มีตำแหน่งของเรา แตะเพื่อเปิดแผนที่เต็ม */}
+          <PressScale onPress={() => router.push({ pathname: '/map', params: { day: String(day) } })} label={pick({ th: 'เปิดแผนที่ของวันนี้', en: "Open today's map" })}>
+            <View style={[{ height: 220, borderRadius: radius.xl, overflow: 'hidden' }, lift(isDark, 0.8)]}>
+              <TripMap points={points} selected={next?.id} interactive={false} showUser pad={{ top: 0.18, bottom: 0.2, x: 0.12 }} />
+            </View>
+          </PressScale>
+        </FadeIn>
+      )}
       {next && rest.length > 0 && (
-        <FadeIn index={3} style={{ gap: space.sm }}>
+        <FadeIn index={4} style={{ gap: space.sm }}>
           <T v="heading">{pick({ th: 'ที่เหลือของวันนี้', en: 'Rest of today' })}</T>
           <RouteList start={{ icon: 'pin', title: pick(next.name), sub: next.time }}
             stops={rest.map((p) => ({ key: p.id, photo: p.photo ?? photo({ name: p.name.en, near }), name: pick(p.name), time: p.time, status: p.checked ? t('it.open') : t('it.unchecked'), statusTone: p.checked ? 'success' : 'muted',

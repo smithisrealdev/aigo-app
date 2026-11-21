@@ -4,12 +4,14 @@ import { ScrollView, View } from 'react-native';
 
 import { TripCards } from '@/components/cards';
 import { Icon } from '@/components/icon';
-import { AiSays, AskBar, Button, Card, Chip, FadeIn, Glass, IconButton, Mascot, PressScale, RouteList, Screen, Segmented, SketchMap, T, Thinking, useToast } from '@/components/ui';
+import { TripMap } from '@/components/tripMap';
+import { AiSays, AskBar, Button, Card, Chip, FadeIn, Glass, IconButton, Mascot, PressScale, RouteList, Screen, Segmented, T, Thinking, useToast } from '@/components/ui';
 import { poses } from '@/data/trip';
 import { askAigo } from '@/lib/ask';
 import { replanDay } from '@/lib/backend';
 import { shortDate } from '@/lib/chat';
 import { addDays, toAppTrip, type AppTrip } from '@/lib/itinerary';
+import { dayPoints } from '@/lib/mapPoints';
 import { usePhotos } from '@/lib/photos';
 import { useSettings } from '@/lib/settings';
 import { useTrip } from '@/lib/tripStore';
@@ -61,21 +63,20 @@ export default function Itinerary() {
     if (!b) return pick({ th: `หลัง${pick(a.name)}`, en: `after ${pick(a.name)}` });
     return pick({ th: `ระหว่าง${pick(a.name)}กับ${pick(b.name)}`, en: `between ${pick(a.name)} and ${pick(b.name)}` });
   };
-  // แผนที่ร่างของวันที่เลือก (วันที่ยังว่างใช้วันแรก) ข้ามที่ที่ไม่มีพิกัด
-  const mapDay = (places.length ? places : trip.days[0] ?? []).filter((p) => p.lat || p.lon);
+  // แผนที่ของวันที่เลือก (วันที่ยังว่างใช้วันแรก) เป็นภาพหัวหน้า แตะปุ่มแผนที่เพื่อเปิดแผนที่เต็มของวันนั้น
+  const mapAt = places.length ? day : 0;
+  const { points } = dayPoints(trip.days[mapAt] ?? [], (p) => pick(p.name), trip.sample);
   const top = (
     <View style={{ height: MAP_H }}>
-      {mapDay.length > 0 && <SketchMap points={mapDay.map((p) => ({ key: p.id, lat: p.lat, lon: p.lon, label: pick(p.name) }))} pad={{ top: 0.3, bottom: 0.17, x: 0.12 }} />}
-      {trip.sample && (
-        <View style={{ position: 'absolute', right: space.lg, bottom: radius.xl + space.md }}>
-          <PressScale onPress={() => router.push('/map')} label={pick({ th: 'ดูแผนที่จริง', en: 'Open the real map' })}>
-            <Glass r={radius.pill} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: space.md, minHeight: 40 }}>
-              <Icon name="map" color={colors.ink} size={18} />
-              <T v="smallBold">{pick({ th: 'แผนที่จริง', en: 'Real map' })}</T>
-            </Glass>
-          </PressScale>
-        </View>
-      )}
+      <TripMap points={points} interactive={false} pad={{ top: 0.3, bottom: 0.17, x: 0.12 }} />
+      <View style={{ position: 'absolute', right: space.lg, bottom: radius.xl + space.md }}>
+        <PressScale onPress={() => router.push({ pathname: '/map', params: { day: String(mapAt) } })} label={pick({ th: `เปิดแผนที่ของ${t('it.day', { n: mapAt + 1 })}`, en: `Open the map of ${t('it.day', { n: mapAt + 1 })}` })}>
+          <Glass r={radius.pill} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: space.md, minHeight: 44 }}>
+            <Icon name="map" color={colors.ink} size={18} />
+            <T v="smallBold">{pick({ th: 'แผนที่', en: 'Map' })}</T>
+          </Glass>
+        </PressScale>
+      </View>
       {/* ขอบบนของแผ่นแผน มีที่จับแบบ bottom sheet */}
       <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: radius.xl, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, backgroundColor: colors.bg, alignItems: 'center', paddingTop: 10 }}>
         <View style={{ width: 40, height: 5, borderRadius: 3, backgroundColor: colors.line }} />
