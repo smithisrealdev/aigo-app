@@ -25,6 +25,13 @@ git clone -b main https://github.com/smithisrealdev/aigo-app.git
 cd aigo-app && npm install
 ```
 
+แผนที่จริงในแอป (Mapbox) ต้องมี public token ของ Mapbox: สมัคร mapbox.com (ฟรี) → Account → Tokens → คัดลอก Default public token (ขึ้นต้นด้วย `pk.`)
+แล้วใส่ในไฟล์ `.env.local` ในโฟลเดอร์ `aigo-app` (ไฟล์นี้ไม่เข้า git) ไม่ต้องใช้ secret token ไม่มี token แอปยังใช้ได้ แต่แผนที่จะเป็นภาพวาด
+
+```bash
+echo 'EXPO_PUBLIC_MAPBOX_TOKEN=pk.วางtokenของคุณตรงนี้' > .env.local
+```
+
 ถ้าใช้ Apple ID ฟรี:
 
 ```bash
@@ -40,6 +47,7 @@ npx expo run:ios --device --configuration Release
 - ถ้าถามให้เลือกเครื่อง ให้เลือก iPhone ของคุณ ถ้าถามทีม (Team) ให้เลือกชื่อคุณ
 - ครั้งแรกใช้เวลาราว 10–20 นาที เสร็จแล้วแอปจะเปิดบน iPhone เอง
 - `--configuration Release` ใส่โค้ดทั้งหมดไว้ในแอป เปิดได้แม้ปิด Mac
+- แอปที่เคยติดตั้งไว้ก่อนมีแผนที่ต้อง build ใหม่ด้วยคำสั่งนี้ (มีโค้ด native ของ Mapbox เพิ่ม) เปิดหน้าแผนที่ครั้งแรกแอปจะขอใช้ตำแหน่ง "ขณะใช้แอป"
 
 ## หลังติดตั้ง ถ้าใช้ Apple ID ฟรี
 
@@ -56,3 +64,5 @@ npx expo run:ios --device --configuration Release
 | Developer Mode disabled | ทำข้อ 3 ของ "ทำครั้งแรกครั้งเดียว" |
 | pod install / CocoaPods error | `brew install cocoapods` แล้วรันคำสั่งเดิม |
 | แก้ `app.json` หรือสลับ `FREE_APPLE_ID` แล้วไม่เห็นผล | ลบโฟลเดอร์ `ios` แล้ว build ใหม่ (โฟลเดอร์นี้สร้างใหม่ได้ทุกครั้ง และไม่ได้เก็บใน git) |
+| แผนที่ยังเป็นภาพวาด ไม่ใช่แผนที่จริง | เช็กว่า `.env.local` มี `EXPO_PUBLIC_MAPBOX_TOKEN=pk...` แล้วรันคำสั่ง build อีกครั้ง (token ถูกใส่ตอน build) |
+| แผนที่เป็นสีเทาว่าง | token ผิดหรือถูกปิดใน Mapbox: สร้าง public token ใหม่ใส่ `.env.local` แล้ว build ใหม่ |
